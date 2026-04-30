@@ -47,22 +47,24 @@ class CrystalPXRDDataset(Dataset):
     """Dataset pairing cached PXRD patterns with parsed crystal structures."""
 
     def __init__(self, data_dir: str | Path, split: str = "train",
-                 max_atoms: int = MAX_ATOMS, preload: bool = True):
+                 max_atoms: int = MAX_ATOMS, preload: bool = True,
+                 limit: int | None = None):
         data_dir = Path(data_dir)
         cache_dir = data_dir / "cache"
         raw_dir = data_dir / "raw"
 
         npz = np.load(cache_dir / f"{split}.npz", allow_pickle=True)
-        self.patterns = npz["pattern"]           # (N, B) float32
-        self.material_ids = npz["material_id"]   # (N,) str
-        self.spacegroups = npz["spacegroup"]     # (N,) int16
+        n = limit if limit is not None else len(npz["pattern"])
+        self.patterns = npz["pattern"][:n]
+        self.material_ids = npz["material_id"][:n]
+        self.spacegroups = npz["spacegroup"][:n]
 
         self.max_atoms = max_atoms
         self._structures: Optional[list] = None
 
         if preload:
             import pandas as pd
-            df = pd.read_csv(raw_dir / f"{split}.csv")
+            df = pd.read_csv(raw_dir / f"{split}.csv", nrows=limit)
             self._structures = []
             for _, row in tqdm(df.iterrows(), total=len(df),
                                desc=f"Parsing {split} CIFs", leave=False):

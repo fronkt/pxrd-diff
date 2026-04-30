@@ -54,7 +54,10 @@ def coord_rmsd(pred: Structure, true: Structure,
     """
     matcher = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
                                primitive_cell=False, scale=True, attempt_supercell=True)
-    rms = matcher.get_rms_dist(pred, true)
+    try:
+        rms = matcher.get_rms_dist(pred, true)
+    except Exception:
+        return float("nan")
     if rms is None:
         return float("nan")
     return float(rms[0])    # (rms, max) tuple -> rms

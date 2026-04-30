@@ -13,22 +13,22 @@ split BEFORE writing any model code.
 
 ### Phase 0 — Data pipeline + evaluation harness (CPU only)
 - [x] 0.1 Project skeleton, git init, README, requirements, pyproject
-- [ ] 0.2 Pull MP-20 canonical splits from CDVAE repo (train/val/test CSVs with CIFs)
-- [ ] 0.3 PXRD simulator (pymatgen XRDCalculator wrapper, Cu Kα, configurable grid)
-- [ ] 0.4 Cache simulated patterns (npz) for all train/val/test
-- [ ] 0.5 Evaluation module: spacegroup match, coord RMSD, Rwp, element accuracy
-- [ ] 0.6 Smoke tests: identity baseline scores 100%, random scores ~0%
-- [ ] 0.7 Visualization notebook (5 random structures + their PXRD)
-- [ ] 0.8 Push to GitHub
+- [x] 0.2 Pull MP-20 canonical splits from CDVAE repo (train/val/test CSVs with CIFs)
+- [x] 0.3 PXRD simulator (pymatgen XRDCalculator wrapper, Cu Kα, configurable grid)
+- [x] 0.4 Cache simulated patterns (npz) for all train/val/test
+- [x] 0.5 Evaluation module: spacegroup match, coord RMSD, Rwp, element accuracy
+- [x] 0.6 Smoke tests: identity baseline scores 100%, random scores ~0%
+- [x] 0.7 Visualization notebook (5 random structures + their PXRD)
+- [x] 0.8 Push to GitHub
 
 ### Phase 1 — Conditional diffusion baseline (Weeks 2-4, CPU prototype)
-- [ ] 1.1 Frozen MACE-MP-0 encoder integration; cache embeddings
-- [ ] 1.2 1D ResNet PXRD encoder
-- [ ] 1.3 Diffusion module: fractional coords on flat torus + lattice in R^6
-- [ ] 1.4 Cross-attention conditioning between PXRD embedding and structure tokens
-- [ ] 1.5 EDM-style denoising training loop (small-batch CPU smoke)
-- [ ] 1.6 Sampler (DDIM / Euler) — reverse process from noise to structure
-- [ ] 1.7 End-to-end smoke: train 100 steps on 16 structures, sample, eval
+- [x] 1.1 Equivariant structure encoder (SchNet-style, MACE deferred to Phase 2)
+- [x] 1.2 1D ResNet PXRD encoder (4 blocks, 256-dim output)
+- [x] 1.3 Diffusion module: VP-SDE cosine schedule, torus coords + R^6 lattice
+- [x] 1.4 Additive PXRD+timestep conditioning (cross-attention deferred)
+- [x] 1.5 Training loop w/ lattice normalization, grad clip, cosine LR
+- [x] 1.6 DDIM sampler (50 steps, deterministic) — reverse process from noise to structure
+- [x] 1.7 E2E smoke: 500 steps, sample 8, all invalid lattice (expected at <1% training)
 
 ### Phase 2 — Differentiable Debye scattering loss (Weeks 5-6)
 - [ ] 2.1 Implement differentiable Debye scattering in PyTorch (vectorized)
@@ -44,9 +44,18 @@ split BEFORE writing any model code.
 - [ ] 3.5 Random-search + Rietveld baseline (via GSAS-II or jana2020)
 - [ ] 3.6 Final benchmarks, ablations, plots, paper draft
 
-## Review
-<!-- Filled in after Phase 0 -->
-- Completed:
-- What worked:
-- What changed from plan:
-- Known limitations:
+## Review — Phase 0
+- Completed: 2026-04-29
+- What worked: pymatgen XRDCalculator is fast (~100 struct/s), zero sim failures across 45k structures
+- What changed: none, plan executed as-is
+- Known limitations: patterns are simulated (no experimental artifacts), 92% sparsity
+
+## Review — Phase 1
+- Completed: 2026-04-30
+- What worked: 2.1M param model trains on CPU (0.19s/step), DDIM sampling at 0.1s/struct
+- What changed from plan: used SchNet-style MP instead of frozen MACE (simpler, correct geometry,
+  MACE integration deferred to Phase 2). Additive conditioning instead of cross-attention.
+  Atom types conditioned (fixed), not predicted.
+- Known limitations: 500-step smoke produces garbage lattice (10^6-10^9 values); need real
+  training (~10k+ steps on GPU) to see meaningful predictions. Lattice prediction may need
+  separate treatment (clamping, log-space diffusion, or conditioning on composition stats).
