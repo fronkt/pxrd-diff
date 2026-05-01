@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from pxrd_diff.data import CrystalPXRDDataset
-from pxrd_diff.debye import DebyePXRD, debye_pxrd_loss
+from pxrd_diff.debye import DiffPXRD, diff_pxrd_loss
 from pxrd_diff.eval import r_pearson
 
 
@@ -32,7 +32,7 @@ def main():
     print(f"Device: {device}")
 
     ds = CrystalPXRDDataset(ROOT / "data", split="test")
-    debye = DebyePXRD(n_bins=256).to(device)
+    debye = DiffPXRD(n_bins=256).to(device)
 
     pearsons, losses = [], []
 
@@ -47,7 +47,7 @@ def main():
 
         pred = debye(coords, types, lat, mask)  # (1, 256)
 
-        loss = debye_pxrd_loss(pred, pxrd_target, n_bins_debye=256)
+        loss = diff_pxrd_loss(pred, pxrd_target, n_bins_diff=256)
         loss.backward()
 
         grad_ok = coords.grad is not None and not coords.grad.isnan().any()
