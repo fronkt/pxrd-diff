@@ -59,6 +59,8 @@ but AdaptiveAvgPool1d(1) destroys spectral structure before it reaches the denoi
       - Compute structure factor PXRD, compare with Pearson correlation loss
       - --debye-weight flag controls λ (default 0, backward compatible)
 - [ ] 2.4 Ablation: λ_debye ∈ {0, 0.1, 1, 10} on gpu_v6/v7/v8/v9
+      - Running on RTX 5090 32GB, batch=64, 100k steps each
+      - v6=0, v7=0.1, v8=1.0, v9=10.0 (sequential, ~8h total)
 
 ### Phase 3 — Cloud GPU scale-up + baselines (Weeks 7-9)
 - [ ] 3.1 Provision cloud GPU (Vast.ai / RunPod RTX 3090, 24 GB)
