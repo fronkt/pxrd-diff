@@ -21,29 +21,21 @@ import torch.nn.functional as F
 def _build_ff_table(max_z: int = 100) -> torch.Tensor:
     """Extract atomic form factor coefficients from pymatgen.
 
-    Returns (max_z+1, 9) tensor: [a1, b1, a2, b2, a3, b3, a4, b4, c] per element.
-    f(s) = Σₖ aₖ exp(-bₖ s²) + c, where s = sin(θ)/λ = Q/(4π).
+    Returns (max_z+1, 4, 2) tensor: ff_table[Z] = [[a1,b1],[a2,b2],[a3,b3],[a4,b4]].
+    f(s) = Σₖ aₖ exp(-bₖ s²), where s = sin(θ)/λ.
     """
     from pymatgen.analysis.diffraction.xrd import ATOMIC_SCATTERING_PARAMS
     from pymatgen.core.periodic_table import Element
 
-    table = torch.zeros(max_z + 1, 9)
+    table = torch.zeros(max_z + 1, 4, 2)
     for z in range(1, max_z + 1):
         try:
             el = Element.from_Z(z)
-            key = el.symbol
-            if key in ATOMIC_SCATTERING_PARAMS:
-                params = ATOMIC_SCATTERING_PARAMS[key]
-                # pymatgen format: dict mapping symbol -> list of coefficients
-                # Each entry is [a1, b1, a2, b2, a3, b3, a4, b4, c]
-                if isinstance(params, list):
-                    coeffs = params[0] if isinstance(params[0], (list, tuple)) else params
-                elif isinstance(params, dict):
-                    coeffs = params.get("coeffs", params.get("Cromer-Mann", []))
-                else:
-                    continue
-                if len(coeffs) >= 9:
-                    table[z] = torch.tensor(coeffs[:9], dtype=torch.float32)
+            if el.symbol in ATOMIC_SCATTERING_PARAMS:
+                pairs = ATOMIC_SCATTERING_PARAMS[el.symbol]  # [[a1,b1], ...]
+                for k, (a, b) in enumerate(pairs[:4]):
+                    table[z, k, 0] = a
+                    table[z, k, 1] = b
         except Exception:
             continue
     return table
@@ -97,15 +89,14 @@ class DebyePXRD(nn.Module):
         Returns:
             (B, N, n_bins) form factor values, including DW factor
         """
-        coeffs = self.ff_table[atom_types]  # (B, N, 9)
-        a = coeffs[..., ::2][..., :4]       # (B, N, 4)
-        b = coeffs[..., 1::2][..., :4]      # (B, N, 4)
-        c = coeffs[..., 8]                  # (B, N)
+        coeffs = self.ff_table[atom_types]   # (B, N, 4, 2)
+        a = coeffs[..., 0]                   # (B, N, 4)
+        b = coeffs[..., 1]                   # (B, N, 4)
 
-        # f(s) = Σₖ aₖ exp(-bₖ s²) + c
+        # f(s) = Σₖ aₖ exp(-bₖ s²)
         s_sq = self.s_sq.view(1, 1, -1, 1)  # (1, 1, n_bins, 1)
-        f = (a.unsqueeze(2) * torch.exp(-b.unsqueeze(2) * s_sq)).sum(-1) + c.unsqueeze(2)
-        return f * self.dw.view(1, 1, -1)   # (B, N, n_bins)
+        f = (a.unsqueeze(2) * torch.exp(-b.unsqueeze(2) * s_sq)).sum(-1)
+        return f * self.dw.view(1, 1, -1)    # (B, N, n_bins)
 
     def forward(self, frac_coords: torch.Tensor, atom_types: torch.Tensor,
                 lattice: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
