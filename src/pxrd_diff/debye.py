@@ -124,10 +124,10 @@ class DiffPXRD(nn.Module):
 
         # d*-vectors for each hkl: (B, M, 3) = hkl (M,3) @ recip (B,3,3)
         g_hkl = torch.einsum("md,bdc->bmc", hkl, recip)  # (B, M, 3)
-        g_len = g_hkl.norm(dim=-1)  # (B, M) = 1/d_hkl in reciprocal Å
+        g_len = g_hkl.norm(dim=-1)  # (B, M) = 2π/d_hkl (physics convention)
 
         # d-spacings and 2θ positions
-        d_hkl = 1.0 / g_len.clamp(min=1e-8)  # (B, M)
+        d_hkl = 2 * math.pi / g_len.clamp(min=1e-8)  # (B, M)
         sin_theta = self.wavelength / (2 * d_hkl)  # sin(θ) = λ/(2d)
 
         # Filter: only reflections where |sin(θ)| < 1 (valid Bragg condition)
