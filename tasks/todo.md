@@ -35,19 +35,23 @@ GPU v4 run (100k steps) confirmed coord loss flat at ~3.0 — global PXRD poolin
 is the bottleneck. Aux loss proves encoder learns good features (0.99→0.007),
 but AdaptiveAvgPool1d(1) destroys spectral structure before it reaches the denoiser.
 
-- [ ] 1.5.1 PXRDEncoder: return multi-res feature maps alongside global vector
-- [ ] 1.5.2 CrystalDenoiser: add per-layer cross-attention (atoms attend to PXRD features)
-- [ ] 1.5.3 DDIMSampler: wire up new encoder output (global + feature maps)
-- [ ] 1.5.4 Training script: update for new signatures, keep aux head on global vector
-- [ ] 1.5.5 Local smoke test (CPU, 200 steps) — verify shapes, gradients, no NaN
-- [ ] 1.5.6 Push to GitHub, deploy to new Vast.ai RTX 5090 instance
-- [ ] 1.5.7 Full training run (100k steps), compare coord loss trajectory to v4
+- [x] 1.5.1 PXRDEncoder: return multi-res feature maps alongside global vector
+- [x] 1.5.2 CrystalDenoiser: add per-layer cross-attention (atoms attend to PXRD features)
+- [x] 1.5.3 DDIMSampler: wire up new encoder output (global + feature maps)
+- [x] 1.5.4 Training script: update for new signatures, keep aux head on global vector
+- [x] 1.5.5 GPU smoke test — shapes OK, backward OK, no NaN (3.5M params)
+- [x] 1.5.6 Push to GitHub, deploy to Vast.ai RTX 5090 (32GB)
+- [x] 1.5.7 Full training run (100k steps) — coord 3.0→1.0, loss 3.1→1.1
 
 ### Phase 2 — Differentiable Debye scattering loss (Weeks 5-6)
 - [ ] 2.1 Implement differentiable Debye scattering in PyTorch (vectorized)
-- [ ] 2.2 Verify against pymatgen XRDCalculator on 50 known structures
-- [ ] 2.3 Add as auxiliary loss with λ_debye hyperparameter
-- [ ] 2.4 Ablation: λ_debye ∈ {0, 0.1, 1, 10}
+      - Atomic form factors (4-Gaussian + c, tabulated for Z=1..100)
+      - Differentiable pairwise distances from frac_coords + lattice
+      - Debye equation on Q grid matching our Cu Kα PXRD bins
+      - Debye-Waller temperature factor
+- [ ] 2.2 Verify against pymatgen XRDCalculator on 50 known structures (Rwp < 0.05)
+- [ ] 2.3 Add as auxiliary loss in training: Debye PXRD of x0_pred vs input pattern
+- [ ] 2.4 Ablation: λ_debye ∈ {0, 0.1, 1, 10} on gpu_v6/v7/v8/v9
 
 ### Phase 3 — Cloud GPU scale-up + baselines (Weeks 7-9)
 - [ ] 3.1 Provision cloud GPU (Vast.ai / RunPod RTX 3090, 24 GB)
