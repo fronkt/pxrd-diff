@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from pxrd_diff.data import CrystalPXRDDataset, lattice_params_stats
-from pxrd_diff.diffusion import DiffusionProcess
+from pxrd_diff.debye import DiffPXRD, diff_pxrd_loss
+from pxrd_diff.diffusion import DiffusionProcess, cosine_alpha_bar
 from pxrd_diff.model.denoiser import CrystalDenoiser
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder
 
@@ -64,6 +65,11 @@ def train(args: argparse.Namespace) -> None:
                                 n_heads=args.n_heads).to(device)
     aux_head = AuxLatHead(args.d_model).to(device)
     diffusion = DiffusionProcess()
+
+    diff_pxrd = None
+    if args.debye_weight > 0:
+        diff_pxrd = DiffPXRD(n_bins=256, hkl_max=5).to(device)
+        diff_pxrd.eval()
 
     params = list(encoder.parameters()) + list(denoiser.parameters()) + list(aux_head.parameters())
     opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=1e-4)
@@ -115,6 +121,17 @@ def train(args: argparse.Namespace) -> None:
 
             loss = loss_coord + args.lat_weight * loss_lat + args.aux_weight * loss_aux
 
+            loss_debye = torch.tensor(0.0, device=device)
+            if diff_pxrd is not None:
+                alpha_bar = cosine_alpha_bar(t)
+                while alpha_bar.dim() < noisy_coords.dim():
+                    alpha_bar = alpha_bar.unsqueeze(-1)
+                x0_pred = ((noisy_coords - (1 - alpha_bar).sqrt() * eps_c_pred)
+                           / alpha_bar.sqrt().clamp(min=1e-6)) % 1.0
+                pred_pxrd = diff_pxrd(x0_pred, types, lat, mask)
+                loss_debye = diff_pxrd_loss(pred_pxrd, pxrd, n_bins_diff=256)
+                loss = loss + args.debye_weight * loss_debye
+
             opt.zero_grad()
             loss.backward()
             grad_norm = torch.nn.utils.clip_grad_norm_(params, 1.0)
@@ -130,9 +147,10 @@ def train(args: argparse.Namespace) -> None:
                 emb_std = pxrd_global.std().item()
                 emb_abs = pxrd_global.abs().mean().item()
                 enc_gnorm = sum(p.grad.norm().item()**2 for p in encoder.parameters() if p.grad is not None)**0.5
+                debye_str = f"  debye={loss_debye.item():.4f}" if diff_pxrd is not None else ""
                 print(f"step={step:>6d}  loss={loss_ema:.4f}  "
                       f"coord={loss_coord.item():.4f}  lat={loss_lat.item():.4f}  "
-                      f"aux={loss_aux.item():.4f}  "
+                      f"aux={loss_aux.item():.4f}{debye_str}  "
                       f"lr={lr:.2e}  gnorm={grad_norm:.2f}  enc_gn={enc_gnorm:.3f}  "
                       f"emb_std={emb_std:.3f}  emb_abs={emb_abs:.3f}  "
                       f"t={elapsed:.0f}s")
@@ -177,6 +195,7 @@ def main():
     ap.add_argument("--n-heads", type=int, default=4)
     ap.add_argument("--lat-weight", type=float, default=0.1)
     ap.add_argument("--aux-weight", type=float, default=0.5)
+    ap.add_argument("--debye-weight", type=float, default=0.0)
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")
