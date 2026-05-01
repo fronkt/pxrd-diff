@@ -1,8 +1,8 @@
 """1D ResNet encoder for PXRD intensity vectors.
 
-Maps (B, n_bins) -> (B, d_model). Four residual blocks with progressive
-downsampling, followed by global average pool and a linear projection.
-The output embedding conditions the diffusion denoiser on the input pattern.
+Returns both a global embedding (B, d_model) for auxiliary tasks and
+multi-resolution feature maps (B, L_total, d_model) for cross-attention
+conditioning in the denoiser.
 """
 from __future__ import annotations
 
@@ -29,29 +29,44 @@ class ResBlock1d(nn.Module):
 
 
 class PXRDEncoder(nn.Module):
-    """1D ResNet: (B, n_bins) -> (B, d_model)."""
+    """1D ResNet: (B, n_bins) -> global (B, d_model) + features (B, L, d_model)."""
 
     def __init__(self, n_bins: int = 4251, d_model: int = 256,
                  channels: tuple[int, ...] = (64, 128, 256, 256)):
         super().__init__()
+        self.d_model = d_model
         self.stem = nn.Sequential(
             nn.Conv1d(1, channels[0], 7, stride=2, padding=3, bias=False),
             nn.GroupNorm(8, channels[0]),
             nn.SiLU(),
         )
-        blocks = []
+        blocks, feat_projs = [], []
         in_ch = channels[0]
         for out_ch in channels:
             stride = 2 if out_ch != in_ch else 1
             blocks.append(ResBlock1d(in_ch, out_ch, stride))
+            feat_projs.append(nn.Conv1d(out_ch, d_model, 1))
             in_ch = out_ch
-        self.blocks = nn.Sequential(*blocks)
+        self.blocks = nn.ModuleList(blocks)
+        self.feat_projs = nn.ModuleList(feat_projs)
+
         self.pool = nn.AdaptiveAvgPool1d(1)
         self.proj = nn.Linear(channels[-1], d_model)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x.unsqueeze(1)         # (B, 1, n_bins)
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        mu = x.mean(dim=-1, keepdim=True)
+        sigma = x.std(dim=-1, keepdim=True).clamp(min=1e-6)
+        x = (x - mu) / sigma
+
+        x = x.unsqueeze(1)
         x = self.stem(x)
-        x = self.blocks(x)
-        x = self.pool(x).squeeze(-1)
-        return self.proj(x)         # (B, d_model)
+
+        features = []
+        for block, proj in zip(self.blocks, self.feat_projs):
+            x = block(x)
+            features.append(proj(x).transpose(1, 2))  # (B, L_i, d_model)
+
+        global_emb = self.proj(self.pool(x).squeeze(-1))  # (B, d_model)
+        multi_res = torch.cat(features, dim=1)             # (B, L_total, d_model)
+
+        return global_emb, multi_res

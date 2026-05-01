@@ -30,6 +30,19 @@ split BEFORE writing any model code.
 - [x] 1.6 DDIM sampler (50 steps, deterministic) — reverse process from noise to structure
 - [x] 1.7 E2E smoke: 500 steps, sample 8, all invalid lattice (expected at <1% training)
 
+### Phase 1.5 — Multi-resolution cross-attention (coord loss fix)
+GPU v4 run (100k steps) confirmed coord loss flat at ~3.0 — global PXRD pooling
+is the bottleneck. Aux loss proves encoder learns good features (0.99→0.007),
+but AdaptiveAvgPool1d(1) destroys spectral structure before it reaches the denoiser.
+
+- [ ] 1.5.1 PXRDEncoder: return multi-res feature maps alongside global vector
+- [ ] 1.5.2 CrystalDenoiser: add per-layer cross-attention (atoms attend to PXRD features)
+- [ ] 1.5.3 DDIMSampler: wire up new encoder output (global + feature maps)
+- [ ] 1.5.4 Training script: update for new signatures, keep aux head on global vector
+- [ ] 1.5.5 Local smoke test (CPU, 200 steps) — verify shapes, gradients, no NaN
+- [ ] 1.5.6 Push to GitHub, deploy to new Vast.ai RTX 5090 instance
+- [ ] 1.5.7 Full training run (100k steps), compare coord loss trajectory to v4
+
 ### Phase 2 — Differentiable Debye scattering loss (Weeks 5-6)
 - [ ] 2.1 Implement differentiable Debye scattering in PyTorch (vectorized)
 - [ ] 2.2 Verify against pymatgen XRDCalculator on 50 known structures
@@ -59,3 +72,11 @@ split BEFORE writing any model code.
 - Known limitations: 500-step smoke produces garbage lattice (10^6-10^9 values); need real
   training (~10k+ steps on GPU) to see meaningful predictions. Lattice prediction may need
   separate treatment (clamping, log-space diffusion, or conditioning on composition stats).
+
+## Review — GPU v4 run (100k steps on RTX 5070 Ti)
+- Completed: 2026-05-01
+- coord loss: flat at ~3.0 from step 1 to 100k (uniform random baseline)
+- lat loss: slight improvement (1.09 → 0.97)
+- aux loss: 0.99 → 0.007 (PXRD encoder IS learning, information destroyed by pooling)
+- Diagnosis: AdaptiveAvgPool1d(1) collapses all spectral structure; additive broadcast
+  gives every atom identical conditioning. Cross-attention is required.
