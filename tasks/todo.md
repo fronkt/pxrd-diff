@@ -78,13 +78,28 @@ The ablation eval revealed two architectural problems independent of Debye loss:
       headline match 0%). The cross-attention helped vs. v4 (3.0→1.0) but model
       isn't truly inverting PXRD.
 
-- [ ] 2.5.1 Diagnose lattice noise prediction failure
-      - Check normalization stats, gradient flow into lattice head
-      - Try predicting lattice in log-space or with composition-aware prior
-- [ ] 2.5.2 Investigate coord prediction ceiling
-      - Stronger PXRD encoder? Increase capacity? Per-Q-bin attention keys?
-      - Try predicting x0 directly instead of eps
-- [ ] 2.5.3 Re-run ablation after fix to get true Debye loss signal
+- [x] 2.5.1 Diagnose & fix lattice noise prediction
+      - **Root cause**: denoiser never saw the noisy_lat_p it was trying to
+        denoise. Training fed ground-truth lattice matrix to denoiser while
+        applying noise to a separate noisy_lat_p vector. Lattice head could
+        only predict E[eps]=0, giving loss=1.0.
+      - **Fix**: pass noisy_lat_p as additional input. Lattice head now sees
+        h_pool + pxrd_global + lat_in_proj(noisy_lat_p) + t_cond.
+      - **Result (gpu_v10, 100k steps, λ=0)**: lat loss 1.0 → **0.055** (95%↓)
+      - **Result (gpu_v11, 100k steps, λ=1)**: lat loss 1.0 → **0.063** (94%↓)
+- [x] 2.5.2 Re-run ablation with lattice fix
+      - At n=256 with predicted lattice: v10=0%, v11=0.4% match (within noise)
+      - At n=256 with true lattice (coord-only): v10=1.6%, v11=0.4% match
+      - Pearson ~0.34 with true lattice (vs 0.31 baseline) — minor improvement
+      - **Conclusion**: lattice fix dramatically improves lat loss but coord
+        prediction is still the dominant bottleneck. Debye loss does not
+        meaningfully shift coord quality at this scale.
+- [ ] 2.5.3 Coord prediction architecture investigation
+      - Hypothesis: at high noise, atoms have no positional anchoring to
+        specific PXRD features. Cross-attention provides global context but
+        no way to associate "this peak corresponds to this atom".
+      - Try predicting x0 directly instead of eps (more stable at low SNR)
+      - Try larger model (more layers, bigger d_model)
 
 ### Phase 3 — Cloud GPU scale-up + baselines (Weeks 7-9)
 - [x] 3.1 Provision cloud GPU (Vast.ai RTX 5090, 32GB)
