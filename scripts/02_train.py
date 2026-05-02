@@ -86,6 +86,21 @@ def train(args: argparse.Namespace) -> None:
     loss_ema = None
     t0 = time.perf_counter()
 
+    if args.resume:
+        resume_path = Path(args.resume)
+        if not resume_path.is_absolute():
+            resume_path = ROOT / resume_path
+        print(f"Resuming from {resume_path}")
+        ckpt = torch.load(resume_path, map_location=device, weights_only=False)
+        encoder.load_state_dict(ckpt["encoder"])
+        denoiser.load_state_dict(ckpt["denoiser"])
+        aux_head.load_state_dict(ckpt["aux_head"])
+        opt.load_state_dict(ckpt["optimizer"])
+        step = ckpt["step"]
+        for _ in range(step):
+            scheduler.step()
+        print(f"  -> resumed at step {step}")
+
     while step < args.steps:
         epoch += 1
         for batch in dl:
@@ -196,6 +211,8 @@ def main():
     ap.add_argument("--lat-weight", type=float, default=0.1)
     ap.add_argument("--aux-weight", type=float, default=0.5)
     ap.add_argument("--debye-weight", type=float, default=0.0)
+    ap.add_argument("--resume", type=str, default=None,
+                    help="Path to ckpt to resume from")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")
