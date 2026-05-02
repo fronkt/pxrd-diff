@@ -35,7 +35,8 @@ class DDIMSampler:
         x_t = torch.randn(B, N, 3, device=device)
         l_t = torch.randn(B, 6, device=device)
 
-        timesteps = torch.linspace(1.0, 1e-4, self.n_steps + 1, device=device)
+        timesteps = torch.linspace(1.0 - 0.5 / self.n_steps, 1e-4,
+                                    self.n_steps + 1, device=device)
 
         for i in range(self.n_steps):
             t_now, t_next = timesteps[i], timesteps[i + 1]
@@ -68,7 +69,7 @@ class DDIMSampler:
         shape = [1] * (x_t.dim() - 1)
         ab_now = ab_now.view(-1, *shape)
         ab_next = ab_next.view(-1, *shape)
-        x0_pred = (x_t - (1 - ab_now).sqrt() * eps) / ab_now.sqrt().clamp(min=1e-8)
+        x0_pred = (x_t - (1 - ab_now).sqrt() * eps) / ab_now.sqrt().clamp(min=0.05)
         sigma = self.eta * ((1 - ab_next) / (1 - ab_now) * (1 - ab_now / ab_next)).sqrt()
         dir_xt = (1 - ab_next - sigma ** 2).clamp(min=0).sqrt() * eps
         x_next = ab_next.sqrt() * x0_pred + dir_xt
