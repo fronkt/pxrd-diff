@@ -59,7 +59,11 @@ def tensor_to_structure(frac_coords, atom_types, lattice_params, num_atoms):
     return Structure(lat, species, coords)
 
 
-def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps):
+def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps,
+                        use_true_lattice=True):
+    """Evaluate a checkpoint. If use_true_lattice, swap predicted lattice with
+    ground truth (since lat loss never converged to better than random baseline,
+    isolating coord quality for the ablation comparison)."""
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     train_args = ckpt["args"]
     d_model = train_args.get("d_model", 256)
@@ -74,17 +78,22 @@ def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps):
     pxrd = torch.stack([b["pxrd_pattern"] for b in batch_items]).to(device)
     atom_types = torch.stack([b["atom_types"] for b in batch_items]).to(device)
     lattice = torch.stack([b["lattice"] for b in batch_items]).to(device)
+    true_lat_params = torch.stack([b["lattice_params"] for b in batch_items]).to(device)
     mask = torch.stack([b["mask"] for b in batch_items]).to(device)
 
     sampler = DDIMSampler(encoder, denoiser, n_steps=ddim_steps, eta=0.0,
                           lat_mean=ckpt.get("lat_mean"), lat_std=ckpt.get("lat_std"))
     pred_coords, pred_lat_params = sampler.sample(pxrd, atom_types, lattice, mask)
+    if use_true_lattice:
+        pred_lat_params = true_lat_params
 
     metrics_list = []
+    skipped = 0
     for i, b in enumerate(batch_items):
         na = b["num_atoms"].item()
         lp = pred_lat_params[i].cpu().numpy()
         if not is_valid_lattice(lp):
+            skipped += 1
             continue
         try:
             pred_struct = tensor_to_structure(pred_coords[i], atom_types[i], pred_lat_params[i], na)
@@ -98,9 +107,12 @@ def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps):
                 pred_pattern, b["pxrd_pattern"].numpy(),
             ))
         except Exception:
+            skipped += 1
             continue
 
-    return aggregate(metrics_list) if metrics_list else {"n": 0}
+    agg = aggregate(metrics_list) if metrics_list else {"n": 0}
+    agg["skipped"] = skipped
+    return agg
 
 
 def main():
