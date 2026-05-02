@@ -121,15 +121,23 @@ def train(args: argparse.Namespace) -> None:
             noisy_lat_p, eps_lat = diffusion.forward_q(lat_p_norm, t)
 
             pxrd_global, pxrd_feats = encoder(pxrd)
-            eps_c_pred, eps_l_pred = denoiser(
+            pred_c, pred_l = denoiser(
                 noisy_coords, types, lat, t,
                 pxrd_global, pxrd_feats, mask, noisy_lat_p
             )
 
-            loss_coord = diffusion.loss(eps_c_pred, eps_coords, mask)
-            loss_lat = diffusion.loss(
-                eps_l_pred.unsqueeze(1), eps_lat.unsqueeze(1)
-            )
+            if args.predict_x0:
+                loss_coord = diffusion.loss(pred_c, coords, mask, periodic=True)
+                loss_lat = diffusion.loss(
+                    pred_l.unsqueeze(1), lat_p_norm.unsqueeze(1)
+                )
+                eps_c_pred = pred_c  # for downstream Debye loss
+            else:
+                loss_coord = diffusion.loss(pred_c, eps_coords, mask)
+                loss_lat = diffusion.loss(
+                    pred_l.unsqueeze(1), eps_lat.unsqueeze(1)
+                )
+                eps_c_pred = pred_c
 
             lat_pred = aux_head(pxrd_global)
             loss_aux = ((lat_pred - lat_p_norm) ** 2).mean()
@@ -138,11 +146,14 @@ def train(args: argparse.Namespace) -> None:
 
             loss_debye = torch.tensor(0.0, device=device)
             if diff_pxrd is not None:
-                alpha_bar = cosine_alpha_bar(t)
-                while alpha_bar.dim() < noisy_coords.dim():
-                    alpha_bar = alpha_bar.unsqueeze(-1)
-                x0_pred = ((noisy_coords - (1 - alpha_bar).sqrt() * eps_c_pred)
-                           / alpha_bar.sqrt().clamp(min=1e-6)) % 1.0
+                if args.predict_x0:
+                    x0_pred = pred_c % 1.0
+                else:
+                    alpha_bar = cosine_alpha_bar(t)
+                    while alpha_bar.dim() < noisy_coords.dim():
+                        alpha_bar = alpha_bar.unsqueeze(-1)
+                    x0_pred = ((noisy_coords - (1 - alpha_bar).sqrt() * eps_c_pred)
+                               / alpha_bar.sqrt().clamp(min=1e-6)) % 1.0
                 pred_pxrd = diff_pxrd(x0_pred, types, lat, mask)
                 loss_debye = diff_pxrd_loss(pred_pxrd, pxrd, n_bins_diff=256)
                 loss = loss + args.debye_weight * loss_debye
@@ -213,6 +224,8 @@ def main():
     ap.add_argument("--debye-weight", type=float, default=0.0)
     ap.add_argument("--resume", type=str, default=None,
                     help="Path to ckpt to resume from")
+    ap.add_argument("--predict-x0", action="store_true",
+                    help="Predict x0 directly instead of eps")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")

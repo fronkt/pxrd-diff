@@ -61,17 +61,15 @@ class DiffusionProcess(nn.Module):
         return x_t, eps
 
     def loss(self, eps_pred: torch.Tensor, eps_true: torch.Tensor,
-             mask: torch.Tensor | None = None) -> torch.Tensor:
-        """Masked MSE loss on predicted noise.
-
-        Args:
-            eps_pred: (B, N, D) predicted noise
-            eps_true: (B, N, D) true noise
-            mask:     (B, N) bool — True for real atoms, False for padding
-        """
-        sq = (eps_pred - eps_true) ** 2                  # (B, N, D)
+             mask: torch.Tensor | None = None,
+             periodic: bool = False) -> torch.Tensor:
+        """Masked MSE loss. If periodic, wrap diff to [-0.5, 0.5] (torus)."""
+        diff = eps_pred - eps_true
+        if periodic:
+            diff = (diff + 0.5) % 1.0 - 0.5
+        sq = diff ** 2
         if mask is not None:
-            mask = mask.unsqueeze(-1).float()             # (B, N, 1)
+            mask = mask.unsqueeze(-1).float()
             return (sq * mask).sum() / mask.sum().clamp(min=1) / sq.shape[-1]
         return sq.mean()
 
