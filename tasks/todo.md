@@ -58,15 +58,39 @@ but AdaptiveAvgPool1d(1) destroys spectral structure before it reaches the denoi
       - Reconstruct x0_pred from noise prediction via diffusion equation
       - Compute structure factor PXRD, compare with Pearson correlation loss
       - --debye-weight flag controls λ (default 0, backward compatible)
-- [ ] 2.4 Ablation: λ_debye ∈ {0, 0.1, 1, 10} on gpu_v6/v7/v8/v9
-      - Running on RTX 5090 32GB, batch=64, 100k steps each
-      - v6=0, v7=0.1, v8=1.0, v9=10.0 (sequential, ~8h total)
+- [x] 2.4 Ablation: λ_debye ∈ {0, 0.1, 1, 10} on gpu_v6/v7/v8/v9
+      - 4× 100k steps, batch=64, RTX 5090. Final EMA losses:
+        v6=1.09 (no debye), v7=1.16, v8=1.68, v9=6.81 (loss inflated by debye term)
+      - coord loss converged to ~1.0 in all runs (not better than v5 baseline)
+      - lat loss stuck at ~1.0 in all runs (random baseline — see 2.5)
+      - At n=256 test eval (with ground-truth lattice to isolate coords):
+        match rate: v6=0.4-1.2%, v7=0-1.2%, v8=0.4-0.8%, v9=1.2%
+      - Conclusion: differences within noise (1-3 matches per 256). Debye loss
+        does NOT provide measurable benefit at this architecture/scale. The
+        bottleneck is coord/lattice prediction itself, not the loss formulation.
+
+### Phase 2.5 — Lattice prediction fix + coord prediction improvements
+The ablation eval revealed two architectural problems independent of Debye loss:
+  (a) Lattice noise prediction never learns (loss flat at random baseline ~1.0
+      across all four runs). Sampled lattices are completely garbage (negative
+      angles, lengths in 10^2 range).
+  (b) Coord prediction is barely better than mean-prediction (Pearson ~0.31,
+      headline match 0%). The cross-attention helped vs. v4 (3.0→1.0) but model
+      isn't truly inverting PXRD.
+
+- [ ] 2.5.1 Diagnose lattice noise prediction failure
+      - Check normalization stats, gradient flow into lattice head
+      - Try predicting lattice in log-space or with composition-aware prior
+- [ ] 2.5.2 Investigate coord prediction ceiling
+      - Stronger PXRD encoder? Increase capacity? Per-Q-bin attention keys?
+      - Try predicting x0 directly instead of eps
+- [ ] 2.5.3 Re-run ablation after fix to get true Debye loss signal
 
 ### Phase 3 — Cloud GPU scale-up + baselines (Weeks 7-9)
-- [ ] 3.1 Provision cloud GPU (Vast.ai / RunPod RTX 3090, 24 GB)
-- [ ] 3.2 Full training run on MP-20 train split
-- [ ] 3.3 DiffractGPT baseline reproduction
-- [ ] 3.4 Crystalyze baseline reproduction
+- [x] 3.1 Provision cloud GPU (Vast.ai RTX 5090, 32GB)
+- [x] 3.2 Full training run on MP-20 train split (100k steps × 4 runs done)
+- [ ] 3.3 DiffractGPT baseline reproduction (deferred until 2.5 fixed)
+- [ ] 3.4 Crystalyze baseline reproduction (deferred until 2.5 fixed)
 - [ ] 3.5 Random-search + Rietveld baseline (via GSAS-II or jana2020)
 - [ ] 3.6 Final benchmarks, ablations, plots, paper draft
 
@@ -93,3 +117,19 @@ but AdaptiveAvgPool1d(1) destroys spectral structure before it reaches the denoi
 - aux loss: 0.99 → 0.007 (PXRD encoder IS learning, information destroyed by pooling)
 - Diagnosis: AdaptiveAvgPool1d(1) collapses all spectral structure; additive broadcast
   gives every atom identical conditioning. Cross-attention is required.
+
+## Review — Phase 2 (differentiable PXRD + ablation)
+- Completed: 2026-05-02
+- What worked:
+  - Structure factor PXRD computation matches pymatgen at Pearson 0.96 mean (50/50 > 0.7)
+  - DiffPXRD module is fully differentiable, integrates cleanly into training loop
+  - DDIM sampler bug at t=1.0 boundary identified and fixed (ab.sqrt clamp, t-start offset)
+- What changed from plan:
+  - Pivoted from Debye equation to structure factors (Debye eq → no Bragg peaks)
+  - Bug fix: d-spacing factor of 2π was wrong (recip lattice in physics convention)
+- Honest negative result:
+  - At λ ∈ {0, 0.1, 1, 10}, ablation match rates are within noise (0.4-1.2% at n=256)
+  - The Debye loss does NOT measurably improve coord prediction at this scale
+  - Real bottleneck: lattice prediction is broken, coord prediction barely learns
+- Why this matters: The Debye loss is well-formulated and verified, but proving its
+  value requires a model that can actually invert PXRD. Phase 2.5 must come first.
