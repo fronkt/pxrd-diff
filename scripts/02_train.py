@@ -127,11 +127,15 @@ def train(args: argparse.Namespace) -> None:
             )
 
             if args.predict_x0:
-                loss_coord = diffusion.loss(pred_c, coords, mask, periodic=True)
+                # Residual: pred_c is correction from noisy_coords toward x0.
+                # MLP head outputs ~0 at init, so x0_pred starts as noisy_coords.
+                x0_pred_c = noisy_coords + pred_c
+                x0_pred_l = noisy_lat_p + pred_l
+                loss_coord = diffusion.loss(x0_pred_c, coords, mask, periodic=True)
                 loss_lat = diffusion.loss(
-                    pred_l.unsqueeze(1), lat_p_norm.unsqueeze(1)
+                    x0_pred_l.unsqueeze(1), lat_p_norm.unsqueeze(1)
                 )
-                eps_c_pred = pred_c  # for downstream Debye loss
+                eps_c_pred = x0_pred_c  # for downstream Debye loss
             else:
                 loss_coord = diffusion.loss(pred_c, eps_coords, mask)
                 loss_lat = diffusion.loss(
