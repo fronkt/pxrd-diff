@@ -108,7 +108,7 @@ def train(args: argparse.Namespace) -> None:
             pxrd_global, pxrd_feats = encoder(pxrd)
             eps_c_pred, eps_l_pred = denoiser(
                 noisy_coords, types, lat, t,
-                pxrd_global, pxrd_feats, mask
+                pxrd_global, pxrd_feats, mask, noisy_lat_p
             )
 
             loss_coord = diffusion.loss(eps_c_pred, eps_coords, mask)

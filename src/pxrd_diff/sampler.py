@@ -48,7 +48,7 @@ class DDIMSampler:
 
             eps_c, eps_l = self.denoiser(
                 x_t % 1.0, atom_types, lattice_for_dist, t_batch,
-                pxrd_global, pxrd_feats, mask,
+                pxrd_global, pxrd_feats, mask, l_t,
             )
 
             x_t = self._ddim_step(x_t, eps_c, ab_now, ab_next) % 1.0

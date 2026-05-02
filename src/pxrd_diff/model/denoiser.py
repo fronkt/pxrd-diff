@@ -97,6 +97,7 @@ class CrystalDenoiser(nn.Module):
             SinusoidalTimestepEmb(d_model),
             nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, d_model),
         )
+        self.lat_in_proj = nn.Linear(6, d_model)
 
         self.layers = nn.ModuleList(
             [MessagePassingLayer(d_model, n_rbf, n_heads) for _ in range(n_layers)]
@@ -105,14 +106,18 @@ class CrystalDenoiser(nn.Module):
         self.coord_head = nn.Sequential(
             nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, 3),
         )
+        # Lattice head sees: pooled atom features + PXRD global + noisy lat + time
         self.lattice_head = nn.Sequential(
-            nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, 6),
+            nn.Linear(4 * d_model, d_model), nn.SiLU(),
+            nn.Linear(d_model, d_model), nn.SiLU(),
+            nn.Linear(d_model, 6),
         )
 
     def forward(self, noisy_coords, atom_types, lattice, t,
-                pxrd_global, pxrd_feats, mask):
+                pxrd_global, pxrd_feats, mask, noisy_lat_p):
         """
-        pxrd_global: (B, d) — global PXRD embedding (used for lattice head pooling)
+        noisy_lat_p: (B, 6) — noisy normalized lattice parameters being denoised
+        pxrd_global: (B, d) — global PXRD embedding
         pxrd_feats:  (B, L, d) — multi-resolution features for cross-attention
         """
         B, N, _ = noisy_coords.shape
@@ -129,6 +134,8 @@ class CrystalDenoiser(nn.Module):
         eps_coord = self.coord_head(h)
         h_masked = h * mask.unsqueeze(-1).float()
         h_pool = h_masked.sum(dim=1) / mask.sum(dim=1, keepdim=True).float()
-        eps_lattice = self.lattice_head(h_pool)
+        lat_in = self.lat_in_proj(noisy_lat_p)
+        lat_features = torch.cat([h_pool, pxrd_global, lat_in, t_cond], dim=-1)
+        eps_lattice = self.lattice_head(lat_features)
 
         return eps_coord, eps_lattice
