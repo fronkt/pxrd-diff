@@ -30,10 +30,8 @@ from pymatgen.core import Lattice, Structure
 
 
 RUNS = [
-    ("gpu_v6", 0.0),
-    ("gpu_v7", 0.1),
-    ("gpu_v8", 1.0),
-    ("gpu_v9", 10.0),
+    ("gpu_v10", 0.0),
+    ("gpu_v11", 1.0),
 ]
 
 
@@ -60,7 +58,7 @@ def tensor_to_structure(frac_coords, atom_types, lattice_params, num_atoms):
 
 
 def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps,
-                        use_true_lattice=True):
+                        use_true_lattice=False):
     """Evaluate a checkpoint. If use_true_lattice, swap predicted lattice with
     ground truth (since lat loss never converged to better than random baseline,
     isolating coord quality for the ablation comparison)."""
@@ -119,6 +117,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=64)
     ap.add_argument("--ddim-steps", type=int, default=50)
+    ap.add_argument("--use-true-lattice", action="store_true",
+                    help="Use ground-truth lattice (legacy hack, no longer needed)")
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -139,7 +139,8 @@ def main():
             continue
         print(f"=== {name} (λ_debye={lam}) ===")
         t0 = time.perf_counter()
-        agg = evaluate_checkpoint(ckpt_path, batch_items, device, sim, args.ddim_steps)
+        agg = evaluate_checkpoint(ckpt_path, batch_items, device, sim,
+                                  args.ddim_steps, use_true_lattice=args.use_true_lattice)
         results[(name, lam)] = agg
         print(f"  elapsed: {time.perf_counter()-t0:.1f}s")
         for k, v in agg.items():
