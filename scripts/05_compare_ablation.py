@@ -79,11 +79,14 @@ def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps,
     lattice = torch.stack([b["lattice"] for b in batch_items]).to(device)
     true_lat_params = torch.stack([b["lattice_params"] for b in batch_items]).to(device)
     mask = torch.stack([b["mask"] for b in batch_items]).to(device)
+    wyckoff = None
+    if train_args.get("use_wyckoff", False):
+        wyckoff = torch.stack([b["wyckoff"] for b in batch_items]).to(device)
 
     sampler = DDIMSampler(encoder, denoiser, n_steps=ddim_steps, eta=0.0,
                           lat_mean=ckpt.get("lat_mean"), lat_std=ckpt.get("lat_std"),
                           predict_x0=train_args.get("predict_x0", False))
-    pred_coords, pred_lat_params = sampler.sample(pxrd, atom_types, lattice, mask)
+    pred_coords, pred_lat_params = sampler.sample(pxrd, atom_types, lattice, mask, wyckoff=wyckoff)
     if use_true_lattice:
         pred_lat_params = true_lat_params
 

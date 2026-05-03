@@ -33,14 +33,38 @@ warnings.filterwarnings("ignore", category=UserWarning,
                         message=".*fractional coordinates rounded.*")
 
 
-def _parse_cif(cif_str: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Parse CIF -> (frac_coords, atomic_numbers, lattice_matrix, lattice_params)."""
+def _wyckoff_letters_to_ids(struct, max_id: int = 27) -> np.ndarray:
+    """Compute per-atom Wyckoff site IDs via spglib. Returns (N,) int64.
+
+    Each Wyckoff letter ('a'..'z', plus 'A' fallback) maps to int 0..26.
+    Letter 'a' is the highest-symmetry site; 'A' is a fallback for unusual cases.
+    """
+    from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+    try:
+        sga = SpacegroupAnalyzer(struct, symprec=0.01)
+        ds = sga.get_symmetry_dataset()
+        wlist = ds.wyckoffs if hasattr(ds, "wyckoffs") else ds["wyckoffs"]
+    except Exception:
+        return np.full(len(struct), max_id - 1, dtype=np.int64)
+    out = np.full(len(struct), max_id - 1, dtype=np.int64)
+    for i, w in enumerate(wlist):
+        if isinstance(w, str) and len(w) == 1 and w.isalpha():
+            wl = w.lower()
+            idx = ord(wl) - ord("a")
+            if 0 <= idx < max_id - 1:
+                out[i] = idx
+    return out
+
+
+def _parse_cif(cif_str: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Parse CIF -> (frac_coords, atomic_numbers, lattice_matrix, lattice_params, wyckoff_ids)."""
     struct = CifParser.from_str(cif_str).parse_structures(primitive=False)[0]
     frac = struct.frac_coords.astype(np.float32)                  # (N, 3)
     z = np.array([s.Z for s in struct.species], dtype=np.int64)    # (N,)
     lat = struct.lattice.matrix.astype(np.float32)                 # (3, 3)
     params = np.array(struct.lattice.parameters, dtype=np.float32) # (6,) a,b,c,α,β,γ
-    return frac, z, lat, params
+    wyck = _wyckoff_letters_to_ids(struct)
+    return frac, z, lat, params, wyck
 
 
 class CrystalPXRDDataset(Dataset):
@@ -74,22 +98,25 @@ class CrystalPXRDDataset(Dataset):
         return len(self.patterns)
 
     def __getitem__(self, idx: int) -> dict:
-        frac, z, lat, params = self._structures[idx]
+        frac, z, lat, params, wyck = self._structures[idx]
         n = len(z)
         M = self.max_atoms
 
         frac_padded = np.zeros((M, 3), dtype=np.float32)
         z_padded = np.zeros(M, dtype=np.int64)
+        wyck_padded = np.zeros(M, dtype=np.int64)
         mask = np.zeros(M, dtype=bool)
 
         frac_padded[:n] = frac
         z_padded[:n] = z
+        wyck_padded[:n] = wyck
         mask[:n] = True
 
         return {
             "pxrd_pattern": torch.from_numpy(self.patterns[idx]),
             "frac_coords": torch.from_numpy(frac_padded),
             "atom_types": torch.from_numpy(z_padded),
+            "wyckoff": torch.from_numpy(wyck_padded),
             "lattice": torch.from_numpy(lat),
             "lattice_params": torch.from_numpy(params),
             "num_atoms": torch.tensor(n, dtype=torch.long),
@@ -101,5 +128,6 @@ class CrystalPXRDDataset(Dataset):
 
 def lattice_params_stats(dataset: CrystalPXRDDataset) -> dict[str, np.ndarray]:
     """Compute mean/std of lattice params for normalization."""
+    # Tuple is (frac, z, lat, params, wyck) — params is index 3
     params = np.stack([s[3] for s in dataset._structures])
     return {"mean": params.mean(axis=0), "std": params.std(axis=0)}

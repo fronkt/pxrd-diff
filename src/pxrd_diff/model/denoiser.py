@@ -19,6 +19,7 @@ from pxrd_diff.diffusion import SinusoidalTimestepEmb
 MAX_ATOMIC_NUM = 100
 N_RBF = 64
 RBF_CUTOFF = 12.0
+N_WYCKOFF = 27  # 'a'..'z' + fallback
 
 
 def rbf_expansion(d: torch.Tensor, n_rbf: int = N_RBF,
@@ -92,6 +93,7 @@ class CrystalDenoiser(nn.Module):
         self.d_model = d_model
 
         self.atom_emb = nn.Embedding(MAX_ATOMIC_NUM + 1, d_model, padding_idx=0)
+        self.wyckoff_emb = nn.Embedding(N_WYCKOFF, d_model)
         self.coord_proj = nn.Linear(3, d_model)
         self.time_emb = nn.Sequential(
             SinusoidalTimestepEmb(d_model),
@@ -120,8 +122,9 @@ class CrystalDenoiser(nn.Module):
 
     def forward(self, noisy_coords, atom_types, lattice, t,
                 pxrd_global, pxrd_feats, mask, noisy_lat_p,
-                return_dist: bool = False):
+                wyckoff=None, return_dist: bool = False):
         """
+        wyckoff: (B, N) Wyckoff site IDs in [0, N_WYCKOFF). None disables.
         noisy_lat_p: (B, 6) — noisy normalized lattice parameters being denoised
         pxrd_global: (B, d) — global PXRD embedding
         pxrd_feats:  (B, L, d) — multi-resolution features for cross-attention
@@ -130,6 +133,8 @@ class CrystalDenoiser(nn.Module):
         B, N, _ = noisy_coords.shape
 
         h = self.atom_emb(atom_types) + self.coord_proj(noisy_coords)
+        if wyckoff is not None:
+            h = h + self.wyckoff_emb(wyckoff)
         t_cond = self.time_emb(t)
 
         dist = periodic_distances(noisy_coords, lattice, mask)

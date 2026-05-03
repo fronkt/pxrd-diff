@@ -28,6 +28,7 @@ class DDIMSampler:
     @torch.no_grad()
     def sample(self, pxrd: torch.Tensor, atom_types: torch.Tensor,
                lattice_init: torch.Tensor, mask: torch.Tensor,
+               wyckoff: torch.Tensor | None = None,
                ) -> tuple[torch.Tensor, torch.Tensor]:
         device = pxrd.device
         B, N = atom_types.shape
@@ -51,6 +52,7 @@ class DDIMSampler:
             pred_c, pred_l = self.denoiser(
                 x_t % 1.0, atom_types, lattice_for_dist, t_batch,
                 pxrd_global, pxrd_feats, mask, l_t,
+                wyckoff=wyckoff,
             )
 
             if self.predict_x0:

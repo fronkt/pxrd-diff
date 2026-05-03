@@ -113,6 +113,7 @@ def train(args: argparse.Namespace) -> None:
             lat = batch["lattice"].to(device)
             lat_p = batch["lattice_params"].to(device)
             mask = batch["mask"].to(device)
+            wyckoff = batch["wyckoff"].to(device) if args.use_wyckoff else None
 
             lat_p_norm = (lat_p - lat_mean) / lat_std
 
@@ -125,6 +126,7 @@ def train(args: argparse.Namespace) -> None:
             denoiser_out = denoiser(
                 noisy_coords, types, lat, t,
                 pxrd_global, pxrd_feats, mask, noisy_lat_p,
+                wyckoff=wyckoff,
                 return_dist=use_dist,
             )
             if use_dist:
@@ -253,6 +255,8 @@ def main():
                     help="Predict x0 directly instead of eps")
     ap.add_argument("--dist-weight", type=float, default=0.0,
                     help="Weight for pairwise distance auxiliary loss")
+    ap.add_argument("--use-wyckoff", action="store_true",
+                    help="Use Wyckoff position tokens as additional atom feature")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")
