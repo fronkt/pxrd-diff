@@ -111,6 +111,26 @@ The ablation eval revealed two architectural problems independent of Debye loss:
         first measurable improvement over baseline.
       - With predicted lattice (full pipeline): v13 = 1.2% vs v10/11 = 0.4%
 
+### Phase 2.6 — Mid-effort improvements (target 15-30% match rate)
+Three independent improvements addressing different aspects of the bottleneck:
+  (a) Per-atom positional supervision (currently coords get only noise prediction)
+  (b) Per-atom symmetry-breaking (currently permutation-equivariant means atoms ambiguous)
+  (c) Better physics inductive bias for the denoiser
+
+- [ ] 2.6.1 Distance matrix auxiliary loss
+      - Add pair-MLP `D_ij = f(h_i, h_j)` predicting periodic Cartesian distances
+      - Strong per-atom supervision: each atom must encode its relative position
+      - Cheapest to implement (~1 hour); supervises geometry directly
+- [ ] 2.6.2 Wyckoff position tokens
+      - Use spglib to analyze each training structure → assign Wyckoff label per atom
+      - Add learned Wyckoff embedding alongside atom_emb
+      - Breaks permutation equivariance in a physically meaningful way
+      - At inference: predict Wyckoff site assignments from PXRD (or use ground truth for now)
+- [ ] 2.6.3 MACE encoder for denoiser (optional, high effort)
+      - Replace SchNet-style MP with MACE message passing (mace-torch)
+      - Pre-trained MACE-MP-0 features for free physics priors
+- [ ] 2.6.4 Combined gpu_v14 run + final 4-way ablation
+
 ### Phase 3 — Cloud GPU scale-up + baselines (Weeks 7-9)
 - [x] 3.1 Provision cloud GPU (Vast.ai RTX 5090, 32GB)
 - [x] 3.2 Full training run on MP-20 train split (100k steps × 4 runs done)

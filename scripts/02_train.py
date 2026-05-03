@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from pxrd_diff.data import CrystalPXRDDataset, lattice_params_stats
 from pxrd_diff.debye import DiffPXRD, diff_pxrd_loss
 from pxrd_diff.diffusion import DiffusionProcess, cosine_alpha_bar
-from pxrd_diff.model.denoiser import CrystalDenoiser
+from pxrd_diff.model.denoiser import CrystalDenoiser, periodic_distances
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder
 
 
@@ -121,10 +121,16 @@ def train(args: argparse.Namespace) -> None:
             noisy_lat_p, eps_lat = diffusion.forward_q(lat_p_norm, t)
 
             pxrd_global, pxrd_feats = encoder(pxrd)
-            pred_c, pred_l = denoiser(
+            use_dist = args.dist_weight > 0
+            denoiser_out = denoiser(
                 noisy_coords, types, lat, t,
-                pxrd_global, pxrd_feats, mask, noisy_lat_p
+                pxrd_global, pxrd_feats, mask, noisy_lat_p,
+                return_dist=use_dist,
             )
+            if use_dist:
+                pred_c, pred_l, d_pred = denoiser_out
+            else:
+                pred_c, pred_l = denoiser_out
 
             if args.predict_x0:
                 # Residual: pred_c is correction from noisy_coords toward x0.
@@ -147,6 +153,20 @@ def train(args: argparse.Namespace) -> None:
             loss_aux = ((lat_pred - lat_p_norm) ** 2).mean()
 
             loss = loss_coord + args.lat_weight * loss_lat + args.aux_weight * loss_aux
+
+            loss_dist = torch.tensor(0.0, device=device)
+            if use_dist:
+                # True periodic Cartesian distances from clean coords + true lattice
+                d_true = periodic_distances(coords, lat, mask)
+                pair_mask = (mask.unsqueeze(2) & mask.unsqueeze(1)).float()
+                # Mask diagonal (self-distances)
+                eye = torch.eye(d_true.shape[-1], device=device).unsqueeze(0)
+                pair_mask = pair_mask * (1 - eye)
+                # Clamp distances to RBF cutoff for stable training
+                d_true_clamped = d_true.clamp(max=12.0)
+                sq = (d_pred - d_true_clamped) ** 2
+                loss_dist = (sq * pair_mask).sum() / pair_mask.sum().clamp(min=1)
+                loss = loss + args.dist_weight * loss_dist
 
             loss_debye = torch.tensor(0.0, device=device)
             if diff_pxrd is not None:
@@ -178,9 +198,10 @@ def train(args: argparse.Namespace) -> None:
                 emb_abs = pxrd_global.abs().mean().item()
                 enc_gnorm = sum(p.grad.norm().item()**2 for p in encoder.parameters() if p.grad is not None)**0.5
                 debye_str = f"  debye={loss_debye.item():.4f}" if diff_pxrd is not None else ""
+                dist_str = f"  dist={loss_dist.item():.4f}" if use_dist else ""
                 print(f"step={step:>6d}  loss={loss_ema:.4f}  "
                       f"coord={loss_coord.item():.4f}  lat={loss_lat.item():.4f}  "
-                      f"aux={loss_aux.item():.4f}{debye_str}  "
+                      f"aux={loss_aux.item():.4f}{debye_str}{dist_str}  "
                       f"lr={lr:.2e}  gnorm={grad_norm:.2f}  enc_gn={enc_gnorm:.3f}  "
                       f"emb_std={emb_std:.3f}  emb_abs={emb_abs:.3f}  "
                       f"t={elapsed:.0f}s")
@@ -230,6 +251,8 @@ def main():
                     help="Path to ckpt to resume from")
     ap.add_argument("--predict-x0", action="store_true",
                     help="Predict x0 directly instead of eps")
+    ap.add_argument("--dist-weight", type=float, default=0.0,
+                    help="Weight for pairwise distance auxiliary loss")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")

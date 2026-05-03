@@ -112,13 +112,20 @@ class CrystalDenoiser(nn.Module):
             nn.Linear(d_model, d_model), nn.SiLU(),
             nn.Linear(d_model, 6),
         )
+        # Distance matrix head: predicts periodic Cartesian distances between atom pairs
+        self.dist_head = nn.Sequential(
+            nn.Linear(2 * d_model, d_model), nn.SiLU(),
+            nn.Linear(d_model, 1),
+        )
 
     def forward(self, noisy_coords, atom_types, lattice, t,
-                pxrd_global, pxrd_feats, mask, noisy_lat_p):
+                pxrd_global, pxrd_feats, mask, noisy_lat_p,
+                return_dist: bool = False):
         """
         noisy_lat_p: (B, 6) — noisy normalized lattice parameters being denoised
         pxrd_global: (B, d) — global PXRD embedding
         pxrd_feats:  (B, L, d) — multi-resolution features for cross-attention
+        return_dist: if True, also return predicted pairwise distance matrix (B, N, N)
         """
         B, N, _ = noisy_coords.shape
 
@@ -137,5 +144,11 @@ class CrystalDenoiser(nn.Module):
         lat_in = self.lat_in_proj(noisy_lat_p)
         lat_features = torch.cat([h_pool, pxrd_global, lat_in, t_cond], dim=-1)
         eps_lattice = self.lattice_head(lat_features)
+
+        if return_dist:
+            h_i = h.unsqueeze(2).expand(-1, -1, N, -1)
+            h_j = h.unsqueeze(1).expand(-1, N, -1, -1)
+            d_pair = self.dist_head(torch.cat([h_i, h_j], dim=-1)).squeeze(-1)
+            return eps_coord, eps_lattice, d_pair
 
         return eps_coord, eps_lattice
