@@ -93,7 +93,7 @@ def train(args: argparse.Namespace) -> None:
         print(f"Resuming from {resume_path}")
         ckpt = torch.load(resume_path, map_location=device, weights_only=False)
         encoder.load_state_dict(ckpt["encoder"])
-        denoiser.load_state_dict(ckpt["denoiser"])
+        denoiser.load_state_dict(ckpt["denoiser"], strict=False)
         aux_head.load_state_dict(ckpt["aux_head"])
         opt.load_state_dict(ckpt["optimizer"])
         step = ckpt["step"]

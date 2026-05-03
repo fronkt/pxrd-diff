@@ -72,7 +72,8 @@ def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps,
     encoder = PXRDEncoder(d_model=d_model).to(device).eval()
     denoiser = CrystalDenoiser(d_model=d_model, n_layers=n_layers, n_heads=n_heads).to(device).eval()
     encoder.load_state_dict(ckpt["encoder"])
-    denoiser.load_state_dict(ckpt["denoiser"])
+    # strict=False: old checkpoints (v10-v13) don't have wyckoff_emb or dist_head
+    denoiser.load_state_dict(ckpt["denoiser"], strict=False)
 
     pxrd = torch.stack([b["pxrd_pattern"] for b in batch_items]).to(device)
     atom_types = torch.stack([b["atom_types"] for b in batch_items]).to(device)
