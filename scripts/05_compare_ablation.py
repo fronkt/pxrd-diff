@@ -33,6 +33,7 @@ RUNS = [
     ("gpu_v10", 0.0),
     ("gpu_v11", 1.0),
     ("gpu_v13", 1.0),  # x0 residual prediction
+    ("gpu_v14", 1.0),  # + Wyckoff tokens + dist aux loss
 ]
 
 
