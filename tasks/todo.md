@@ -94,12 +94,22 @@ The ablation eval revealed two architectural problems independent of Debye loss:
       - **Conclusion**: lattice fix dramatically improves lat loss but coord
         prediction is still the dominant bottleneck. Debye loss does not
         meaningfully shift coord quality at this scale.
-- [ ] 2.5.3 Coord prediction architecture investigation
-      - Hypothesis: at high noise, atoms have no positional anchoring to
-        specific PXRD features. Cross-attention provides global context but
-        no way to associate "this peak corresponds to this atom".
-      - Try predicting x0 directly instead of eps (more stable at low SNR)
-      - Try larger model (more layers, bigger d_model)
+- [x] 2.5.3 Coord prediction architecture investigation
+      - **Bigger model (10.1M params, gpu_v12, 18k steps killed)**: coord still
+        stuck at 1.0 baseline. Capacity is NOT the bottleneck.
+      - **x0 residual prediction (gpu_v13, 100k, λ=1)**: model output
+        interpreted as correction added to noisy input. Coord drops to 0.072
+        (vs 0.083 random baseline, 13% below). Lat drops to 0.012 (99%↓).
+      - **Headline: 3-way ablation (n=256 test, true lattice for coord-only)**:
+        ```
+        config                       match%   rmsd   pearson
+        v10 (eps, λ=0)               0.8%     0.24   0.346
+        v11 (eps, λ=1)               0.0%     nan    0.333
+        v13 (x0+res+latfix, λ=1)     2.7%     0.23   0.434  ← 3.5×
+        ```
+      - The combination (x0 residual + lattice fix + Debye loss) provides
+        first measurable improvement over baseline.
+      - With predicted lattice (full pipeline): v13 = 1.2% vs v10/11 = 0.4%
 
 ### Phase 3 — Cloud GPU scale-up + baselines (Weeks 7-9)
 - [x] 3.1 Provision cloud GPU (Vast.ai RTX 5090, 32GB)
@@ -148,3 +158,28 @@ The ablation eval revealed two architectural problems independent of Debye loss:
   - Real bottleneck: lattice prediction is broken, coord prediction barely learns
 - Why this matters: The Debye loss is well-formulated and verified, but proving its
   value requires a model that can actually invert PXRD. Phase 2.5 must come first.
+
+## Review — Phase 2.5 (architecture fixes)
+- Completed: 2026-05-02
+- Three architectural changes, each measurably impactful:
+  1. **Lattice fix (2.5.1)**: pass noisy_lat_p to denoiser → lat loss 1.0 → 0.05
+     (95% reduction). Root cause was denoiser never seeing the lattice it was
+     denoising. Without this, all lat sampling is unusable noise.
+  2. **Capacity test (2.5.3a)**: 10.1M params (vs 3.7M), d=384, 5 layers.
+     Coord still stuck at 1.0 — capacity is NOT the bottleneck.
+  3. **x0 residual prediction (2.5.3b)**: model output interpreted as
+     correction added to noisy input (so the natural zero output gives the
+     identity transform). Coord drops to 0.072 (13% below random baseline),
+     lat to 0.012 (99% reduction).
+- **Final 3-way ablation (n=256, coord-only with true lattice):**
+  ```
+  config                                match%   pearson
+  v10  eps, λ=0                          0.8%    0.35
+  v11  eps, λ=1                          0.0%    0.33
+  v13  x0+residual+latfix, λ=1           2.7%    0.43   ← 3.5× match, +26% Pearson
+  ```
+- Honest read: 2.7% match is still far from useful for real Rietveld replacement,
+  but the architectural recipe (x0 residual + lattice noise input + Debye aux loss)
+  shows directional improvement. This is publishable as a methods paper showing
+  both what works (the recipe) and what's hard (per-atom anchoring from a global
+  signal like PXRD).
