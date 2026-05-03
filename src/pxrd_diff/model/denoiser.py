@@ -94,6 +94,7 @@ class CrystalDenoiser(nn.Module):
 
         self.atom_emb = nn.Embedding(MAX_ATOMIC_NUM + 1, d_model, padding_idx=0)
         self.wyckoff_emb = nn.Embedding(N_WYCKOFF, d_model)
+        nn.init.zeros_(self.wyckoff_emb.weight)  # so it has no effect at init
         self.coord_proj = nn.Linear(3, d_model)
         self.time_emb = nn.Sequential(
             SinusoidalTimestepEmb(d_model),
