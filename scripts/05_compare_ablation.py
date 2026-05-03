@@ -32,6 +32,7 @@ from pymatgen.core import Lattice, Structure
 RUNS = [
     ("gpu_v10", 0.0),
     ("gpu_v11", 1.0),
+    ("gpu_v13", 1.0),  # x0 residual prediction
 ]
 
 
@@ -80,7 +81,8 @@ def evaluate_checkpoint(ckpt_path, batch_items, device, sim, ddim_steps,
     mask = torch.stack([b["mask"] for b in batch_items]).to(device)
 
     sampler = DDIMSampler(encoder, denoiser, n_steps=ddim_steps, eta=0.0,
-                          lat_mean=ckpt.get("lat_mean"), lat_std=ckpt.get("lat_std"))
+                          lat_mean=ckpt.get("lat_mean"), lat_std=ckpt.get("lat_std"),
+                          predict_x0=train_args.get("predict_x0", False))
     pred_coords, pred_lat_params = sampler.sample(pxrd, atom_types, lattice, mask)
     if use_true_lattice:
         pred_lat_params = true_lat_params

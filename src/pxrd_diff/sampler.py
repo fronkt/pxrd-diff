@@ -15,13 +15,15 @@ class DDIMSampler:
     def __init__(self, encoder: nn.Module, denoiser: nn.Module,
                  n_steps: int = 50, eta: float = 0.0,
                  lat_mean: torch.Tensor | None = None,
-                 lat_std: torch.Tensor | None = None):
+                 lat_std: torch.Tensor | None = None,
+                 predict_x0: bool = False):
         self.encoder = encoder
         self.denoiser = denoiser
         self.n_steps = n_steps
         self.eta = eta
         self.lat_mean = lat_mean
         self.lat_std = lat_std
+        self.predict_x0 = predict_x0
 
     @torch.no_grad()
     def sample(self, pxrd: torch.Tensor, atom_types: torch.Tensor,
@@ -46,10 +48,21 @@ class DDIMSampler:
 
             lattice_for_dist = self._params_to_approx_lattice(l_t, lattice_init)
 
-            eps_c, eps_l = self.denoiser(
+            pred_c, pred_l = self.denoiser(
                 x_t % 1.0, atom_types, lattice_for_dist, t_batch,
                 pxrd_global, pxrd_feats, mask, l_t,
             )
+
+            if self.predict_x0:
+                # Model output is residual: x0_pred = x_t + pred
+                x0_c = (x_t % 1.0) + pred_c
+                x0_l = l_t + pred_l
+                # Convert to eps for DDIM step
+                eps_c = (x_t - ab_now.view(-1, 1, 1).sqrt() * x0_c) / (1 - ab_now.view(-1, 1, 1)).sqrt().clamp(min=0.05)
+                eps_l = (l_t - ab_now.view(-1, 1).sqrt() * x0_l) / (1 - ab_now.view(-1, 1)).sqrt().clamp(min=0.05)
+            else:
+                eps_c = pred_c
+                eps_l = pred_l
 
             x_t = self._ddim_step(x_t, eps_c, ab_now, ab_next) % 1.0
             l_t = self._ddim_step(l_t, eps_l, ab_now, ab_next)
