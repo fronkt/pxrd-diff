@@ -129,7 +129,29 @@ Three independent improvements addressing different aspects of the bottleneck:
 - [ ] 2.6.3 MACE encoder for denoiser (optional, high effort)
       - Replace SchNet-style MP with MACE message passing (mace-torch)
       - Pre-trained MACE-MP-0 features for free physics priors
-- [ ] 2.6.4 Combined gpu_v14 run + final 4-way ablation
+- [~] 2.6.4 Combined gpu_v14 run + 4-way ablation (PARTIAL — see below)
+      - v14 = x0+res+latfix + Debye λ=1 + dist λ=0.01 + Wyckoff (zero-init).
+      - Training stable (gnorm 0.4-0.9, was 7-34 before zero-init fix).
+      - Final losses: coord=0.076, lat=0.013, aux=0.014, dist=2.0, debye=0.55.
+      - n=1000 ablation (coord-only with true lattice):
+        ```
+        v10 (eps λ=0):              match 1.40%   pearson 0.359   rmsd 0.17
+        v11 (eps λ=1):              match 0.90%   pearson 0.365   rmsd 0.15
+        v13 (x0+res+latfix, λ=1):   match 2.51%   pearson 0.434   rmsd 0.22  ← best
+        v14 (+ Wyckoff + dist):     match 0.80%   pearson 0.367   rmsd 0.14  ← best rmsd
+        ```
+      - Surprising: v14 has lowest RMSD-when-matched but lowest match rate.
+        Suggests model produces structures with correct local geometry (low rmsd)
+        that don't match StructureMatcher's tolerance (different mode of error).
+      - Wyckoff embedding DID learn (mean abs 0.065, 5404 non-zero entries),
+        just not helpful for StructureMatcher.
+
+### Phase 2.6.5 — Disambiguate Wyckoff vs dist (TOMORROW)
+v14 lumped both novelties together and underperformed v13 on match rate.
+Need to isolate which is the problem (or whether either helps in isolation).
+- [ ] Run v15: x0+res+latfix+Debye λ=1 + Wyckoff only (no dist loss)
+- [ ] Run v16: x0+res+latfix+Debye λ=1 + dist only (no Wyckoff)
+- [ ] If neither beats v13, that's the answer — write up
 
 ### Phase 3 — Cloud GPU scale-up + baselines (Weeks 7-9)
 - [x] 3.1 Provision cloud GPU (Vast.ai RTX 5090, 32GB)
