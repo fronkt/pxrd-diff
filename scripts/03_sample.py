@@ -5,6 +5,7 @@ reconstructs pymatgen Structures, runs the eval harness, and prints metrics.
 
 Usage:
   python scripts/03_sample.py --ckpt runs/smoke/ckpt_final.pt --n 16
+  python scripts/03_sample.py --ckpt runs/gpu_v16/ckpt_final.pt --n 1000 --true-lattice
 """
 from __future__ import annotations
 
@@ -67,6 +68,8 @@ def main():
     ap.add_argument("--ddim-steps", type=int, default=50)
     ap.add_argument("--eta", type=float, default=0.0)
     ap.add_argument("--split", default="test")
+    ap.add_argument("--true-lattice", action="store_true",
+                    help="Use ground-truth lattice params for coord-only eval")
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -88,6 +91,8 @@ def main():
     lat_std = ckpt.get("lat_std")
 
     print(f"Loaded checkpoint: step={ckpt['step']}, d_model={d_model}")
+    if args.true_lattice:
+        print("Mode: coord-only eval with ground-truth lattice")
 
     # Dataset
     ds = CrystalPXRDDataset(ROOT / "data", split=args.split)
@@ -122,16 +127,20 @@ def main():
         na = num_atoms[i]
         mid = material_ids[i]
 
-        # Validate lattice before building (prevents C-level crashes in spglib)
-        lp = pred_lat_params[i].cpu().numpy()
-        if not is_valid_lattice(lp):
-            print(f"  [{mid}] invalid lattice: {lp.round(1).tolist()}")
-            continue
+        # Choose lattice for building predicted structure
+        eval_lat_params = lattice_params_true[i] if args.true_lattice else pred_lat_params[i]
+
+        # Validate lattice (skip if using ground truth)
+        if not args.true_lattice:
+            lp = eval_lat_params.cpu().numpy()
+            if not is_valid_lattice(lp):
+                print(f"  [{mid}] invalid lattice: {lp.round(1).tolist()}")
+                continue
 
         # Build predicted structure
         try:
             pred_struct = tensor_to_structure(
-                pred_coords[i], atom_types[i], pred_lat_params[i], na
+                pred_coords[i], atom_types[i], eval_lat_params, na
             )
         except Exception as e:
             print(f"  [{mid}] failed to build structure: {e}")
