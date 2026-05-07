@@ -98,7 +98,9 @@ def main() -> int:
     args = ap.parse_args()
 
     cfg = PXRDConfig()
-    np.save(ROOT / "data" / "cache" / "two_theta.npy", cfg.two_theta_grid)
+    cache_dir = ROOT / "data" / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    np.save(cache_dir / "two_theta.npy", cfg.two_theta_grid)
 
     for split in args.splits:
         run_split(split, cfg, args.workers, args.limit)
