@@ -106,6 +106,8 @@ def main():
                     help="DiffPXRD n_bins for scoring/refinement")
     ap.add_argument("--debye-hkl-max", type=int, default=10,
                     help="DiffPXRD hkl_max for scoring/refinement")
+    ap.add_argument("--batch-size", type=int, default=64,
+                    help="Patterns processed per chunk (avoids OOM at large n × n_samples)")
     ap.add_argument("--out-json", default=None,
                     help="If set, write aggregate metrics JSON here")
     args = ap.parse_args()
@@ -173,74 +175,114 @@ def main():
     )
 
     B = len(indices)
+    bs = max(1, min(args.batch_size, B))
+    n_chunks = (B + bs - 1) // bs
 
-    # ---- Sample (single or ensemble) ----------------------------------------
+    # Allocate output tensors filled in by chunked predict pass
+    N = atom_types.shape[1]
+    pred_coords = torch.empty(B, N, 3, device=device)
+    pred_lat_params = torch.empty(B, 6, device=device)
+
     if args.n_samples > 1:
-        print(f"Ensemble sampling: {B} patterns x {args.n_samples} candidates "
-              f"= {B * args.n_samples} total")
-        t0 = time.perf_counter()
-        cand_coords, cand_lat = sampler.sample_ensemble(
-            pxrd, atom_types, lattice, mask,
-            n_samples=args.n_samples, eta=args.ensemble_eta, wyckoff=wyckoff,
-        )
-        t_sample = time.perf_counter() - t0
-        print(f"Ensemble sampling done in {t_sample:.1f}s "
-              f"({t_sample / (B * args.n_samples):.3f}s/cand)")
-
-        # Score by DiffPXRD pearson, pick best per pattern.
-        if args.true_lattice:
-            lattice_for_score = lattice  # (B, 3, 3) — broadcast inside selector
-        else:
-            # Build (B, S, 3, 3) lattice from predicted params for each candidate
-            lp_flat = cand_lat.reshape(B * args.n_samples, 6)
-            lat_mat_flat = lattice_params_to_matrix(lp_flat)
-            lattice_for_score = lat_mat_flat.view(B, args.n_samples, 3, 3)
-
-        t0 = time.perf_counter()
-        pred_coords, pred_lat_params, scores = select_best_by_pearson(
-            cand_coords, cand_lat, atom_types, mask,
-            lattice_for_score, pxrd, debye,
-        )
-        t_select = time.perf_counter() - t0
-        print(f"Scoring + selection done in {t_select:.1f}s; "
-              f"selected pearson mean={scores.mean().item():.3f}, "
-              f"median={scores.median().item():.3f}")
+        print(f"Ensemble: {B} patterns x {args.n_samples} candidates "
+              f"in chunks of {bs} ({n_chunks} chunk{'s' if n_chunks > 1 else ''})")
     else:
-        print(f"Sampling {B} structures ({args.ddim_steps} DDIM steps)...")
-        t0 = time.perf_counter()
-        pred_coords, pred_lat_params = sampler.sample(
-            pxrd, atom_types, lattice, mask, wyckoff=wyckoff,
-        )
-        elapsed = time.perf_counter() - t0
-        print(f"Sampling done in {elapsed:.1f}s ({elapsed / B:.2f}s/sample)")
+        print(f"Sampling {B} structures in chunks of {bs} "
+              f"({n_chunks} chunk{'s' if n_chunks > 1 else ''}, "
+              f"{args.ddim_steps} DDIM steps)")
 
-    # ---- Optional Rietveld refinement ---------------------------------------
     if args.refine_steps > 0:
-        if args.true_lattice:
-            lat_for_refine = lattice
-        else:
-            lat_for_refine = lattice_params_to_matrix(pred_lat_params)
+        print(f"Refinement: {args.refine_steps} Adam steps @ lr={args.refine_lr}, "
+              f"refine_lattice={args.refine_lattice}")
 
+    t_sample = 0.0
+    t_select = 0.0
+    t_refine = 0.0
+    pearson_scores_all = []
+    refine_loss_first = []
+    refine_loss_last = []
+
+    for ci, lo in enumerate(range(0, B, bs)):
+        hi = min(lo + bs, B)
+        cb = hi - lo
+
+        pxrd_c = pxrd[lo:hi]
+        at_c = atom_types[lo:hi]
+        lat_c = lattice[lo:hi]
+        mask_c = mask[lo:hi]
+        wyck_c = wyckoff[lo:hi] if wyckoff is not None else None
+
+        # ---- Sample ---------------------------------------------------------
         t0 = time.perf_counter()
-        pred_coords, lat_refined, hist = refine_structure(
-            pred_coords, atom_types, lat_for_refine, mask, pxrd, debye,
-            steps=args.refine_steps, lr=args.refine_lr,
-            refine_lattice=args.refine_lattice,
-        )
-        t_refine = time.perf_counter() - t0
-        print(f"Refinement done in {t_refine:.1f}s ({args.refine_steps} steps); "
-              f"loss {hist[0]:.4f} -> {hist[-1]:.4f} "
-              f"(min {min(hist):.4f})")
-        if args.refine_lattice:
-            # If lattice was refined, recover params from the matrix for eval
-            # (use pymatgen for the inverse mapping)
-            from pymatgen.core import Lattice as PmgLat
-            new_params = []
-            for i in range(B):
-                m = lat_refined[i].cpu().numpy()
-                lp = PmgLat(m).parameters
-                new_params.append(torch.tensor(lp, device=device))
-            pred_lat_params = torch.stack(new_params)
+        if args.n_samples > 1:
+            cand_coords_c, cand_lat_c = sampler.sample_ensemble(
+                pxrd_c, at_c, lat_c, mask_c,
+                n_samples=args.n_samples, eta=args.ensemble_eta, wyckoff=wyck_c,
+            )
+            t_sample += time.perf_counter() - t0
+
+            # Build the lattice tensor used for scoring
+            if args.true_lattice:
+                lattice_for_score_c = lat_c  # (cb, 3, 3) — broadcasts inside
+            else:
+                lp_flat = cand_lat_c.reshape(cb * args.n_samples, 6)
+                lat_mat_flat = lattice_params_to_matrix(lp_flat)
+                lattice_for_score_c = lat_mat_flat.view(cb, args.n_samples, 3, 3)
+
+            t0 = time.perf_counter()
+            pc_c, pl_c, scores_c = select_best_by_pearson(
+                cand_coords_c, cand_lat_c, at_c, mask_c,
+                lattice_for_score_c, pxrd_c, debye,
+            )
+            t_select += time.perf_counter() - t0
+            pearson_scores_all.append(scores_c.detach().cpu())
+        else:
+            pc_c, pl_c = sampler.sample(pxrd_c, at_c, lat_c, mask_c, wyckoff=wyck_c)
+            t_sample += time.perf_counter() - t0
+
+        # ---- Refine ---------------------------------------------------------
+        if args.refine_steps > 0:
+            if args.true_lattice:
+                lat_for_refine_c = lat_c
+            else:
+                lat_for_refine_c = lattice_params_to_matrix(pl_c)
+
+            t0 = time.perf_counter()
+            pc_c, lat_refined_c, hist = refine_structure(
+                pc_c, at_c, lat_for_refine_c, mask_c, pxrd_c, debye,
+                steps=args.refine_steps, lr=args.refine_lr,
+                refine_lattice=args.refine_lattice,
+            )
+            t_refine += time.perf_counter() - t0
+            refine_loss_first.append(hist[0])
+            refine_loss_last.append(hist[-1])
+
+            if args.refine_lattice:
+                from pymatgen.core import Lattice as PmgLat
+                new_params = []
+                for i in range(cb):
+                    m = lat_refined_c[i].cpu().numpy()
+                    lp = PmgLat(m).parameters
+                    new_params.append(torch.tensor(lp, device=device))
+                pl_c = torch.stack(new_params)
+
+        pred_coords[lo:hi] = pc_c
+        pred_lat_params[lo:hi] = pl_c
+
+        if (ci + 1) % max(1, n_chunks // 10) == 0 or ci == n_chunks - 1:
+            print(f"  chunk {ci + 1}/{n_chunks} done "
+                  f"(sample={t_sample:.1f}s  select={t_select:.1f}s  refine={t_refine:.1f}s)")
+
+    print(f"Total: sample={t_sample:.1f}s  select={t_select:.1f}s  "
+          f"refine={t_refine:.1f}s")
+    if pearson_scores_all:
+        scores_all = torch.cat(pearson_scores_all)
+        print(f"Selected-candidate pearson: mean={scores_all.mean().item():.3f} "
+              f"median={scores_all.median().item():.3f}")
+    if refine_loss_first:
+        print(f"Refinement loss avg first->last: "
+              f"{sum(refine_loss_first) / len(refine_loss_first):.4f} -> "
+              f"{sum(refine_loss_last) / len(refine_loss_last):.4f}")
 
     # Simulate PXRD for predicted structures and evaluate
     sim = PXRDSimulator()
