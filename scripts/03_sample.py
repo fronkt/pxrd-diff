@@ -3,9 +3,24 @@
 Loads a checkpoint, samples structures for test-set PXRD patterns using DDIM,
 reconstructs pymatgen Structures, runs the eval harness, and prints metrics.
 
+Phase 4 inference improvements (no retrain required):
+  --n-samples N        Generate N candidates per pattern, pick the one whose
+                       DiffPXRD-pearson against the target is highest. N=1
+                       reproduces the original single-sample behavior.
+  --ensemble-eta E     DDIM stochasticity to use during ensemble sampling.
+                       0.0 is fully deterministic given init noise (different
+                       noise per candidate already gives diversity).
+  --refine-steps K     After picking a candidate, run K Adam steps minimizing
+                       1 - Pearson(DiffPXRD(structure), target) to refine
+                       fractional coords. K=0 disables.
+  --refine-lr LR       Adam learning rate for refinement (default 1e-3).
+  --refine-lattice     Also refine the 3x3 lattice matrix (default: coords only).
+
 Usage:
   python scripts/03_sample.py --ckpt runs/smoke/ckpt_final.pt --n 16
-  python scripts/03_sample.py --ckpt runs/gpu_v16/ckpt_final.pt --n 1000 --true-lattice
+  python scripts/03_sample.py --ckpt runs/gpu_v13/ckpt_final.pt --n 1000 --true-lattice
+  python scripts/03_sample.py --ckpt runs/gpu_v13/ckpt_final.pt --n 1000 --true-lattice \
+                              --n-samples 20 --refine-steps 200
 """
 from __future__ import annotations
 
@@ -22,10 +37,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from pxrd_diff.data import CrystalPXRDDataset                        # noqa: E402
+from pxrd_diff.debye import DiffPXRD                                  # noqa: E402
 from pxrd_diff.eval import aggregate, evaluate_one                    # noqa: E402
 from pxrd_diff.model.denoiser import CrystalDenoiser                 # noqa: E402
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder                 # noqa: E402
-from pxrd_diff.sampler import DDIMSampler                             # noqa: E402
+from pxrd_diff.sampler import (                                       # noqa: E402
+    DDIMSampler,
+    lattice_params_to_matrix,
+    refine_structure,
+    select_best_by_pearson,
+)
 from pxrd_diff.simulator import PXRDSimulator                        # noqa: E402
 
 from pymatgen.core import Lattice, Structure                          # noqa: E402
@@ -70,6 +91,23 @@ def main():
     ap.add_argument("--split", default="test")
     ap.add_argument("--true-lattice", action="store_true",
                     help="Use ground-truth lattice params for coord-only eval")
+    # ---- Phase 4 -------------------------------------------------------------
+    ap.add_argument("--n-samples", type=int, default=1,
+                    help="Candidates per pattern (Phase 4.1 ensemble; 1 = single)")
+    ap.add_argument("--ensemble-eta", type=float, default=0.0,
+                    help="DDIM eta for ensemble sampling (0 = deterministic)")
+    ap.add_argument("--refine-steps", type=int, default=0,
+                    help="Phase 4.2 Rietveld refinement steps (0 = disabled)")
+    ap.add_argument("--refine-lr", type=float, default=1e-3,
+                    help="Adam LR for refinement")
+    ap.add_argument("--refine-lattice", action="store_true",
+                    help="Refine lattice matrix as well as coords")
+    ap.add_argument("--debye-n-bins", type=int, default=512,
+                    help="DiffPXRD n_bins for scoring/refinement")
+    ap.add_argument("--debye-hkl-max", type=int, default=10,
+                    help="DiffPXRD hkl_max for scoring/refinement")
+    ap.add_argument("--out-json", default=None,
+                    help="If set, write aggregate metrics JSON here")
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -89,10 +127,17 @@ def main():
 
     lat_mean = ckpt.get("lat_mean")
     lat_std = ckpt.get("lat_std")
+    predict_x0 = bool(train_args.get("predict_x0", False))
 
-    print(f"Loaded checkpoint: step={ckpt['step']}, d_model={d_model}")
+    print(f"Loaded checkpoint: step={ckpt['step']}, d_model={d_model}, "
+          f"predict_x0={predict_x0}")
     if args.true_lattice:
         print("Mode: coord-only eval with ground-truth lattice")
+    if args.n_samples > 1:
+        print(f"Phase 4.1: ensemble n_samples={args.n_samples}, eta={args.ensemble_eta}")
+    if args.refine_steps > 0:
+        print(f"Phase 4.2: Rietveld refinement steps={args.refine_steps}, "
+              f"lr={args.refine_lr}, refine_lattice={args.refine_lattice}")
 
     # Dataset
     ds = CrystalPXRDDataset(ROOT / "data", split=args.split)
@@ -108,16 +153,94 @@ def main():
     mask = torch.stack([b["mask"] for b in batch_items]).to(device)
     num_atoms = [b["num_atoms"].item() for b in batch_items]
     material_ids = [b["material_id"] for b in batch_items]
+    wyckoff = None
+    if "wyckoff" in batch_items[0]:
+        wyckoff = torch.stack([b["wyckoff"] for b in batch_items]).to(device)
 
-    # Sample
-    sampler = DDIMSampler(encoder, denoiser, n_steps=args.ddim_steps,
-                          eta=args.eta, lat_mean=lat_mean, lat_std=lat_std)
+    # DiffPXRD module (used iff Phase 4 features enabled)
+    debye = None
+    if args.n_samples > 1 or args.refine_steps > 0:
+        debye = DiffPXRD(
+            n_bins=args.debye_n_bins,
+            hkl_max=args.debye_hkl_max,
+        ).to(device).eval()
 
-    print(f"Sampling {len(indices)} structures ({args.ddim_steps} DDIM steps)...")
-    t0 = time.perf_counter()
-    pred_coords, pred_lat_params = sampler.sample(pxrd, atom_types, lattice, mask)
-    elapsed = time.perf_counter() - t0
-    print(f"Sampling done in {elapsed:.1f}s ({elapsed/len(indices):.2f}s/sample)")
+    # Sampler
+    sampler = DDIMSampler(
+        encoder, denoiser, n_steps=args.ddim_steps,
+        eta=args.eta, lat_mean=lat_mean, lat_std=lat_std,
+        predict_x0=predict_x0,
+    )
+
+    B = len(indices)
+
+    # ---- Sample (single or ensemble) ----------------------------------------
+    if args.n_samples > 1:
+        print(f"Ensemble sampling: {B} patterns x {args.n_samples} candidates "
+              f"= {B * args.n_samples} total")
+        t0 = time.perf_counter()
+        cand_coords, cand_lat = sampler.sample_ensemble(
+            pxrd, atom_types, lattice, mask,
+            n_samples=args.n_samples, eta=args.ensemble_eta, wyckoff=wyckoff,
+        )
+        t_sample = time.perf_counter() - t0
+        print(f"Ensemble sampling done in {t_sample:.1f}s "
+              f"({t_sample / (B * args.n_samples):.3f}s/cand)")
+
+        # Score by DiffPXRD pearson, pick best per pattern.
+        if args.true_lattice:
+            lattice_for_score = lattice  # (B, 3, 3) — broadcast inside selector
+        else:
+            # Build (B, S, 3, 3) lattice from predicted params for each candidate
+            lp_flat = cand_lat.reshape(B * args.n_samples, 6)
+            lat_mat_flat = lattice_params_to_matrix(lp_flat)
+            lattice_for_score = lat_mat_flat.view(B, args.n_samples, 3, 3)
+
+        t0 = time.perf_counter()
+        pred_coords, pred_lat_params, scores = select_best_by_pearson(
+            cand_coords, cand_lat, atom_types, mask,
+            lattice_for_score, pxrd, debye,
+        )
+        t_select = time.perf_counter() - t0
+        print(f"Scoring + selection done in {t_select:.1f}s; "
+              f"selected pearson mean={scores.mean().item():.3f}, "
+              f"median={scores.median().item():.3f}")
+    else:
+        print(f"Sampling {B} structures ({args.ddim_steps} DDIM steps)...")
+        t0 = time.perf_counter()
+        pred_coords, pred_lat_params = sampler.sample(
+            pxrd, atom_types, lattice, mask, wyckoff=wyckoff,
+        )
+        elapsed = time.perf_counter() - t0
+        print(f"Sampling done in {elapsed:.1f}s ({elapsed / B:.2f}s/sample)")
+
+    # ---- Optional Rietveld refinement ---------------------------------------
+    if args.refine_steps > 0:
+        if args.true_lattice:
+            lat_for_refine = lattice
+        else:
+            lat_for_refine = lattice_params_to_matrix(pred_lat_params)
+
+        t0 = time.perf_counter()
+        pred_coords, lat_refined, hist = refine_structure(
+            pred_coords, atom_types, lat_for_refine, mask, pxrd, debye,
+            steps=args.refine_steps, lr=args.refine_lr,
+            refine_lattice=args.refine_lattice,
+        )
+        t_refine = time.perf_counter() - t0
+        print(f"Refinement done in {t_refine:.1f}s ({args.refine_steps} steps); "
+              f"loss {hist[0]:.4f} -> {hist[-1]:.4f} "
+              f"(min {min(hist):.4f})")
+        if args.refine_lattice:
+            # If lattice was refined, recover params from the matrix for eval
+            # (use pymatgen for the inverse mapping)
+            from pymatgen.core import Lattice as PmgLat
+            new_params = []
+            for i in range(B):
+                m = lat_refined[i].cpu().numpy()
+                lp = PmgLat(m).parameters
+                new_params.append(torch.tensor(lp, device=device))
+            pred_lat_params = torch.stack(new_params)
 
     # Simulate PXRD for predicted structures and evaluate
     sim = PXRDSimulator()
@@ -166,9 +289,11 @@ def main():
 
         sg_ok = "Y" if m.sg_match.get(0.1, False) else "N"
         rmsd_str = f"{m.rmsd:.3f}" if not np.isnan(m.rmsd) else "  NaN"
-        print(f"  {mid:>14s}  comp={'Y' if m.composition_ok else 'N'}  "
-              f"sg@0.1={sg_ok}  rmsd={rmsd_str}  rwp={m.rwp:.3f}  "
-              f"pearson={m.pearson:.3f}  all={'Y' if m.all_correct else 'N'}")
+        if i < 30 or args.n <= 50:
+            # Avoid drowning the terminal on n=1000 runs
+            print(f"  {mid:>14s}  comp={'Y' if m.composition_ok else 'N'}  "
+                  f"sg@0.1={sg_ok}  rmsd={rmsd_str}  rwp={m.rwp:.3f}  "
+                  f"pearson={m.pearson:.3f}  all={'Y' if m.all_correct else 'N'}")
 
     # Aggregate
     if metrics_list:
@@ -179,6 +304,22 @@ def main():
                 print(f"  {k:>30s}: {v:.4f}")
             else:
                 print(f"  {k:>30s}: {v}")
+
+        if args.out_json:
+            agg["config"] = {
+                "ckpt": args.ckpt,
+                "n": args.n,
+                "true_lattice": args.true_lattice,
+                "n_samples": args.n_samples,
+                "ensemble_eta": args.ensemble_eta,
+                "refine_steps": args.refine_steps,
+                "refine_lr": args.refine_lr,
+                "refine_lattice": args.refine_lattice,
+                "ddim_steps": args.ddim_steps,
+                "eta": args.eta,
+            }
+            Path(args.out_json).write_text(json.dumps(agg, indent=2))
+            print(f"\nWrote aggregate metrics to {args.out_json}")
 
     return 0
 
