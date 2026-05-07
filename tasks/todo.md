@@ -365,3 +365,70 @@ More data is the safest scaling lever for a diffusion model at this size.
 Goal: ≥25% match rate on MP-20 test split (publishable positive result).
 Stretch: ≥40% (competitive with Crystalyze on this benchmark).
 
+
+---
+
+## Review — Phase 4 (inference improvements; no retrain)
+- Completed: 2026-05-07
+- Checkpoint: `runs/gpu_v13/ckpt_079500.pt` (v13 training crashed at step 80k due to
+  16 GB instance disk filling with 160 × 43 MB checkpoints; the 80k save was partial.
+  79.5k loads cleanly, coord loss 0.085 — ~17% above v13's 100k value of 0.072).
+- Test set: n=1000 from MP-20 test split, `--true-lattice` (coord-only eval).
+- DiffPXRD config matched training: `n_bins=256, hkl_max=5`.
+
+### Headline results (n=1000)
+
+| metric                      | baseline (single) | +ensemble (n=20) | +ensemble + refine 200 |
+|-----------------------------|------------------:|-----------------:|-----------------------:|
+| StructureMatcher match rate |             1.60% |            4.20% |              **6.80%** |
+| rmsd_mean (Å)               |             0.211 |            0.170 |              **0.133** |
+| rmsd_median (Å)             |             0.247 |            0.145 |              **0.126** |
+| pearson_mean                |             0.425 |            0.533 |              **0.694** |
+| rwp_mean                    |              7.57 |             7.14 |               **5.32** |
+| headline_all_correct        |             0.20% |            0.20% |              **0.60%** |
+| sg_match@0.1                |             1.70% |            1.60% |                  2.10% |
+
+### Read
+
+- **Phase 4.1 (ensemble + DiffPXRD-pearson selection) gives 2.6× match rate for free.**
+  Selecting the best of N=20 candidates per pattern lifts match from 1.6 → 4.2 % with
+  no retraining and no architectural changes. Per-candidate selection time on RTX 5090
+  was ~14 s for n=1000 at chunk_size=32.
+- **Phase 4.2 (Rietveld refinement) compounds to 4.25× match rate.**
+  200 Adam steps on `1 - Pearson(DiffPXRD(coords), target)` collapses the avg
+  refinement loss from 0.366 → 0.076, recovering coordinate precision that the
+  diffusion sampler leaves on the table. Total refinement wall-clock ~28 s per 1000
+  patterns at chunk_size=32. Refinement lattice was left fixed (true lattice in this
+  eval mode).
+- **Pattern-domain metrics improve sharply:** Pearson 0.425 → 0.694 (+63 %), Rwp
+  7.57 → 5.32 (−30 %).  Coord-domain RMSD drops 37 % on the mean and 49 % on the
+  median, suggesting the refinement is genuinely realigning atoms rather than just
+  fitting the pattern.
+- **Space-group recovery is unchanged.** sg_match@0.1 sits at ~2 % across all three
+  configs. This is expected — refinement nudges fractional coords continuously and
+  cannot flip the discrete symmetry detected by spglib. `headline_all_correct` is
+  gated by sg_match, so it ticks up only modestly (0.2 → 0.6 %).
+
+### Per-sample anecdotes from the refine run
+A handful of test cases reach near-perfect reconstruction after refinement, e.g.
+  - mp-1225695: rmsd 0.004 Å, pearson 1.000, sg ✓ (only `all=Y` row in the chunk)
+  - mp-1218989: rmsd 0.293, pearson 0.993
+  - mp-1223834: rmsd 0.219, pearson 0.978
+  - mp-972370 : rmsd 0.054, pearson 0.996
+These are cases where the diffusion sampler placed atoms close to the basin and the
+DiffPXRD gradient pulled them in. The structures with low Pearson before refinement
+(<0.3) tended to refine to mid-Pearson but rarely cross the rmsd≤0.1 threshold —
+suggesting some predictions are in the wrong basin entirely (Phase 6 territory).
+
+### What Phase 4 unblocks
+- Match-rate ceiling moved from "<3 % feels publishable" to "**6.8 % is the new
+  baseline**". Phase 5/6/7 improvements should build on this Phase 4 evaluation
+  pipeline (ensemble + refine is essentially free at inference time).
+- The fact that pearson improved 63 % while sg_match stayed flat localizes the
+  remaining gap to **categorical symmetry recovery**, not coordinate precision.
+  This validates the planned Phase 6 (space group conditioning + Wyckoff-reduced
+  asymmetric unit) as the highest-leverage next step.
+
+### Artifacts
+- `paper/phase4_results/*.json` — per-config aggregate metrics (committed)
+- `runs/phase4/*.{json,log}` on the GPU instance — full per-sample results
