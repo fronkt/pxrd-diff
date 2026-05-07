@@ -102,11 +102,11 @@ def main():
                     help="Adam LR for refinement")
     ap.add_argument("--refine-lattice", action="store_true",
                     help="Refine lattice matrix as well as coords")
-    ap.add_argument("--debye-n-bins", type=int, default=512,
-                    help="DiffPXRD n_bins for scoring/refinement")
-    ap.add_argument("--debye-hkl-max", type=int, default=10,
-                    help="DiffPXRD hkl_max for scoring/refinement")
-    ap.add_argument("--batch-size", type=int, default=64,
+    ap.add_argument("--debye-n-bins", type=int, default=256,
+                    help="DiffPXRD n_bins for scoring/refinement (matches training)")
+    ap.add_argument("--debye-hkl-max", type=int, default=5,
+                    help="DiffPXRD hkl_max for scoring/refinement (matches training)")
+    ap.add_argument("--batch-size", type=int, default=32,
                     help="Patterns processed per chunk (avoids OOM at large n × n_samples)")
     ap.add_argument("--out-json", default=None,
                     help="If set, write aggregate metrics JSON here")
