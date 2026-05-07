@@ -225,3 +225,143 @@ Need to isolate which is the problem (or whether either helps in isolation).
   shows directional improvement. This is publishable as a methods paper showing
   both what works (the recipe) and what's hard (per-atom anchoring from a global
   signal like PXRD).
+
+---
+
+## Phase 4 — Inference-time improvements (target: 2.51% → 10–15%)
+These require NO retraining. Pure inference-side changes on the best checkpoint (v13).
+Fastest path to a better headline number.
+
+### 4.1 Ensemble generation + pick by Rwp (~1 hour)
+- [ ] 4.1.1 In `03_sample.py`, add `--n-samples N` flag (default 20)
+- [ ] 4.1.2 For each test structure: generate N candidate structures via DDIM sampler
+- [ ] 4.1.3 For each candidate: compute Rwp against true PXRD pattern using DiffPXRD
+- [ ] 4.1.4 Return the candidate with lowest Rwp as the prediction
+- [ ] 4.1.5 Evaluate on n=1000 test set, compare match% vs single-sample v13 baseline
+- [ ] 4.1.6 Sweep N ∈ {5, 10, 20, 50} — find diminishing returns threshold
+- Expected improvement: 2–4× match rate (2.51% → 5–10%)
+
+### 4.2 Rietveld refinement post-processing (~1 day)
+- [ ] 4.2.1 Add `refine_structure(frac_coords, atom_types, lattice, target_pxrd, steps=200)`
+        to `sampler.py`. Uses Adam on `frac_coords` (leaf tensor) minimizing Debye loss.
+- [ ] 4.2.2 Lattice refinement: also optimize lattice_params jointly (start at predicted)
+- [ ] 4.2.3 Constrain: frac_coords % 1.0 after each step (stay on torus)
+- [ ] 4.2.4 Apply refinement AFTER ensemble selection (best Rwp candidate → then refine)
+- [ ] 4.2.5 Evaluate on n=1000, compare vs 4.1 and v13 baseline
+- [ ] 4.2.6 Tune: step size (1e-3 → 1e-4), steps (50/100/200), convergence criterion
+- Expected improvement: 4.1 result × 1.5–2× additional gain
+- Push to GitHub after Phase 4 complete
+
+---
+
+## Phase 5 — Direct lattice from d-spacings (~2 days + retrain overnight)
+Replace diffusion-predicted lattice with deterministic extraction from PXRD peaks.
+Root cause: diffusion lattice still fails often (invalid angles/lengths) even with v13 fix.
+
+### 5.1 Dedicated lattice head on PXRDEncoder
+- [ ] 5.1.1 Add `self.lattice_head = nn.Sequential(Linear(d_model,128), SiLU(), Linear(128,6))`
+        to `PXRDEncoder` (on the global embedding — peak positions encode d-spacings directly)
+- [ ] 5.1.2 Train with MSE loss vs normalized lattice params (same normalization as existing)
+- [ ] 5.1.3 Add `--lat-direct` flag to `02_train.py`: if set, use encoder lattice head
+        prediction instead of diffusion for lattice at inference. Denoiser still receives
+        predicted lattice params (as before) but with a much better starting point.
+- [ ] 5.1.4 Constrain outputs: lengths > 0 via softplus, angles via sigmoid scaled to [10°, 170°]
+- [ ] 5.1.5 Train from v13 checkpoint (warm start): freeze denoiser, train encoder+lat_head
+        for 20k steps. Then unfreeze all for 30k steps. Total: ~6 GPU-hours.
+- [ ] 5.1.6 Evaluate: lat MAE vs v13 lat MSE, match% on n=1000
+
+### 5.2 Validation
+- [ ] 5.2.1 Compare predicted vs true lattice params (MAE per dimension)
+- [ ] 5.2.2 Check: how many predicted lattices are physically valid (a,b,c > 0, angles in [10,170])
+- [ ] 5.2.3 Run full pipeline (predicted lattice + coords + Phase 4 refinement)
+- Push to GitHub after Phase 5 complete
+
+---
+
+## Phase 6 — Space group conditioning (~1 week + retrain)
+Constrain generation to crystallographically valid configurations.
+Biggest physics inductive bias available without changing architecture.
+
+### 6.1 Space group prediction head
+- [ ] 6.1.1 Add SG classification head to PXRDEncoder: Linear(d_model, 230) + CrossEntropy
+- [ ] 6.1.2 Train jointly (--sg-weight 0.1). Evaluate top-1 and top-5 SG accuracy.
+- [ ] 6.1.3 At inference: predict top-k SG candidates from PXRD encoder
+
+### 6.2 SG-constrained lattice parameter generation
+- [ ] 6.2.1 Map SG → crystal system (cubic/tetragonal/ortho/mono/triclinic/hex/rhombo)
+- [ ] 6.2.2 In lattice head (Phase 5): apply SG constraints post-hoc:
+        - Cubic: a=b=c, α=β=γ=90°
+        - Tetragonal: a=b, α=β=γ=90°
+        - Hexagonal: a=b, γ=120°, α=β=90°
+        - etc.
+- [ ] 6.2.3 Alternatively: condition denoiser on SG one-hot embedding (concat with t_cond)
+
+### 6.3 Wyckoff-reduced asymmetric unit prediction
+- [ ] 6.3.1 For each training structure: extract asymmetric unit coords (unique Wyckoff positions)
+- [ ] 6.3.2 Model predicts ONLY the asymmetric unit; symmetry operations applied to generate
+        full structure. Reduces DoF dramatically (e.g., cubic: 1/48 of the full cell).
+- [ ] 6.3.3 Implement `apply_symmetry_ops(asym_coords, sg_number)` using spglib
+- [ ] 6.3.4 Full retrain from scratch with new parameterization (~12 GPU-hours)
+- Push to GitHub after Phase 6 complete
+
+---
+
+## Phase 7 — Experimental noise augmentation (~1 day + retrain overnight)
+Make model robust to real PXRD data (not just perfect simulated patterns).
+
+### 7.1 Augmentation pipeline in `data.py`
+- [ ] 7.1.1 Gaussian instrument noise: pattern += N(0, σ²), σ ~ U(0.001, 0.03) × max(I)
+- [ ] 7.1.2 Peak broadening: convolve with Lorentzian (not just Gaussian) kernel,
+        FWHM ~ U(0.05°, 0.3°) to simulate crystallite size effects
+- [ ] 7.1.3 Amorphous background: add polynomial baseline + broad humps
+- [ ] 7.1.4 Preferred orientation (March-Dollase): scale intensities by orientation factor
+        for a random hkl direction (affects systematic sets of peaks)
+- [ ] 7.1.5 Peak shift: random 2θ zero-offset ∈ [-0.1°, +0.1°] (simulates calibration error)
+- [ ] 7.1.6 Apply augmentations with p=0.8 per batch (keep 20% clean for stability)
+
+### 7.2 Training
+- [ ] 7.2.1 Retrain from v13 (or Phase 5 best checkpoint), 50k additional steps with augmentation
+- [ ] 7.2.2 Evaluate on clean simulated patterns AND augmented patterns
+- [ ] 7.2.3 Goal: match rate on augmented patterns ≥ 50% of clean pattern performance
+- Push to GitHub after Phase 7 complete
+
+---
+
+## Phase 8 — Full Materials Project data scale-up (~1 day setup + overnight training)
+MP-20 has 27k train structures. Full MP has ~154k DFT-computed structures.
+More data is the safest scaling lever for a diffusion model at this size.
+
+### 8.1 Data acquisition
+- [ ] 8.1.1 Pull full MP structures via `mp-api`: filter to ≤20 atoms, DFT-converged,
+        energy_above_hull < 0.1 eV/atom (stable/near-stable)
+- [ ] 8.1.2 Expected yield: ~80–120k structures after filtering
+- [ ] 8.1.3 Split: 90/5/5 train/val/test. Keep MP-20 test split untouched for comparison.
+- [ ] 8.1.4 Simulate PXRD for all new structures: `01_simulate_pxrd.py` (batched, ~15 min)
+
+### 8.2 Training
+- [ ] 8.2.1 Retrain from scratch with full dataset, 200k steps (~12–18 GPU-hours)
+- [ ] 8.2.2 Keep all Phase 5–7 improvements (lat head, SG conditioning, noise augmentation)
+- [ ] 8.2.3 Evaluate on both MP-20 test split (comparability) and new full-MP test split
+
+### 8.3 Validation
+- [ ] 8.3.1 Compare match% on MP-20 test vs Phase 5–7 best checkpoint
+- [ ] 8.3.2 Expected: 1.5–3× improvement from data scale alone
+- Push to GitHub after Phase 8 complete
+
+---
+
+## Execution Order & Expected Match Rate Progression
+
+| Phase | What | Effort | Expected match% |
+|-------|------|--------|-----------------|
+| v13 baseline | Current best | done | 2.51% |
+| 4.1 Ensemble (N=20) | No retrain | 1 hour | ~5–8% |
+| 4.2 Rietveld refinement | No retrain | 1 day | ~8–15% |
+| 5 Lat from d-spacings | Partial retrain | 2 days | ~12–18% |
+| 6 SG conditioning | Full retrain | 1 week | ~18–30% |
+| 7 Noise augmentation | Partial retrain | 1 day | (robust to real data) |
+| 8 Full MP data | Full retrain | 1 day setup | ~25–45% |
+
+Goal: ≥25% match rate on MP-20 test split (publishable positive result).
+Stretch: ≥40% (competitive with Crystalyze on this benchmark).
+
