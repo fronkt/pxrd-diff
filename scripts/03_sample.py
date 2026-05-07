@@ -39,6 +39,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from pxrd_diff.data import CrystalPXRDDataset                        # noqa: E402
 from pxrd_diff.debye import DiffPXRD                                  # noqa: E402
 from pxrd_diff.eval import aggregate, evaluate_one                    # noqa: E402
+from pxrd_diff.model.aux_head import AuxLatHead                       # noqa: E402
 from pxrd_diff.model.denoiser import CrystalDenoiser                 # noqa: E402
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder                 # noqa: E402
 from pxrd_diff.sampler import (                                       # noqa: E402
@@ -108,6 +109,12 @@ def main():
                     help="DiffPXRD hkl_max for scoring/refinement (matches training)")
     ap.add_argument("--batch-size", type=int, default=32,
                     help="Patterns processed per chunk (avoids OOM at large n × n_samples)")
+    # ---- Phase 5 -------------------------------------------------------------
+    ap.add_argument("--lat-from-aux", action="store_true",
+                    help="Phase 5: substitute aux-head lattice prediction for the "
+                         "diffusion sampler's lattice. Ignored when --true-lattice "
+                         "is also set (true lattice wins). The aux-vs-true MAE "
+                         "diagnostic is always printed regardless of this flag.")
     ap.add_argument("--out-json", default=None,
                     help="If set, write aggregate metrics JSON here")
     args = ap.parse_args()
@@ -127,14 +134,24 @@ def main():
     encoder.eval()
     denoiser.eval()
 
+    aux_head = None
+    if "aux_head" in ckpt:
+        aux_head = AuxLatHead(d_model=d_model).to(device)
+        aux_head.load_state_dict(ckpt["aux_head"])
+        aux_head.eval()
+
     lat_mean = ckpt.get("lat_mean")
     lat_std = ckpt.get("lat_std")
     predict_x0 = bool(train_args.get("predict_x0", False))
 
     print(f"Loaded checkpoint: step={ckpt['step']}, d_model={d_model}, "
-          f"predict_x0={predict_x0}")
+          f"predict_x0={predict_x0}, aux_head={aux_head is not None}")
     if args.true_lattice:
         print("Mode: coord-only eval with ground-truth lattice")
+    elif args.lat_from_aux:
+        if aux_head is None:
+            sys.exit("--lat-from-aux requested but checkpoint has no aux_head")
+        print("Phase 5: lattice from aux head (instead of diffusion sampler)")
     if args.n_samples > 1:
         print(f"Phase 4.1: ensemble n_samples={args.n_samples}, eta={args.ensemble_eta}")
     if args.refine_steps > 0:
@@ -178,6 +195,43 @@ def main():
     bs = max(1, min(args.batch_size, B))
     n_chunks = (B + bs - 1) // bs
 
+    # ---- Phase 5: aux-head lattice prediction (always computed for diagnostic)
+    aux_lat_params: torch.Tensor | None = None
+    aux_lat_matrix: torch.Tensor | None = None
+    if aux_head is not None:
+        with torch.no_grad():
+            pxrd_global_full, _ = encoder(pxrd)            # (B, d)
+            aux_lat_norm = aux_head(pxrd_global_full)      # (B, 6)
+            if lat_mean is not None and lat_std is not None:
+                aux_lat_params = (aux_lat_norm * lat_std.to(device)
+                                  + lat_mean.to(device))
+            else:
+                aux_lat_params = aux_lat_norm
+        # MAE per dimension vs. ground truth (always printed; cheap)
+        mae = (aux_lat_params - lattice_params_true).abs().mean(dim=0)
+        print("Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):")
+        print(f"  a={mae[0]:.3f}  b={mae[1]:.3f}  c={mae[2]:.3f}  "
+              f"α={mae[3]:.2f}  β={mae[4]:.2f}  γ={mae[5]:.2f}")
+        # How many aux lattice predictions are physically valid?
+        aux_lat_np = aux_lat_params.cpu().numpy()
+        n_valid = sum(is_valid_lattice(lp) for lp in aux_lat_np)
+        print(f"Aux-head lattice validity: {n_valid}/{B} "
+              f"({100.0 * n_valid / B:.1f}%)")
+        # Build the corresponding 3×3 matrices (clamp to a sane physical range
+        # before the matrix construction so we don't take sqrt of a negative
+        # number for pathological predictions). The clamp matches is_valid_lattice.
+        aux_lat_clamped = aux_lat_params.clone()
+        aux_lat_clamped[:, :3] = aux_lat_clamped[:, :3].clamp(min=0.5, max=100.0)
+        aux_lat_clamped[:, 3:] = aux_lat_clamped[:, 3:].clamp(min=10.0, max=170.0)
+        aux_lat_matrix = lattice_params_to_matrix(aux_lat_clamped)
+
+    # When Phase 5 is requested (and we're not in --true-lattice mode), the
+    # sampler should use aux-head lattice both as lattice_init and as the
+    # final predicted lat_params for downstream eval/refinement.
+    use_aux_lat = (args.lat_from_aux and not args.true_lattice
+                   and aux_head is not None)
+    sampler_lattice = aux_lat_matrix if use_aux_lat else lattice
+
     # Allocate output tensors filled in by chunked predict pass
     N = atom_types.shape[1]
     pred_coords = torch.empty(B, N, 3, device=device)
@@ -202,13 +256,18 @@ def main():
     refine_loss_first = []
     refine_loss_last = []
 
+    # When using a fixed lattice (true or aux), the ensemble selector and the
+    # refinement loop should both consume that lattice rather than the
+    # sampler's diffusion-predicted one.
+    use_fixed_lat = args.true_lattice or use_aux_lat
+
     for ci, lo in enumerate(range(0, B, bs)):
         hi = min(lo + bs, B)
         cb = hi - lo
 
         pxrd_c = pxrd[lo:hi]
         at_c = atom_types[lo:hi]
-        lat_c = lattice[lo:hi]
+        lat_c = sampler_lattice[lo:hi]
         mask_c = mask[lo:hi]
         wyck_c = wyckoff[lo:hi] if wyckoff is not None else None
 
@@ -222,7 +281,7 @@ def main():
             t_sample += time.perf_counter() - t0
 
             # Build the lattice tensor used for scoring
-            if args.true_lattice:
+            if use_fixed_lat:
                 lattice_for_score_c = lat_c  # (cb, 3, 3) — broadcasts inside
             else:
                 lp_flat = cand_lat_c.reshape(cb * args.n_samples, 6)
@@ -240,9 +299,13 @@ def main():
             pc_c, pl_c = sampler.sample(pxrd_c, at_c, lat_c, mask_c, wyckoff=wyck_c)
             t_sample += time.perf_counter() - t0
 
+        # ---- Phase 5: substitute aux-head lattice for the diffusion lattice
+        if use_aux_lat:
+            pl_c = aux_lat_params[lo:hi]
+
         # ---- Refine ---------------------------------------------------------
         if args.refine_steps > 0:
-            if args.true_lattice:
+            if use_fixed_lat:
                 lat_for_refine_c = lat_c
             else:
                 lat_for_refine_c = lattice_params_to_matrix(pl_c)
@@ -352,6 +415,7 @@ def main():
                 "ckpt": args.ckpt,
                 "n": args.n,
                 "true_lattice": args.true_lattice,
+                "lat_from_aux": args.lat_from_aux,
                 "n_samples": args.n_samples,
                 "ensemble_eta": args.ensemble_eta,
                 "refine_steps": args.refine_steps,

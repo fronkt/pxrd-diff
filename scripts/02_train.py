@@ -21,19 +21,9 @@ sys.path.insert(0, str(ROOT / "src"))
 from pxrd_diff.data import CrystalPXRDDataset, lattice_params_stats
 from pxrd_diff.debye import DiffPXRD, diff_pxrd_loss
 from pxrd_diff.diffusion import DiffusionProcess, cosine_alpha_bar
+from pxrd_diff.model.aux_head import AuxLatHead
 from pxrd_diff.model.denoiser import CrystalDenoiser, periodic_distances
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder
-
-
-class AuxLatHead(nn.Module):
-    """Predict normalized lattice params from PXRD embedding (auxiliary task)."""
-    def __init__(self, d_model: int = 256):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, 6),
-        )
-    def forward(self, emb):
-        return self.net(emb)
 
 
 def collate(batch: list[dict]) -> dict:
