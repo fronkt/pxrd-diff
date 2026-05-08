@@ -23,6 +23,12 @@ from pxrd_diff.debye import DiffPXRD, diff_pxrd_loss
 from pxrd_diff.diffusion import DiffusionProcess, cosine_alpha_bar
 from pxrd_diff.model.aux_head import AuxLatHead
 from pxrd_diff.model.denoiser import CrystalDenoiser, periodic_distances
+from pxrd_diff.model.lat_head import (
+    ConstrainedLatHead,
+    SpaceGroupHead,
+    sg_classification_loss,
+    sg_topk_accuracy,
+)
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder
 
 
@@ -53,7 +59,15 @@ def train(args: argparse.Namespace) -> None:
     encoder = PXRDEncoder(d_model=args.d_model).to(device)
     denoiser = CrystalDenoiser(d_model=args.d_model, n_layers=args.n_layers,
                                 n_heads=args.n_heads).to(device)
-    aux_head = AuxLatHead(args.d_model).to(device)
+    if args.constrained_lat_head:
+        aux_head = ConstrainedLatHead(args.d_model).to(device)
+        print("Using ConstrainedLatHead (Phase 5B)")
+    else:
+        aux_head = AuxLatHead(args.d_model).to(device)
+    sg_head = None
+    if args.sg_weight > 0:
+        sg_head = SpaceGroupHead(args.d_model).to(device)
+        print(f"Using SpaceGroupHead (Phase 6.1) sg_weight={args.sg_weight}")
     diffusion = DiffusionProcess()
 
     diff_pxrd = None
@@ -61,7 +75,10 @@ def train(args: argparse.Namespace) -> None:
         diff_pxrd = DiffPXRD(n_bins=256, hkl_max=5).to(device)
         diff_pxrd.eval()
 
-    params = list(encoder.parameters()) + list(denoiser.parameters()) + list(aux_head.parameters())
+    params = (list(encoder.parameters()) + list(denoiser.parameters())
+              + list(aux_head.parameters()))
+    if sg_head is not None:
+        params = params + list(sg_head.parameters())
     opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.steps)
 
@@ -84,8 +101,31 @@ def train(args: argparse.Namespace) -> None:
         ckpt = torch.load(resume_path, map_location=device, weights_only=False)
         encoder.load_state_dict(ckpt["encoder"])
         denoiser.load_state_dict(ckpt["denoiser"], strict=False)
-        aux_head.load_state_dict(ckpt["aux_head"])
-        opt.load_state_dict(ckpt["optimizer"])
+        # Match the checkpoint's lat-head architecture to the configured one.
+        ckpt_args = ckpt.get("args", {})
+        ckpt_constrained = bool(ckpt_args.get("constrained_lat_head", False))
+        if ckpt_constrained == args.constrained_lat_head and "aux_head" in ckpt:
+            aux_head.load_state_dict(ckpt["aux_head"])
+            print("  -> resumed lat head from checkpoint")
+        else:
+            print("  -> NOT resuming lat head (architecture mismatch — fresh init)")
+        if sg_head is not None and "sg_head" in ckpt:
+            sg_head.load_state_dict(ckpt["sg_head"])
+            print("  -> resumed sg_head from checkpoint")
+        elif sg_head is not None:
+            print("  -> NOT resuming sg_head (new in this run — fresh init)")
+        # Optimizer state is keyed by parameter id, so it only matches if every
+        # head had its weights loaded. Skip when any new head was just init'd.
+        load_opt = (ckpt_constrained == args.constrained_lat_head
+                    and (sg_head is None or "sg_head" in ckpt))
+        if load_opt and "optimizer" in ckpt:
+            try:
+                opt.load_state_dict(ckpt["optimizer"])
+                print("  -> resumed optimizer state")
+            except (ValueError, KeyError) as e:
+                print(f"  -> NOT resuming optimizer ({e!s})")
+        else:
+            print("  -> NOT resuming optimizer (new heads added — starting fresh)")
         step = ckpt["step"]
         for _ in range(step):
             scheduler.step()
@@ -141,10 +181,27 @@ def train(args: argparse.Namespace) -> None:
                 )
                 eps_c_pred = pred_c
 
-            lat_pred = aux_head(pxrd_global)
-            loss_aux = ((lat_pred - lat_p_norm) ** 2).mean()
+            lat_pred_raw = aux_head(pxrd_global)
+            if args.constrained_lat_head:
+                # ConstrainedLatHead emits physical-unit params; normalize to match lat_p_norm.
+                lat_pred_norm = (lat_pred_raw - lat_mean) / lat_std
+            else:
+                lat_pred_norm = lat_pred_raw
+            loss_aux = ((lat_pred_norm - lat_p_norm) ** 2).mean()
 
-            loss = loss_coord + args.lat_weight * loss_lat + args.aux_weight * loss_aux
+            loss_sg = torch.tensor(0.0, device=device)
+            sg_top1 = torch.tensor(0.0, device=device)
+            if sg_head is not None:
+                sg_logits = sg_head(pxrd_global)
+                sg_target = batch["spacegroup"].to(device)
+                loss_sg = sg_classification_loss(sg_logits, sg_target)
+                with torch.no_grad():
+                    sg_top1 = sg_topk_accuracy(sg_logits, sg_target, k=1)
+
+            loss = (loss_coord
+                    + args.lat_weight * loss_lat
+                    + args.aux_weight * loss_aux
+                    + args.sg_weight * loss_sg)
 
             loss_dist = torch.tensor(0.0, device=device)
             if use_dist:
@@ -191,9 +248,11 @@ def train(args: argparse.Namespace) -> None:
                 enc_gnorm = sum(p.grad.norm().item()**2 for p in encoder.parameters() if p.grad is not None)**0.5
                 debye_str = f"  debye={loss_debye.item():.4f}" if diff_pxrd is not None else ""
                 dist_str = f"  dist={loss_dist.item():.4f}" if use_dist else ""
+                sg_str = (f"  sg={loss_sg.item():.4f}/top1={sg_top1.item():.3f}"
+                          if sg_head is not None else "")
                 print(f"step={step:>6d}  loss={loss_ema:.4f}  "
                       f"coord={loss_coord.item():.4f}  lat={loss_lat.item():.4f}  "
-                      f"aux={loss_aux.item():.4f}{debye_str}{dist_str}  "
+                      f"aux={loss_aux.item():.4f}{sg_str}{debye_str}{dist_str}  "
                       f"lr={lr:.2e}  gnorm={grad_norm:.2f}  enc_gn={enc_gnorm:.3f}  "
                       f"emb_std={emb_std:.3f}  emb_abs={emb_abs:.3f}  "
                       f"t={elapsed:.0f}s")
@@ -209,6 +268,8 @@ def train(args: argparse.Namespace) -> None:
                     "lat_std": lat_std.cpu(),
                     "args": vars(args),
                 }
+                if sg_head is not None:
+                    ckpt["sg_head"] = sg_head.state_dict()
                 path = ckpt_dir / f"ckpt_{step:06d}.pt"
                 torch.save(ckpt, path)
                 print(f"  -> saved {path}")
@@ -223,6 +284,8 @@ def train(args: argparse.Namespace) -> None:
         "lat_std": lat_std.cpu(),
         "args": vars(args),
     }
+    if sg_head is not None:
+        ckpt["sg_head"] = sg_head.state_dict()
     torch.save(ckpt, ckpt_dir / "ckpt_final.pt")
     print(f"\nDone. {step} steps in {time.perf_counter()-t0:.1f}s")
     print(f"Final EMA loss: {loss_ema:.4f}")
@@ -247,6 +310,14 @@ def main():
                     help="Weight for pairwise distance auxiliary loss")
     ap.add_argument("--use-wyckoff", action="store_true",
                     help="Use Wyckoff position tokens as additional atom feature")
+    # ---- Phase 5B + 6 -------------------------------------------------------
+    ap.add_argument("--constrained-lat-head", action="store_true",
+                    help="Phase 5B: replace AuxLatHead with ConstrainedLatHead "
+                         "(physical units, sigmoid-bounded). Recommended with "
+                         "a higher --aux-weight than the v13 default of 0.5.")
+    ap.add_argument("--sg-weight", type=float, default=0.0,
+                    help="Phase 6.1: weight for the SpaceGroupHead "
+                         "cross-entropy loss. 0 disables the head.")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")

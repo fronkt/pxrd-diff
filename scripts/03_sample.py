@@ -41,6 +41,11 @@ from pxrd_diff.debye import DiffPXRD                                  # noqa: E4
 from pxrd_diff.eval import aggregate, evaluate_one                    # noqa: E402
 from pxrd_diff.model.aux_head import AuxLatHead                       # noqa: E402
 from pxrd_diff.model.denoiser import CrystalDenoiser                 # noqa: E402
+from pxrd_diff.model.lat_head import (                                # noqa: E402
+    ConstrainedLatHead,
+    SpaceGroupHead,
+    apply_sg_constraints,
+)
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder                 # noqa: E402
 from pxrd_diff.sampler import (                                       # noqa: E402
     DDIMSampler,
@@ -115,6 +120,12 @@ def main():
                          "diffusion sampler's lattice. Ignored when --true-lattice "
                          "is also set (true lattice wins). The aux-vs-true MAE "
                          "diagnostic is always printed regardless of this flag.")
+    # ---- Phase 6 -------------------------------------------------------------
+    ap.add_argument("--sg-constrain-lat", action="store_true",
+                    help="Phase 6.2: project the aux/constrained-head lattice "
+                         "prediction onto the crystal-system manifold of the "
+                         "predicted space group (e.g. cubic ⇒ a=b=c, all "
+                         "angles 90°). Requires a checkpoint with sg_head.")
     ap.add_argument("--out-json", default=None,
                     help="If set, write aggregate metrics JSON here")
     args = ap.parse_args()
@@ -134,24 +145,46 @@ def main():
     encoder.eval()
     denoiser.eval()
 
+    # Lattice prediction head: ConstrainedLatHead (Phase 5B, physical units)
+    # or AuxLatHead (legacy, normalized space). Pick by what the checkpoint
+    # was trained with.
+    constrained_lat = bool(train_args.get("constrained_lat_head", False))
     aux_head = None
     if "aux_head" in ckpt:
-        aux_head = AuxLatHead(d_model=d_model).to(device)
+        if constrained_lat:
+            aux_head = ConstrainedLatHead(d_model=d_model).to(device)
+        else:
+            aux_head = AuxLatHead(d_model=d_model).to(device)
         aux_head.load_state_dict(ckpt["aux_head"])
         aux_head.eval()
+
+    sg_head = None
+    if "sg_head" in ckpt:
+        sg_head = SpaceGroupHead(d_model=d_model).to(device)
+        sg_head.load_state_dict(ckpt["sg_head"])
+        sg_head.eval()
 
     lat_mean = ckpt.get("lat_mean")
     lat_std = ckpt.get("lat_std")
     predict_x0 = bool(train_args.get("predict_x0", False))
 
     print(f"Loaded checkpoint: step={ckpt['step']}, d_model={d_model}, "
-          f"predict_x0={predict_x0}, aux_head={aux_head is not None}")
+          f"predict_x0={predict_x0}, "
+          f"lat_head={'Constrained' if constrained_lat else 'Aux' if aux_head is not None else 'none'}, "
+          f"sg_head={sg_head is not None}")
     if args.true_lattice:
         print("Mode: coord-only eval with ground-truth lattice")
     elif args.lat_from_aux:
         if aux_head is None:
             sys.exit("--lat-from-aux requested but checkpoint has no aux_head")
-        print("Phase 5: lattice from aux head (instead of diffusion sampler)")
+        if constrained_lat:
+            print("Phase 5B: lattice from ConstrainedLatHead (physical units, sigmoid-bounded)")
+        else:
+            print("Phase 5: lattice from AuxLatHead (Path A — known to underperform)")
+    if args.sg_constrain_lat:
+        if sg_head is None:
+            sys.exit("--sg-constrain-lat requested but checkpoint has no sg_head")
+        print("Phase 6.2: applying SG-based crystal-system constraints to predicted lattice")
     if args.n_samples > 1:
         print(f"Phase 4.1: ensemble n_samples={args.n_samples}, eta={args.ensemble_eta}")
     if args.refine_steps > 0:
@@ -195,27 +228,52 @@ def main():
     bs = max(1, min(args.batch_size, B))
     n_chunks = (B + bs - 1) // bs
 
-    # ---- Phase 5: aux-head lattice prediction (always computed for diagnostic)
+    # ---- Phase 5/5B: lattice from auxiliary head (always computed for diagnostic)
     aux_lat_params: torch.Tensor | None = None
     aux_lat_matrix: torch.Tensor | None = None
+    sg_pred_top1: torch.Tensor | None = None
     if aux_head is not None:
         with torch.no_grad():
-            pxrd_global_full, _ = encoder(pxrd)            # (B, d)
-            aux_lat_norm = aux_head(pxrd_global_full)      # (B, 6)
-            if lat_mean is not None and lat_std is not None:
-                aux_lat_params = (aux_lat_norm * lat_std.to(device)
+            pxrd_global_full, _ = encoder(pxrd)                    # (B, d)
+            head_out = aux_head(pxrd_global_full)                  # (B, 6)
+            if constrained_lat:
+                # ConstrainedLatHead emits physical units already.
+                aux_lat_params = head_out
+            elif lat_mean is not None and lat_std is not None:
+                aux_lat_params = (head_out * lat_std.to(device)
                                   + lat_mean.to(device))
             else:
-                aux_lat_params = aux_lat_norm
-        # MAE per dimension vs. ground truth (always printed; cheap)
+                aux_lat_params = head_out
+
+            # Optional Phase 6.1 / 6.2: predict SG and project lattice onto
+            # the corresponding crystal-system manifold.
+            if sg_head is not None:
+                sg_logits = sg_head(pxrd_global_full)              # (B, 230)
+                sg_pred_top1 = sg_logits.argmax(dim=-1) + 1        # (B,) in 1-230
+                # Top-1 / top-5 SG accuracy diagnostic
+                sg_topk = sg_logits.topk(5, dim=-1).indices + 1
+                sg_true = torch.tensor(
+                    [int(b["spacegroup"].item()) for b in batch_items],
+                    device=device,
+                )
+                top1_acc = (sg_pred_top1 == sg_true).float().mean().item()
+                top5_acc = (sg_topk == sg_true.unsqueeze(-1)).any(-1).float().mean().item()
+                print(f"SG-head accuracy (n={B}): top1={top1_acc:.3f}  top5={top5_acc:.3f}")
+
+                if args.sg_constrain_lat:
+                    aux_lat_params = apply_sg_constraints(aux_lat_params, sg_pred_top1)
+
+        # Aux/constrained-head MAE per dim vs. ground truth (cheap, always shown).
         mae = (aux_lat_params - lattice_params_true).abs().mean(dim=0)
-        print("Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):")
+        head_kind = "Constrained-lat" if constrained_lat else "Aux-head"
+        sg_constr_str = " (after SG constraint)" if (sg_head is not None and args.sg_constrain_lat) else ""
+        print(f"{head_kind} lattice MAE vs true{sg_constr_str} (a,b,c in Å, α,β,γ in °):")
         print(f"  a={mae[0]:.3f}  b={mae[1]:.3f}  c={mae[2]:.3f}  "
               f"α={mae[3]:.2f}  β={mae[4]:.2f}  γ={mae[5]:.2f}")
         # How many aux lattice predictions are physically valid?
         aux_lat_np = aux_lat_params.cpu().numpy()
         n_valid = sum(is_valid_lattice(lp) for lp in aux_lat_np)
-        print(f"Aux-head lattice validity: {n_valid}/{B} "
+        print(f"{head_kind} lattice validity: {n_valid}/{B} "
               f"({100.0 * n_valid / B:.1f}%)")
         # Build the corresponding 3×3 matrices (clamp to a sane physical range
         # before the matrix construction so we don't take sqrt of a negative
@@ -416,6 +474,7 @@ def main():
                 "n": args.n,
                 "true_lattice": args.true_lattice,
                 "lat_from_aux": args.lat_from_aux,
+                "sg_constrain_lat": args.sg_constrain_lat,
                 "n_samples": args.n_samples,
                 "ensemble_eta": args.ensemble_eta,
                 "refine_steps": args.refine_steps,
