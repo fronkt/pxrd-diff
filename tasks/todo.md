@@ -432,3 +432,64 @@ suggesting some predictions are in the wrong basin entirely (Phase 6 territory).
 ### Artifacts
 - `paper/phase4_results/*.json` — per-config aggregate metrics (committed)
 - `runs/phase4/*.{json,log}` on the GPU instance — full per-sample results
+
+---
+
+## Review — Phase 5 Path A (no retrain) — NEGATIVE result
+- Completed: 2026-05-07
+- Approach: promote the existing `AuxLatHead` (an MSE-supervised regularizer in
+  the v13 training loss) to inference-time lattice predictor. Substitute its
+  output for the diffusion sampler's lattice in `lattice_init`, ensemble
+  selection, refinement, and final eval.
+- Implementation: `src/pxrd_diff/model/aux_head.py`, `--lat-from-aux` flag in
+  `scripts/03_sample.py`. Diagnostic always prints aux-vs-true MAE.
+
+### Aux-head lattice quality (v13 ckpt @ 79.5k, n=1000 test)
+```
+                a       b       c       α       β       γ
+MAE          1.119   1.022   1.380   12.98°  11.85°  17.55°
+validity     998 / 1000 = 99.8% (vs ≈ 0% for diffusion sampler)
+```
+
+### End-to-end results (no --true-lattice, n=1000)
+| metric                       | aux baseline (single) | aux + Phase 4 (ens+refine) |
+|------------------------------|----------------------:|---------------------------:|
+| StructureMatcher match rate  |                 1.20% |                      1.30% |
+| pearson_mean                 |                 0.014 |                      0.082 |
+| rmsd_mean (Å)                |                 0.226 |                      0.176 |
+| rwp_mean                     |                19.94  |                     18.06  |
+| headline_all_correct         |                 0.00% |                      0.00% |
+| sg_match@0.1                 |                 1.40% |                      1.40% |
+
+### Why Path A doesn't work
+- A 1 Å MAE on lengths is ~15–20 % relative error for typical MP-20 unit cells.
+  All Bragg peaks shift by a similar fraction in 2θ, driving Pearson with the
+  target pattern to ~0 (mean 0.014 in the baseline).
+- Ensemble + Pearson selection picks among uniformly-bad candidates; Rietveld
+  refinement on coords cannot recover from a wrong unit cell. Phase 4 lifts
+  pearson 0.014 → 0.082 (6×), but the absolute level is still useless.
+- `match_rate` and `rmsd_mean` are misleading here — they're computed only over
+  StructureMatcher matches (which are accidental at this lattice quality).
+- The diffusion-sampler lattice was even worse: pymatgen's `StructureMatcher.
+  get_rms_dist` hung on the predicted (degenerate) lattices, so the
+  `diffusion_lat_*` configs of the eval runner were killed and not scored.
+  Per-sample logs showed Pearson ≈ 0 across the board.
+
+### What this rules out
+- The aux head learned-as-regularizer signal is **insufficient** for inference
+  use even though its 99.8 % validity rate is much better than the diffusion
+  sampler. The aux-head MAE corresponds to ~15 % relative lattice error, and
+  the eval is bottlenecked by lattice accuracy, not coordinate accuracy.
+
+### What this motivates (Phase 5 Path B — pending)
+- Retrain with much stronger aux-head supervision **and** a constrained head:
+  - softplus on lengths (always positive)
+  - sigmoid scaled to a physical range on angles (e.g. [30°, 150°])
+  - aux-weight bumped from 0.5 → 5.0 (or split into separate length/angle losses)
+  - resume from `ckpt_079500.pt` as warm start, ~30 k more steps
+- Alternative: dedicate a small CNN/MLP regressor on raw PXRD peaks
+  (Bragg's-law-informed loss directly on d-spacings).
+
+### Artifacts
+- `paper/phase5_results/{aux_lat_baseline, aux_lat_phase4}.json` (committed)
+- `runs/phase5/*.{json,log}` on the GPU instance

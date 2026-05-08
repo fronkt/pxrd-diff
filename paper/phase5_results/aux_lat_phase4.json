@@ -1,0 +1,36 @@
+{
+  "n": 998,
+  "composition_match_rate": 1.0,
+  "rmsd_mean": 0.17551075719915807,
+  "rmsd_median": 0.190147423825141,
+  "match_rate (StructureMatcher)": 0.013026052104208416,
+  "rwp_mean": 18.058821920530832,
+  "pearson_mean": 0.08235349592587861,
+  "headline_all_correct": 0.0,
+  "sg_match@0.01": 0.014028056112224449,
+  "sg_match@0.05": 0.014028056112224449,
+  "sg_match@0.1": 0.014028056112224449,
+  "sg_match@0.2": 0.012024048096192385,
+  "aux_head_mae": {
+    "a": 1.119,
+    "b": 1.022,
+    "c": 1.380,
+    "alpha_deg": 12.98,
+    "beta_deg": 11.85,
+    "gamma_deg": 17.55
+  },
+  "aux_head_validity": "998/1000 (99.8%)",
+  "config": {
+    "ckpt": "runs/gpu_v13/ckpt_079500.pt",
+    "n": 1000,
+    "true_lattice": false,
+    "lat_from_aux": true,
+    "n_samples": 20,
+    "ensemble_eta": 0.0,
+    "refine_steps": 200,
+    "refine_lr": 0.001,
+    "refine_lattice": false,
+    "ddim_steps": 50,
+    "eta": 0.0
+  }
+}
