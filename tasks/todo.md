@@ -721,3 +721,88 @@ Result: heads ended up far from any working point in their loss surface.
 - `paper/phase7_results/{v18_on_clean, v18_on_noisy, v19_on_clean, v19_on_noisy}.json`
 - `runs/gpu_v19_p7/ckpt_final.pt` and intermediate ckpts on the GPU instance
 - `runs/phase7/*.{json,log}` on the GPU instance
+
+---
+
+## Review — Phase 5D (Bragg's law d-spacing conversion) — partial result, overfitting
+- Completed: 2026-05-08
+- Trained `runs/gpu_v20_p5d/ckpt_final.pt` from scratch: 100 k steps,
+  `--predict-x0 --debye-weight 1.0 --peak-aug-lat-head --use-d-spacing
+  --sg-weight 0.1 --aux-weight 5.0`. RTX 5090, 95 min wallclock.
+- PeakAugmentedLatHead now applies `d = λ / (2 sin θ)` to each peak's
+  normalized 2θ position before the MLP, replacing the raw position with
+  log(d) in log Å. The conversion is differentiable.
+
+### Training metrics looked spectacular
+| metric        | step   | v17/v18 (no Bragg) | v20 (Phase 5D) |
+|---------------|--------|-------------------:|---------------:|
+| aux loss      | 100k   |               0.30 |       **0.01** |
+| sg top-1      | 100k   |              ~50 % |    **100.0 %** |
+| gnorm         | 100k   |             80-200 |        0.5-1.1 |
+| enc_gn        | 100k   |              ~0.05 |       0.20-0.35|
+
+Aux ~0.01 in normalized space implies physical MAE ~0.15 Å on lengths
+and ~0.5° on angles — a 7× tighter prediction than v18's training-set MAE.
+
+### But the test-set lattice MAE moved the wrong way
+| head         | a    | b    | c    | α     | β     | γ     |
+|--------------|------|------|------|-------|-------|-------|
+| v18 (5C)     | 1.13 | 1.02 | 1.42 | 13.99 | 12.83 | 18.69 |
+| **v20 (5D)** | **1.24** | **1.15** | **1.71** | **16.41** | **14.82** | **20.76** |
+
+Test SG-head accuracy: top-1 = **44 %** (vs v18's 40 %), top-5 = 70 %.
+Modest improvement, but **far from the 100 % training accuracy**.
+
+### End-to-end results (n=1000, no --true-lattice)
+
+| metric                       | p5d_baseline | p5d_phase4 | p5d_sg_baseline | p5d_sg_phase4 |
+|------------------------------|-------------:|-----------:|----------------:|--------------:|
+| StructureMatcher match rate  |        1.10% |      1.00% |           0.50% |         0.50% |
+| pearson_mean                 |        0.008 |      0.076 |           0.005 |         0.047 |
+| rmsd_mean                    |        0.216 |      0.194 |           0.210 |         0.223 |
+| rmsd_median                  |        0.238 |      0.212 |           0.188 |         0.249 |
+| rwp_mean                     |       19.20  |     17.05  |          19.09  |        16.23  |
+| headline_all_correct         |        0.00% |      0.00% |           0.00% |         0.00% |
+| sg_match@0.1                 |        1.40% |      1.20% |           1.40% |         1.60% |
+
+### Diagnosis: this is overfitting
+The 100 % training SG accuracy and 0.15 Å training-MAE collapsed to 44 %
+and 1.24 Å on the test split. A ~10× train-to-test gap on aux loss and
+a ~2× SG-accuracy gap. Each MP-20 structure has a unique top-20 peak
+fingerprint, so once we hand the head explicit `(d, intensity)` pairs
+the model can memorise the training-set lookup table — we *gave* it
+enough information to do that. But the lookup doesn't transfer to
+unseen test patterns: nearby compositions/structures with subtly
+different patterns get the wrong lattice.
+
+### Where Phase 5D *did* help vs Phase 5C
+- p5d_baseline match rate 1.10 % vs p5c 0.60 % (+0.5 pp; +83 % relative).
+  In the simplest config the Bragg features genuinely help.
+- p5d_phase4 1.00 % vs p5c 0.90 % (small, within noise).
+- p5d_sg_baseline 0.50 % vs p5c 0.70 % (small loss).
+- p5d_sg_phase4 0.50 % vs p5c 0.50 % (tie).
+
+Net: tiny lift on the simple configs, basically a wash on the strong ones.
+The encoder-bottleneck wall is still in place; the d-spacing input
+helps the MLP memorise but doesn't help it generalise.
+
+### What WOULD help (deferred)
+- **Stronger regularisation** in the peak-feature pathway: dropout on
+  `peak_proj`, weight decay specific to the new layers, or just a much
+  smaller hidden width (32 instead of 256).
+- **Peak-feature augmentation during training**: add jitter to peak
+  positions (±1-2 bins) and intensities (±10 %) so the model can't rely
+  on exact training-set fingerprints. This is the "Phase 7 done right"
+  but applied at the peak-feature level rather than the raw spectrum.
+- **More data (Phase 8 — full MP)**: with ~150 k structures, exact
+  fingerprint memorisation gets harder; the head may be forced to learn
+  a more generalisable mapping.
+- **Different inductive bias**: feed peak-position *ratios* (d_i/d_j)
+  rather than absolute d-spacings. Ratios are scale-invariant within a
+  crystal system and may force the model toward learning structure
+  rather than memorising scale.
+
+### Artifacts
+- `paper/phase5d_results/{p5d_baseline, p5d_phase4, p5d_sg_baseline, p5d_sg_phase4}.json`
+- `runs/gpu_v20_p5d/ckpt_final.pt` and intermediate ckpts on the GPU instance
+- `runs/phase5d/*.{json,log}` on the GPU instance

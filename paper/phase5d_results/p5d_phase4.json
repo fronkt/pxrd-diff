@@ -1,0 +1,42 @@
+{
+  "n": 1000,
+  "composition_match_rate": 1.0,
+  "rmsd_mean": 0.19360848317711415,
+  "rmsd_median": 0.21224332341679644,
+  "match_rate (StructureMatcher)": 0.01,
+  "rwp_mean": 17.045430411168315,
+  "pearson_mean": 0.07611070870861238,
+  "headline_all_correct": 0.0,
+  "sg_match@0.01": 0.015,
+  "sg_match@0.05": 0.014,
+  "sg_match@0.1": 0.012,
+  "sg_match@0.2": 0.011,
+  "peak_aug_lat_mae_d_spacing": {
+    "a": 1.238,
+    "b": 1.148,
+    "c": 1.712,
+    "alpha_deg": 16.41,
+    "beta_deg": 14.82,
+    "gamma_deg": 20.76
+  },
+  "peak_aug_lat_validity": "1000/1000 (100.0%)",
+  "sg_head_topk_accuracy": {
+    "top1": 0.440,
+    "top5": 0.701
+  },
+  "config": {
+    "ckpt": "runs/gpu_v20_p5d/ckpt_final.pt",
+    "n": 1000,
+    "true_lattice": false,
+    "lat_from_aux": true,
+    "sg_constrain_lat": false,
+    "noise_aug_eval": false,
+    "n_samples": 20,
+    "ensemble_eta": 0.0,
+    "refine_steps": 200,
+    "refine_lr": 0.001,
+    "refine_lattice": false,
+    "ddim_steps": 50,
+    "eta": 0.0
+  }
+}
