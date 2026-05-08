@@ -51,7 +51,11 @@ def train(args: argparse.Namespace) -> None:
     ds = CrystalPXRDDataset(
         ROOT / "data", split="train",
         n_peaks=args.n_peaks if args.peak_aug_lat_head else 0,
+        augment=args.noise_aug,
     )
+    if args.noise_aug:
+        print("Phase 7: noise augmentation enabled "
+              "(zero-offset + Lorentzian broadening + Gaussian noise, p=0.8)")
     dl = DataLoader(ds, batch_size=args.bs, shuffle=True,
                     collate_fn=collate, num_workers=0, drop_last=True)
 
@@ -346,6 +350,13 @@ def main():
     ap.add_argument("--n-peaks", type=int, default=20,
                     help="Number of top peaks to extract per pattern for "
                          "Phase 5C. Must match the dataset's n_peaks.")
+    # ---- Phase 7 ------------------------------------------------------------
+    ap.add_argument("--noise-aug", action="store_true",
+                    help="Phase 7: apply experimental-style augmentation to "
+                         "PXRD patterns during training "
+                         "(zero-offset + Lorentzian broadening + Gaussian "
+                         "noise, p=0.8 per call). Makes the model robust to "
+                         "real-data artifacts not present in simulated patterns.")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")

@@ -127,6 +127,13 @@ def main():
                          "prediction onto the crystal-system manifold of the "
                          "predicted space group (e.g. cubic ⇒ a=b=c, all "
                          "angles 90°). Requires a checkpoint with sg_head.")
+    # ---- Phase 7 -------------------------------------------------------------
+    ap.add_argument("--noise-aug-eval", action="store_true",
+                    help="Phase 7: apply experimental-style augmentation to "
+                         "test patterns (zero-offset + Lorentzian broadening "
+                         "+ Gaussian noise, deterministic seed=42). Use this "
+                         "to measure robustness of a model trained with or "
+                         "without --noise-aug.")
     ap.add_argument("--out-json", default=None,
                     help="If set, write aggregate metrics JSON here")
     args = ap.parse_args()
@@ -211,7 +218,12 @@ def main():
     ds = CrystalPXRDDataset(
         ROOT / "data", split=args.split,
         n_peaks=n_peaks_train if peak_aug_lat else 0,
+        augment=args.noise_aug_eval,
+        augment_seed=42,
     )
+    if args.noise_aug_eval:
+        print("Phase 7 eval: applying noise augmentation to test patterns "
+              "(deterministic seed=42)")
 
     # Collate a batch
     indices = list(range(min(args.n, len(ds))))
@@ -506,6 +518,7 @@ def main():
                 "true_lattice": args.true_lattice,
                 "lat_from_aux": args.lat_from_aux,
                 "sg_constrain_lat": args.sg_constrain_lat,
+                "noise_aug_eval": args.noise_aug_eval,
                 "n_samples": args.n_samples,
                 "ensemble_eta": args.ensemble_eta,
                 "refine_steps": args.refine_steps,

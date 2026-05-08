@@ -67,6 +67,61 @@ def _parse_cif(cif_str: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.nda
     return frac, z, lat, params, wyck
 
 
+def augment_pxrd_pattern(pattern: np.ndarray,
+                         rng: Optional[np.random.Generator] = None,
+                         p: float = 0.8) -> np.ndarray:
+    """Apply stochastic experimental-style imperfections to a clean simulated
+    PXRD pattern. Used during Phase 7 training to make the model robust to
+    real-data artifacts not present in the simulated patterns.
+
+    Three augmentations, applied jointly with probability `p` (otherwise the
+    pattern is returned unchanged):
+      1. 2θ zero-offset (uniform integer shift in [-5, +5] bins ≈ ±0.1°)
+         — simulates instrument calibration error.
+      2. Lorentzian peak broadening (FWHM uniform in [2, 15] bins ≈ 0.04–0.3°)
+         — simulates crystallite-size / strain broadening (Scherrer).
+      3. Additive Gaussian noise (σ uniform in [0.5, 3] % of pattern max)
+         — simulates counting-statistics / detector noise.
+
+    The output is renormalized to the original max so downstream normalization
+    in the encoder does not see a global intensity drift.
+    """
+    rng = np.random.default_rng() if rng is None else rng
+    if rng.random() > p:
+        return pattern.astype(np.float32, copy=False)
+
+    out = pattern.astype(np.float32, copy=True)
+    orig_max = float(out.max())
+
+    # 1. 2θ zero-offset
+    shift = int(rng.integers(-5, 6))
+    if shift != 0:
+        out = np.roll(out, shift)
+        if shift > 0:
+            out[:shift] = 0.0
+        else:
+            out[shift:] = 0.0
+
+    # 2. Lorentzian peak broadening
+    fwhm = float(rng.uniform(2.0, 15.0))
+    kernel_half = max(1, int(2 * fwhm))
+    x = np.arange(-kernel_half, kernel_half + 1, dtype=np.float32)
+    kernel = 1.0 / (1.0 + (2.0 * x / fwhm) ** 2)
+    kernel /= kernel.sum()
+    out = np.convolve(out, kernel, mode="same").astype(np.float32)
+
+    # 3. Gaussian instrument noise
+    if out.max() > 0:
+        sigma = float(rng.uniform(0.005, 0.03)) * float(out.max())
+        out += rng.normal(0.0, sigma, out.shape).astype(np.float32)
+
+    # Clip negatives, restore original scale
+    out = np.maximum(out, 0.0)
+    if out.max() > 0 and orig_max > 0:
+        out = out * (orig_max / out.max())
+    return out.astype(np.float32)
+
+
 def _extract_peak_features(pattern: np.ndarray, n_peaks: int = 20,
                            height_frac: float = 0.05,
                            min_distance: int = 3) -> np.ndarray:
@@ -117,7 +172,9 @@ class CrystalPXRDDataset(Dataset):
     def __init__(self, data_dir: str | Path, split: str = "train",
                  max_atoms: int = MAX_ATOMS, preload: bool = True,
                  limit: int | None = None,
-                 n_peaks: int = 20):
+                 n_peaks: int = 20,
+                 augment: bool = False,
+                 augment_seed: Optional[int] = None):
         data_dir = Path(data_dir)
         cache_dir = data_dir / "cache"
         raw_dir = data_dir / "raw"
@@ -130,6 +187,11 @@ class CrystalPXRDDataset(Dataset):
 
         self.max_atoms = max_atoms
         self.n_peaks = n_peaks
+        self.augment = augment
+        # Phase 7: an explicit seed makes the augmented eval reproducible while
+        # training augmentation stays stochastic (uses the global default RNG).
+        self._aug_rng = (np.random.default_rng(augment_seed)
+                         if augment and augment_seed is not None else None)
         self._structures: Optional[list] = None
 
         if n_peaks > 0:
@@ -167,8 +229,22 @@ class CrystalPXRDDataset(Dataset):
         wyck_padded[:n] = wyck
         mask[:n] = True
 
+        # Phase 7 augmentation: apply per-call so each epoch sees fresh noise.
+        # When augmenting, peak features must be recomputed on the augmented
+        # pattern so they stay consistent with what the encoder/head will see.
+        pattern = self.patterns[idx]
+        if self.augment:
+            pattern = augment_pxrd_pattern(pattern, rng=self._aug_rng)
+            if self.n_peaks > 0:
+                peak_feat = _extract_peak_features(pattern, n_peaks=self.n_peaks)
+            else:
+                peak_feat = None
+        else:
+            peak_feat = (self.peak_features[idx] if self.peak_features is not None
+                         else None)
+
         out = {
-            "pxrd_pattern": torch.from_numpy(self.patterns[idx]),
+            "pxrd_pattern": torch.from_numpy(pattern.astype(np.float32, copy=False)),
             "frac_coords": torch.from_numpy(frac_padded),
             "atom_types": torch.from_numpy(z_padded),
             "wyckoff": torch.from_numpy(wyck_padded),
@@ -179,8 +255,8 @@ class CrystalPXRDDataset(Dataset):
             "spacegroup": torch.tensor(int(self.spacegroups[idx]), dtype=torch.long),
             "material_id": str(self.material_ids[idx]),
         }
-        if self.peak_features is not None:
-            out["peak_features"] = torch.from_numpy(self.peak_features[idx])
+        if peak_feat is not None:
+            out["peak_features"] = torch.from_numpy(peak_feat.astype(np.float32, copy=False))
         return out
 
 
