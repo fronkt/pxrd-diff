@@ -574,3 +574,74 @@ Two findings drive the rest of this project:
 - `paper/phase5b6_results/{p5b_baseline, p5b_phase4, p5b_sg_baseline, p5b_sg_phase4}.json`
 - `runs/gpu_v17_p5b6/ckpt_final.pt` on the GPU instance (8 ckpts × 47 MB total)
 - `runs/phase5b6/*.{json,log}` on the GPU instance
+
+---
+
+## Review — Phase 5C (peak-augmented lattice head) — NEGATIVE result
+- Completed: 2026-05-08
+- Trained `runs/gpu_v18_p5c/ckpt_final.pt`: 30k steps resumed from
+  `runs/gpu_v17_p5b6/ckpt_final.pt` (140k total). PeakAugmentedLatHead
+  initialized fresh; encoder, denoiser, and sg_head warm-started. 32 min
+  on RTX 5090.
+- Config: `--predict-x0 --debye-weight 1.0 --peak-aug-lat-head --n-peaks 20
+  --sg-weight 0.1 --aux-weight 5.0 --save-every 5000`.
+- Final losses: coord=0.076, lat=0.19, aux=0.30 (vs v17's 0.38), sg=1.80, debye=0.54.
+  Aux DID drop slightly in normalized space, but the physical-unit MAE
+  did not move.
+
+### PeakAug-lat MAE (n=1000)
+| head        | a (Å) | b (Å) | c (Å) | α (°) | β (°) | γ (°) |
+|-------------|------:|------:|------:|------:|------:|------:|
+| Aux (Path A)| 1.119 | 1.022 | 1.380 | 12.98 | 11.85 | 17.55 |
+| Constrained | 1.113 | 1.018 | 1.418 | 13.72 | 12.54 | 18.44 |
+| **PeakAug** | **1.127** | **1.024** | **1.413** | **13.99** | **12.83** | **18.69** |
+
+**Three head architectures with very different inputs and supervision —
+identical MAE.** The peak-feature signal is being fed in (verified by
+unit test: head output changes when peaks change) but the head can't
+turn it into better lattice predictions.
+
+### End-to-end (n=1000, no --true-lattice)
+
+| metric                       | p5c_baseline | p5c_phase4 | p5c_sg_baseline | p5c_sg_phase4 |
+|------------------------------|-------------:|-----------:|----------------:|--------------:|
+| StructureMatcher match rate  |        0.60% |      0.90% |           0.70% |         0.50% |
+| pearson_mean                 |        0.010 |      0.083 |           0.005 |         0.047 |
+| rmsd_mean                    |        0.231 |      0.149 |           0.244 |         0.125 |
+| rmsd_median                  |        0.274 |      0.158 |           0.255 |         0.098 |
+| rwp_mean                     |       19.94  |     17.86  |          18.94  |        16.13  |
+| headline_all_correct         |        0.00% |      0.00% |           0.00% |         0.20% |
+
+Slightly worse than Phase 5B (v17) on every dimension. SG-head accuracy
+stays at top-1=39.9% / top-5=70.7% (essentially identical to v17).
+
+### Why peaks alone aren't enough (the diagnosis)
+
+To get a lattice from peak positions you need to **index** the peaks —
+figure out which `(h, k, l)` reflection produced each one. Indexing is
+a combinatorial inverse problem: even a perfectly-positioned 40-d peak
+vector tells you nothing about which dimension belongs to which `(h,k,l)`.
+A small MLP cannot learn this implicitly from 27 k MP-20 examples.
+
+The v18 head is therefore drawing on the encoder embedding for almost
+all of its lattice signal — which is exactly the signal Phase 5/5B already
+showed is bottlenecked at ~1 Å MAE. We just spent 30 k steps adding a
+pathway to information the model can't decode.
+
+### What WOULD work (deferred — bigger engineering)
+- **Phase 5D**: convert `2θ → d-spacing` via Bragg's law before feeding
+  to the head. d is the actual physical quantity that determines lattice;
+  feeding it directly may let the MLP learn the much-simpler map.
+- **Phase 5E**: peak-attention transformer with learnable `(h,k,l)`
+  queries and crystal-system inductive bias.
+- **Phase 5F**: classical auto-indexing (Treor / DICVOL / N-TREOR) to
+  produce a first lattice estimate, then the model only refines.
+
+### What this rules out
+- Adding peak features as a flat dense vector to a small MLP. Two
+  retrains (v17, v18) confirm the head architecture isn't the wall.
+
+### Artifacts
+- `paper/phase5c_results/{p5c_baseline, p5c_phase4, p5c_sg_baseline, p5c_sg_phase4}.json`
+- `runs/gpu_v18_p5c/ckpt_final.pt` on the GPU instance
+- `runs/phase5c/*.{json,log}` on the GPU instance
