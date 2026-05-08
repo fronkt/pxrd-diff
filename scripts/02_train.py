@@ -70,8 +70,10 @@ def train(args: argparse.Namespace) -> None:
     if args.peak_aug_lat_head:
         aux_head = PeakAugmentedLatHead(
             d_model=args.d_model, peak_dim=2 * args.n_peaks,
+            use_d_spacing=args.use_d_spacing,
         ).to(device)
-        print(f"Using PeakAugmentedLatHead (Phase 5C, n_peaks={args.n_peaks})")
+        mode = "Phase 5D, d-spacing" if args.use_d_spacing else "Phase 5C, raw 2θ"
+        print(f"Using PeakAugmentedLatHead ({mode}, n_peaks={args.n_peaks})")
     elif args.constrained_lat_head:
         aux_head = ConstrainedLatHead(args.d_model).to(device)
         print("Using ConstrainedLatHead (Phase 5B)")
@@ -357,6 +359,13 @@ def main():
     ap.add_argument("--n-peaks", type=int, default=20,
                     help="Number of top peaks to extract per pattern for "
                          "Phase 5C. Must match the dataset's n_peaks.")
+    ap.add_argument("--use-d-spacing", action="store_true",
+                    help="Phase 5D: convert each peak's normalized 2θ position "
+                         "to log d-spacing via Bragg's law before feeding it "
+                         "to the PeakAugmentedLatHead. d-spacing is the "
+                         "physics quantity that determines the lattice; the "
+                         "MLP no longer has to learn the trigonometric inverse "
+                         "implicitly.")
     # ---- Phase 7 ------------------------------------------------------------
     ap.add_argument("--noise-aug", action="store_true",
                     help="Phase 7: apply experimental-style augmentation to "

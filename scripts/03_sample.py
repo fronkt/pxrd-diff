@@ -158,12 +158,14 @@ def main():
     # (Phase 5B) > AuxLatHead (legacy).
     constrained_lat = bool(train_args.get("constrained_lat_head", False))
     peak_aug_lat = bool(train_args.get("peak_aug_lat_head", False))
+    use_d_spacing = bool(train_args.get("use_d_spacing", False))
     n_peaks_train = int(train_args.get("n_peaks", 20))
     aux_head = None
     if "aux_head" in ckpt:
         if peak_aug_lat:
             aux_head = PeakAugmentedLatHead(
                 d_model=d_model, peak_dim=2 * n_peaks_train,
+                use_d_spacing=use_d_spacing,
             ).to(device)
         elif constrained_lat:
             aux_head = ConstrainedLatHead(d_model=d_model).to(device)
@@ -198,7 +200,8 @@ def main():
         if aux_head is None:
             sys.exit("--lat-from-aux requested but checkpoint has no aux_head")
         if peak_aug_lat:
-            print(f"Phase 5C: lattice from PeakAugmentedLatHead "
+            mode = "Phase 5D d-spacing" if use_d_spacing else "Phase 5C raw 2θ"
+            print(f"{mode}: lattice from PeakAugmentedLatHead "
                   f"(n_peaks={n_peaks_train})")
         elif constrained_lat:
             print("Phase 5B: lattice from ConstrainedLatHead (physical units, sigmoid-bounded)")

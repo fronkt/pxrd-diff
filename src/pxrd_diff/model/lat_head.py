@@ -19,6 +19,8 @@ inference (e.g. cubic ⇒ a=b=c, all angles 90°) given a predicted SG number.
 """
 from __future__ import annotations
 
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -70,28 +72,34 @@ class SpaceGroupHead(nn.Module):
 
 
 class PeakAugmentedLatHead(nn.Module):
-    """Phase 5C: lattice head with explicit peak-position features.
+    """Phase 5C/5D: lattice head with explicit peak-position features.
 
     Combines the encoder's global embedding with a precomputed peak-feature
-    vector (top-N peak positions normalized to [0, 1] in 2θ + their relative
-    intensities). The peak features give the head direct access to d-spacing
-    information that the encoder's global pooling discards — for the diffusion
-    encoder this was the bottleneck driving the ~1 Å lattice MAE we saw in
-    Phase 5/5B.
+    vector (top-N peak [position, intensity] pairs).
+
+    Phase 5C (default, `use_d_spacing=False`): positions are passed through
+    as normalized 2θ in [0, 1]. The MLP must learn the trigonometric inverse
+    of Bragg's law implicitly. Empirically (Phase 5C) this didn't move the
+    lattice MAE.
+
+    Phase 5D (`use_d_spacing=True`): positions are converted via Bragg's law
+    `d = λ / (2 sin θ)` to log d-spacings (in log Å) before the MLP.
+    d-spacing is the actual physical quantity that determines the lattice,
+    and the conversion is differentiable. The MLP now sees a feature with
+    direct physical meaning instead of an angle that has to be re-decoded.
 
     Output is in physical units, sigmoid-bounded to a physically plausible
     range, just like ConstrainedLatHead.
-
-    Args:
-        d_model:    encoder embedding dim (concatenated with peak features)
-        peak_dim:   length of the peak-feature vector (typically n_peaks * 2)
-        len_min/max, ang_min/max: physical-unit clamps for the sigmoid scaling
     """
 
     def __init__(self, d_model: int = 256, peak_dim: int = 40,
                  hidden: int = 256,
                  len_min: float = 2.0, len_max: float = 20.0,
-                 ang_min: float = 30.0, ang_max: float = 150.0):
+                 ang_min: float = 30.0, ang_max: float = 150.0,
+                 use_d_spacing: bool = False,
+                 wavelength: float = 1.54184,        # Cu Kα
+                 two_theta_min: float = 5.0,
+                 two_theta_max: float = 90.0):
         super().__init__()
         self.peak_dim = peak_dim
         self.peak_proj = nn.Sequential(
@@ -110,7 +118,39 @@ class PeakAugmentedLatHead(nn.Module):
         self.ang_min = ang_min
         self.ang_max = ang_max
 
+        self.use_d_spacing = use_d_spacing
+        if use_d_spacing:
+            self.register_buffer("wavelength", torch.tensor(wavelength), persistent=False)
+            self.register_buffer("tt_min", torch.tensor(two_theta_min), persistent=False)
+            self.register_buffer("tt_range",
+                                 torch.tensor(two_theta_max - two_theta_min),
+                                 persistent=False)
+
+    def _peaks_to_d_spacing(self, peak_features: torch.Tensor) -> torch.Tensor:
+        """Phase 5D: replace each [pos_norm, intensity] pair with [log_d, intensity].
+
+        pos_norm ∈ [0, 1] maps linearly to 2θ ∈ [tt_min, tt_max] in degrees.
+        d = λ / (2 sin θ) where θ = 2θ / 2.
+        Output is log(d) in log Å. Padded slots (intensity = 0) get log_d = 0.
+        """
+        pos = peak_features[..., ::2]                     # (..., N) in [0, 1]
+        intensity = peak_features[..., 1::2]              # (..., N) in [0, 1]
+        two_theta = self.tt_min + self.tt_range * pos      # degrees
+        theta_rad = two_theta * (math.pi / 180.0) / 2.0
+        sin_theta = torch.sin(theta_rad).clamp(min=1e-6)
+        d = self.wavelength / (2.0 * sin_theta)            # Å
+        log_d = torch.log(d.clamp(min=0.1))                # log Å
+        mask = (intensity > 0).float()
+        log_d = log_d * mask                                # zero-out padded slots
+
+        out = torch.empty_like(peak_features)
+        out[..., ::2] = log_d
+        out[..., 1::2] = intensity
+        return out
+
     def forward(self, emb: torch.Tensor, peak_features: torch.Tensor) -> torch.Tensor:
+        if self.use_d_spacing:
+            peak_features = self._peaks_to_d_spacing(peak_features)
         peak_emb = self.peak_proj(peak_features)
         raw = self.fuse(torch.cat([emb, peak_emb], dim=-1))
         lengths = self.len_min + (self.len_max - self.len_min) * torch.sigmoid(raw[..., :3])

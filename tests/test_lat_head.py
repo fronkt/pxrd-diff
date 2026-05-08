@@ -1,6 +1,7 @@
 """Smoke tests for the Phase 5B + 6 heads (constrained lattice, SG, SG constraints)."""
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -85,6 +86,59 @@ def test_peak_aug_head_is_differentiable_through_peaks():
     out.sum().backward()
     assert peaks.grad is not None
     assert torch.isfinite(peaks.grad).all()
+
+
+# ---------- Phase 5D: d-spacing conversion -----------------------------------
+
+def test_d_spacing_conversion_matches_braggs_law():
+    """Verify _peaks_to_d_spacing implements d = lambda / (2 sin theta)
+    correctly for a few hand-computed positions."""
+    head = PeakAugmentedLatHead(
+        d_model=4, peak_dim=4, use_d_spacing=True,
+        wavelength=1.54184, two_theta_min=5.0, two_theta_max=90.0,
+    )
+    # One peak at pos=0.3 (=> 2θ = 5 + 0.3 * 85 = 30.5°, θ = 15.25°)
+    # d = 1.54184 / (2 * sin(15.25°)) ≈ 2.93 Å, log_d ≈ 1.075
+    # Plus one padded slot at pos=0, intensity=0
+    peak_features = torch.tensor([[0.3, 1.0, 0.0, 0.0]])
+    transformed = head._peaks_to_d_spacing(peak_features)
+    log_d_expected = math.log(1.54184 / (2 * math.sin(math.radians(15.25))))
+    assert torch.isclose(transformed[0, 0], torch.tensor(log_d_expected), atol=1e-4), \
+        f"got {transformed[0,0]:.4f}, expected {log_d_expected:.4f}"
+    # Intensity preserved
+    assert transformed[0, 1].item() == 1.0
+    # Padded slot: log_d should be 0
+    assert transformed[0, 2].item() == 0.0
+    assert transformed[0, 3].item() == 0.0
+
+
+def test_d_spacing_head_outputs_within_bounds():
+    head = PeakAugmentedLatHead(d_model=32, peak_dim=40, use_d_spacing=True)
+    head.eval()
+    emb = torch.randn(8, 32)
+    # Realistic peak features: random positions in [0, 1] and intensities in [0, 1]
+    peaks = torch.rand(8, 40)
+    out = head(emb, peaks)
+    assert out.shape == (8, 6)
+    assert torch.all(out[:, :3] >= 2.0) and torch.all(out[:, :3] <= 20.0)
+    assert torch.all(out[:, 3:] >= 30.0) and torch.all(out[:, 3:] <= 150.0)
+
+
+def test_d_spacing_changes_output_vs_raw_2theta():
+    """If we feed the same peak features through use_d_spacing=False vs True,
+    outputs differ — i.e. the conversion isn't a no-op."""
+    torch.manual_seed(0)
+    h_raw = PeakAugmentedLatHead(d_model=16, peak_dim=20, use_d_spacing=False)
+    torch.manual_seed(0)  # Identical weight init
+    h_d = PeakAugmentedLatHead(d_model=16, peak_dim=20, use_d_spacing=True)
+    h_raw.eval(); h_d.eval()
+
+    emb = torch.randn(4, 16)
+    peaks = torch.rand(4, 20).abs()  # all positive intensities
+    out_raw = h_raw(emb, peaks)
+    out_d = h_d(emb, peaks)
+    assert not torch.allclose(out_raw, out_d, atol=1e-3), \
+        "d-spacing conversion had no effect — feature transform is broken"
 
 
 # ---------- SpaceGroupHead ----------------------------------------------------------
