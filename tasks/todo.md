@@ -645,3 +645,79 @@ pathway to information the model can't decode.
 - `paper/phase5c_results/{p5c_baseline, p5c_phase4, p5c_sg_baseline, p5c_sg_phase4}.json`
 - `runs/gpu_v18_p5c/ckpt_final.pt` on the GPU instance
 - `runs/phase5c/*.{json,log}` on the GPU instance
+
+---
+
+## Review — Phase 7 (noise augmentation) — NEGATIVE result
+- Completed: 2026-05-08
+- Trained `runs/gpu_v19_p7/ckpt_final.pt`: 30 k steps resumed from
+  `runs/gpu_v18_p5c/ckpt_final.pt` (170 k total). New `--noise-aug` flag
+  applies stochastic per-call augmentation to PXRD patterns: 2θ zero-offset
+  in [-5, +5] bins, Lorentzian peak broadening (FWHM 2-15 bins), additive
+  Gaussian noise (σ 0.5-3 % of max), each with p=0.8.
+- First launch (`--steps 170000` cosine) blew up immediately: v18's cosine
+  schedule ended at lr=0 at step 140 k, fast-forwarding the new scheduler
+  past most of its decay left lr ~ 0. Heads diverged. Killed; added
+  `--const-lr` flag (LambdaLR with constant 1.0 multiplier) and relaunched
+  with `--const-lr --lr 1e-4`. Training completed but with chronic gradient
+  pathology: gnorm 8 k - 40 k throughout (clipped to 1.0 by the existing
+  grad-clip), encoder gradient ≈ 0. The encoder stayed essentially frozen
+  at v18 weights while the heads thrashed.
+- Final losses: coord=0.107, lat=0.44, aux=0.99, sg=2.75 (top-1 ~28 %),
+  debye=0.61. All worse than v18's converged values.
+
+### Phase 7 robustness eval (n=1000, strongest pipeline)
+
+| metric                       | v18_on_clean | v18_on_noisy | v19_on_clean | v19_on_noisy |
+|------------------------------|-------------:|-------------:|-------------:|-------------:|
+| StructureMatcher match rate  |        0.80% |        0.20% |    **0.00%** |        0.10% |
+| rmsd_mean                    |        0.129 |        0.230 |       NaN ¹  |        0.007 |
+| rmsd_median                  |        0.101 |        0.230 |       NaN ¹  |        0.007 |
+| pearson_mean                 |        0.048 |        0.053 |        0.014 |        0.017 |
+| rwp_mean                     |       16.18  |       11.47  |       17.19  |        9.40  |
+| headline_all_correct         |        0.30% |        0.00% |        0.00% |        0.00% |
+| sg_match@0.1                 |        1.70% |        1.30% |        0.20% |        0.20% |
+
+¹ rmsd is NaN when StructureMatcher finds zero matches across all 1000
+   test structures — v19 on clean simply does not produce structures
+   pymatgen can register as matches.
+
+### Two real findings
+1. **v18 already has some implicit robustness.** Trained only on clean
+   simulated patterns, it degrades from match=0.80 % → 0.20 % on noisy
+   patterns (a 75 % drop, not catastrophic). Coord-only diffusion training
+   appears to add some noise tolerance for free.
+2. **v19 (aug-fine-tuned) is worse on every metric, including noisy.**
+   Match rate 0.00 % on clean (vs v18's 0.80 %), SG accuracy collapsed
+   1.7 % → 0.2 %, rmsd is NaN on the clean test (no matches at all).
+
+### Why aug-fine-tune from v18 broke the model
+The training log spelled it out: gnorm shot from v18's typical 100-300
+range to 8 k - 40 k under noise augmentation, all clipped to 1.0. The
+encoder's gradient share fell to ~0. So the encoder stayed at v18's
+clean-pattern weights while the heads received 30 k steps of unit-norm
+random-direction updates with no signal to pull them anywhere productive.
+Result: heads ended up far from any working point in their loss surface.
+
+### What WOULD work (deferred — bigger compute)
+- **Phase 7 done right**: train end-to-end *from scratch* with augmentation
+  enabled from step 0. Encoder learns noise-invariant features as it
+  trains, instead of being asked to relearn after convergence. Estimated
+  cost: ~6 GPU-h (full v13-equivalent run on RTX 5090). Out of scope for
+  this session's budget but a clear next step if Phase 7 is revisited.
+- **Phase 7 lite**: much milder augmentation parameters (e.g. σ in [0.001,
+  0.005] of max instead of [0.005, 0.03]) might let v18's converged
+  weights stay close to a working solution while still picking up some
+  noise tolerance.
+- **Phase 7 freeze-encoder**: detach the encoder during noise-aug
+  fine-tune so only the heads adapt. Avoids the gnorm-blowup pathology.
+
+### What this rules out
+- A direct noise-aug fine-tune from a converged clean checkpoint.
+  v18-style models are too tightly fit to clean inputs for a 30 k-step
+  fine-tune to bend them gracefully under aggressive augmentation.
+
+### Artifacts
+- `paper/phase7_results/{v18_on_clean, v18_on_noisy, v19_on_clean, v19_on_noisy}.json`
+- `runs/gpu_v19_p7/ckpt_final.pt` and intermediate ckpts on the GPU instance
+- `runs/phase7/*.{json,log}` on the GPU instance
