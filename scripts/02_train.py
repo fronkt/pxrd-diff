@@ -93,7 +93,14 @@ def train(args: argparse.Namespace) -> None:
     if sg_head is not None:
         params = params + list(sg_head.parameters())
     opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.steps)
+    if args.const_lr:
+        # Fine-tune mode: no LR annealing, lr stays at args.lr for the
+        # whole run. Avoids the case where a cosine endpoint at the resume
+        # ckpt's step makes the resumed lr ~0 even after fast-forwarding.
+        scheduler = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda=lambda _: 1.0)
+        print(f"Constant LR mode: lr={args.lr:.2e} for the whole run")
+    else:
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.steps)
 
     n_params = sum(p.numel() for p in params)
     print(f"Params: {n_params:,} ({n_params/1e6:.1f}M)")
@@ -357,6 +364,11 @@ def main():
                          "(zero-offset + Lorentzian broadening + Gaussian "
                          "noise, p=0.8 per call). Makes the model robust to "
                          "real-data artifacts not present in simulated patterns.")
+    ap.add_argument("--const-lr", action="store_true",
+                    help="Disable the cosine LR schedule and use a constant "
+                         "lr=args.lr for the whole run. Recommended for "
+                         "fine-tune resumes where the resume step is near "
+                         "the cosine endpoint of the previous run.")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")
