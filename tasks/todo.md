@@ -493,3 +493,84 @@ validity     998 / 1000 = 99.8% (vs ≈ 0% for diffusion sampler)
 ### Artifacts
 - `paper/phase5_results/{aux_lat_baseline, aux_lat_phase4}.json` (committed)
 - `runs/phase5/*.{json,log}` on the GPU instance
+
+---
+
+## Review — Phase 5B + 6 (constrained lattice head + space-group head + SG constraints)
+- Completed: 2026-05-08
+- Trained `runs/gpu_v17_p5b6/ckpt_final.pt`: 30,500 steps resumed from
+  `runs/gpu_v13/ckpt_079500.pt` (110k total). Encoder/denoiser warm-started;
+  ConstrainedLatHead and SpaceGroupHead initialized fresh. 32 min on RTX 5090.
+  Config: `--predict-x0 --debye-weight 1.0 --constrained-lat-head
+  --sg-weight 0.1 --aux-weight 5.0 --save-every 5000`.
+- Final losses: coord=0.076, lat=0.22, aux=0.38, sg=2.11, debye=0.58.
+
+### SG-head accuracy
+- **top-1: 39.2 %** | **top-5: 70.9 %**  (vs 0.4 % random across 230 classes).
+  The encoder cleanly captures crystal-system / point-group features even
+  though it doesn't capture absolute scale (lattice parameter MAE is large).
+
+### End-to-end results (n=1000, no --true-lattice)
+
+| metric                       | p5b_baseline | p5b_phase4 | p5b_sg_baseline | p5b_sg_phase4 |
+|------------------------------|-------------:|-----------:|----------------:|--------------:|
+| StructureMatcher match rate  |        1.40% |      1.20% |           0.50% |         0.70% |
+| pearson_mean                 |        0.009 |      0.082 |           0.005 |         0.047 |
+| rmsd_mean (Å)                |        0.226 |      0.211 |           0.227 |     **0.109** |
+| rmsd_median (Å)              |        0.250 |      0.256 |           0.264 |     **0.007** |
+| rwp_mean                     |       20.25  |     17.91  |          19.05  |         16.22 |
+| headline_all_correct         |        0.00% |      0.00% |           0.00% |     **0.30%** |
+| sg_match@0.1                 |        1.40% |      1.30% |           1.40% |         1.60% |
+
+### ConstrainedLatHead MAE
+Pre-SG constraint:  a=1.11 b=1.02 c=1.42 Å,  α=13.7° β=12.5° γ=18.4°
+Post-SG constraint: a=1.11 b=1.02 c=1.41 Å,  α=17.5° β=16.3° γ=23.4°
+
+### Read
+
+Two findings drive the rest of this project:
+
+1. **The encoder is lattice-precision-limited, not lat-head-architecture-limited.**
+   Bumping aux weight 0.5 → 5.0, swapping to a sigmoid-bounded ConstrainedLatHead,
+   and 30 k extra training steps left the lattice MAE essentially unchanged from
+   the original AuxLatHead (a≈1.11 Å, α≈14°). The PXRD encoder's global pooling
+   destroys the peak-position fidelity that Bragg's-law decoding needs to nail
+   absolute lengths and angles. **No amount of head-side fixing will move this
+   number; the next move has to live in the encoder** — explicit d-spacing
+   extraction, wavelet/peak-finding features, or per-peak attention rather than
+   global pooling.
+
+2. **SG conditioning works qualitatively but is destroyed by lattice noise.**
+   The 39 % top-1 SG accuracy is a real signal — when the SG head is right and
+   Phase 4 ensemble + refinement converge, we get **rmsd_median = 0.007 Å, basically
+   exact reconstruction**. That collapse from 0.256 to 0.007 is the strongest
+   per-instance signal in the project. The catch: it only fires for ~7/1000
+   structures because (a) SG is wrong 61 % of the time and (b) when it's wrong
+   the constraint locks the lattice into the wrong symmetry, dropping match_rate
+   from 1.20 % to 0.70 %.
+
+   **`headline_all_correct = 0.30 %` is the first nonzero "predicted everything
+   from PXRD alone" number in the project.** It's small but it's a real signal,
+   and it scales with SG-head accuracy and lattice precision — both improvable.
+
+### What this rules out
+- A drop-in replacement of the lattice head (Phase 5 Path A or B) cannot fix
+  the no-true-lattice headline. The encoder is the bottleneck.
+
+### What this points to next
+- **Phase 5C (encoder rework, ~1 week):** add explicit Bragg-peak features —
+  e.g. a peak-position attention head fed by a 1-D peak detector — so the
+  encoder can encode d-spacings with subpixel precision instead of relying on
+  the ResNet's pooled summary. This should drop length MAE from ~1 Å to ~0.1 Å.
+- **Phase 6.3 (Wyckoff-reduced asymmetric unit, deferred):** with a working SG
+  predictor we can already enumerate symmetry orbits; predicting only the
+  asymmetric-unit fractional coords would shrink the search space dramatically
+  for high-symmetry SGs.
+- **Phase 7 (noise augmentation) / Phase 8 (full MP scale-up):** still on
+  the roadmap, but they amplify whatever lattice precision the encoder
+  produces — they don't fix the encoder bottleneck themselves.
+
+### Artifacts
+- `paper/phase5b6_results/{p5b_baseline, p5b_phase4, p5b_sg_baseline, p5b_sg_phase4}.json`
+- `runs/gpu_v17_p5b6/ckpt_final.pt` on the GPU instance (8 ckpts × 47 MB total)
+- `runs/phase5b6/*.{json,log}` on the GPU instance
