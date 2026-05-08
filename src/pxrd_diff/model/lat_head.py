@@ -69,6 +69,55 @@ class SpaceGroupHead(nn.Module):
         return self.net(emb)                                  # (B, 230) logits
 
 
+class PeakAugmentedLatHead(nn.Module):
+    """Phase 5C: lattice head with explicit peak-position features.
+
+    Combines the encoder's global embedding with a precomputed peak-feature
+    vector (top-N peak positions normalized to [0, 1] in 2θ + their relative
+    intensities). The peak features give the head direct access to d-spacing
+    information that the encoder's global pooling discards — for the diffusion
+    encoder this was the bottleneck driving the ~1 Å lattice MAE we saw in
+    Phase 5/5B.
+
+    Output is in physical units, sigmoid-bounded to a physically plausible
+    range, just like ConstrainedLatHead.
+
+    Args:
+        d_model:    encoder embedding dim (concatenated with peak features)
+        peak_dim:   length of the peak-feature vector (typically n_peaks * 2)
+        len_min/max, ang_min/max: physical-unit clamps for the sigmoid scaling
+    """
+
+    def __init__(self, d_model: int = 256, peak_dim: int = 40,
+                 hidden: int = 256,
+                 len_min: float = 2.0, len_max: float = 20.0,
+                 ang_min: float = 30.0, ang_max: float = 150.0):
+        super().__init__()
+        self.peak_dim = peak_dim
+        self.peak_proj = nn.Sequential(
+            nn.Linear(peak_dim, hidden),
+            nn.SiLU(),
+            nn.Linear(hidden, hidden),
+            nn.SiLU(),
+        )
+        self.fuse = nn.Sequential(
+            nn.Linear(d_model + hidden, hidden),
+            nn.SiLU(),
+            nn.Linear(hidden, 6),
+        )
+        self.len_min = len_min
+        self.len_max = len_max
+        self.ang_min = ang_min
+        self.ang_max = ang_max
+
+    def forward(self, emb: torch.Tensor, peak_features: torch.Tensor) -> torch.Tensor:
+        peak_emb = self.peak_proj(peak_features)
+        raw = self.fuse(torch.cat([emb, peak_emb], dim=-1))
+        lengths = self.len_min + (self.len_max - self.len_min) * torch.sigmoid(raw[..., :3])
+        angles = self.ang_min + (self.ang_max - self.ang_min) * torch.sigmoid(raw[..., 3:])
+        return torch.cat([lengths, angles], dim=-1)
+
+
 def sg_classification_loss(logits: torch.Tensor, sg_numbers: torch.Tensor) -> torch.Tensor:
     """Cross-entropy loss for SG prediction.
 

@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from pxrd_diff.model.lat_head import (                          # noqa: E402
     ConstrainedLatHead,
+    PeakAugmentedLatHead,
     SpaceGroupHead,
     apply_sg_constraints,
     sg_classification_loss,
@@ -45,6 +46,45 @@ def test_constrained_lat_head_is_differentiable():
     out.sum().backward()
     assert emb.grad is not None
     assert torch.isfinite(emb.grad).all()
+
+
+# ---------- PeakAugmentedLatHead -------------------------------------------------
+
+def test_peak_aug_head_within_bounds():
+    head = PeakAugmentedLatHead(d_model=32, peak_dim=40)
+    head.eval()
+    emb = torch.randn(8, 32) * 100.0
+    peaks = torch.rand(8, 40)
+    out = head(emb, peaks)
+    assert out.shape == (8, 6)
+    assert torch.all(out[:, :3] >= 2.0) and torch.all(out[:, :3] <= 20.0)
+    assert torch.all(out[:, 3:] >= 30.0) and torch.all(out[:, 3:] <= 150.0)
+
+
+def test_peak_aug_head_uses_peak_features():
+    """If two batches differ only in peak features, the output should differ
+    (i.e. peak features actually feed into the prediction, not dead weights)."""
+    torch.manual_seed(0)
+    head = PeakAugmentedLatHead(d_model=32, peak_dim=40)
+    head.eval()
+    emb = torch.randn(4, 32)
+    peaks_a = torch.rand(4, 40)
+    peaks_b = torch.rand(4, 40)
+    with torch.no_grad():
+        out_a = head(emb, peaks_a)
+        out_b = head(emb, peaks_b)
+    assert not torch.allclose(out_a, out_b, atol=1e-3), \
+        "Peak features have no effect — head is ignoring them"
+
+
+def test_peak_aug_head_is_differentiable_through_peaks():
+    head = PeakAugmentedLatHead(d_model=16, peak_dim=20)
+    emb = torch.randn(2, 16)
+    peaks = torch.rand(2, 20, requires_grad=True)
+    out = head(emb, peaks)
+    out.sum().backward()
+    assert peaks.grad is not None
+    assert torch.isfinite(peaks.grad).all()
 
 
 # ---------- SpaceGroupHead ----------------------------------------------------------

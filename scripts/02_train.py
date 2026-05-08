@@ -25,6 +25,7 @@ from pxrd_diff.model.aux_head import AuxLatHead
 from pxrd_diff.model.denoiser import CrystalDenoiser, periodic_distances
 from pxrd_diff.model.lat_head import (
     ConstrainedLatHead,
+    PeakAugmentedLatHead,
     SpaceGroupHead,
     sg_classification_loss,
     sg_topk_accuracy,
@@ -47,7 +48,10 @@ def train(args: argparse.Namespace) -> None:
     print(f"Device: {device}")
 
     print("Loading dataset...")
-    ds = CrystalPXRDDataset(ROOT / "data", split="train")
+    ds = CrystalPXRDDataset(
+        ROOT / "data", split="train",
+        n_peaks=args.n_peaks if args.peak_aug_lat_head else 0,
+    )
     dl = DataLoader(ds, batch_size=args.bs, shuffle=True,
                     collate_fn=collate, num_workers=0, drop_last=True)
 
@@ -59,7 +63,12 @@ def train(args: argparse.Namespace) -> None:
     encoder = PXRDEncoder(d_model=args.d_model).to(device)
     denoiser = CrystalDenoiser(d_model=args.d_model, n_layers=args.n_layers,
                                 n_heads=args.n_heads).to(device)
-    if args.constrained_lat_head:
+    if args.peak_aug_lat_head:
+        aux_head = PeakAugmentedLatHead(
+            d_model=args.d_model, peak_dim=2 * args.n_peaks,
+        ).to(device)
+        print(f"Using PeakAugmentedLatHead (Phase 5C, n_peaks={args.n_peaks})")
+    elif args.constrained_lat_head:
         aux_head = ConstrainedLatHead(args.d_model).to(device)
         print("Using ConstrainedLatHead (Phase 5B)")
     else:
@@ -104,7 +113,10 @@ def train(args: argparse.Namespace) -> None:
         # Match the checkpoint's lat-head architecture to the configured one.
         ckpt_args = ckpt.get("args", {})
         ckpt_constrained = bool(ckpt_args.get("constrained_lat_head", False))
-        if ckpt_constrained == args.constrained_lat_head and "aux_head" in ckpt:
+        ckpt_peak_aug = bool(ckpt_args.get("peak_aug_lat_head", False))
+        same_head = (ckpt_peak_aug == args.peak_aug_lat_head
+                     and ckpt_constrained == args.constrained_lat_head)
+        if same_head and "aux_head" in ckpt:
             aux_head.load_state_dict(ckpt["aux_head"])
             print("  -> resumed lat head from checkpoint")
         else:
@@ -116,7 +128,7 @@ def train(args: argparse.Namespace) -> None:
             print("  -> NOT resuming sg_head (new in this run — fresh init)")
         # Optimizer state is keyed by parameter id, so it only matches if every
         # head had its weights loaded. Skip when any new head was just init'd.
-        load_opt = (ckpt_constrained == args.constrained_lat_head
+        load_opt = (same_head
                     and (sg_head is None or "sg_head" in ckpt))
         if load_opt and "optimizer" in ckpt:
             try:
@@ -144,6 +156,8 @@ def train(args: argparse.Namespace) -> None:
             lat_p = batch["lattice_params"].to(device)
             mask = batch["mask"].to(device)
             wyckoff = batch["wyckoff"].to(device) if args.use_wyckoff else None
+            peak_features = (batch["peak_features"].to(device)
+                             if args.peak_aug_lat_head else None)
 
             lat_p_norm = (lat_p - lat_mean) / lat_std
 
@@ -181,9 +195,13 @@ def train(args: argparse.Namespace) -> None:
                 )
                 eps_c_pred = pred_c
 
-            lat_pred_raw = aux_head(pxrd_global)
-            if args.constrained_lat_head:
-                # ConstrainedLatHead emits physical-unit params; normalize to match lat_p_norm.
+            if args.peak_aug_lat_head:
+                lat_pred_raw = aux_head(pxrd_global, peak_features)
+            else:
+                lat_pred_raw = aux_head(pxrd_global)
+            if args.constrained_lat_head or args.peak_aug_lat_head:
+                # Heads with sigmoid-bounded outputs emit physical units;
+                # normalize for consistent gradient magnitudes vs lat_p_norm.
                 lat_pred_norm = (lat_pred_raw - lat_mean) / lat_std
             else:
                 lat_pred_norm = lat_pred_raw
@@ -318,6 +336,16 @@ def main():
     ap.add_argument("--sg-weight", type=float, default=0.0,
                     help="Phase 6.1: weight for the SpaceGroupHead "
                          "cross-entropy loss. 0 disables the head.")
+    # ---- Phase 5C -----------------------------------------------------------
+    ap.add_argument("--peak-aug-lat-head", action="store_true",
+                    help="Phase 5C: replace the lattice head with "
+                         "PeakAugmentedLatHead, which receives explicit "
+                         "top-N peak position+intensity features alongside "
+                         "the encoder embedding. Overrides "
+                         "--constrained-lat-head if both are set.")
+    ap.add_argument("--n-peaks", type=int, default=20,
+                    help="Number of top peaks to extract per pattern for "
+                         "Phase 5C. Must match the dataset's n_peaks.")
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")

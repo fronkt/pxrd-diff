@@ -67,12 +67,57 @@ def _parse_cif(cif_str: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.nda
     return frac, z, lat, params, wyck
 
 
+def _extract_peak_features(pattern: np.ndarray, n_peaks: int = 20,
+                           height_frac: float = 0.05,
+                           min_distance: int = 3) -> np.ndarray:
+    """Extract top-N peak (position_norm, intensity_norm) pairs from a PXRD pattern.
+
+    Position is the bin index normalized to [0, 1] (linear in 2θ since the
+    simulator uses an evenly-spaced grid). Intensity is normalized to the
+    pattern's max value. Output is a flat (n_peaks * 2) vector — interleaved
+    [pos_1, int_1, pos_2, int_2, ...] — sorted by intensity descending. Slots
+    beyond the actual peak count are zero-padded.
+
+    Args:
+        pattern: (L,) raw PXRD intensities (already normalized to max=1 by the
+                 simulator)
+        n_peaks: max peaks to keep
+        height_frac: minimum peak height as a fraction of pattern max
+        min_distance: minimum bin separation between adjacent peaks
+    """
+    from scipy.signal import find_peaks
+    L = len(pattern)
+    pmax = float(pattern.max())
+    if pmax <= 0:
+        return np.zeros(n_peaks * 2, dtype=np.float32)
+    height = height_frac * pmax
+    idx, props = find_peaks(pattern, height=height, distance=min_distance)
+    if len(idx) == 0:
+        return np.zeros(n_peaks * 2, dtype=np.float32)
+    heights = props["peak_heights"]
+    order = np.argsort(heights)[::-1][:n_peaks]
+    top_idx = idx[order]
+    top_h = heights[order]
+    out = np.zeros(n_peaks * 2, dtype=np.float32)
+    pos_norm = top_idx.astype(np.float32) / float(L)
+    int_norm = (top_h / top_h.max()).astype(np.float32) if top_h.size else top_h
+    out[0:2 * len(top_idx):2] = pos_norm
+    out[1:2 * len(top_idx):2] = int_norm
+    return out
+
+
 class CrystalPXRDDataset(Dataset):
-    """Dataset pairing cached PXRD patterns with parsed crystal structures."""
+    """Dataset pairing cached PXRD patterns with parsed crystal structures.
+
+    With the default `n_peaks=20`, each sample also carries a precomputed
+    peak-feature vector (length 40: 20 positions and 20 intensities,
+    interleaved). Set `n_peaks=0` to disable.
+    """
 
     def __init__(self, data_dir: str | Path, split: str = "train",
                  max_atoms: int = MAX_ATOMS, preload: bool = True,
-                 limit: int | None = None):
+                 limit: int | None = None,
+                 n_peaks: int = 20):
         data_dir = Path(data_dir)
         cache_dir = data_dir / "cache"
         raw_dir = data_dir / "raw"
@@ -84,7 +129,17 @@ class CrystalPXRDDataset(Dataset):
         self.spacegroups = npz["spacegroup"][:n]
 
         self.max_atoms = max_atoms
+        self.n_peaks = n_peaks
         self._structures: Optional[list] = None
+
+        if n_peaks > 0:
+            self.peak_features = np.stack([
+                _extract_peak_features(p, n_peaks=n_peaks)
+                for p in tqdm(self.patterns, desc=f"Peak features {split}",
+                              leave=False)
+            ]).astype(np.float32)
+        else:
+            self.peak_features = None
 
         if preload:
             import pandas as pd
@@ -112,7 +167,7 @@ class CrystalPXRDDataset(Dataset):
         wyck_padded[:n] = wyck
         mask[:n] = True
 
-        return {
+        out = {
             "pxrd_pattern": torch.from_numpy(self.patterns[idx]),
             "frac_coords": torch.from_numpy(frac_padded),
             "atom_types": torch.from_numpy(z_padded),
@@ -124,6 +179,9 @@ class CrystalPXRDDataset(Dataset):
             "spacegroup": torch.tensor(int(self.spacegroups[idx]), dtype=torch.long),
             "material_id": str(self.material_ids[idx]),
         }
+        if self.peak_features is not None:
+            out["peak_features"] = torch.from_numpy(self.peak_features[idx])
+        return out
 
 
 def lattice_params_stats(dataset: CrystalPXRDDataset) -> dict[str, np.ndarray]:

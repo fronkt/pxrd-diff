@@ -43,6 +43,7 @@ from pxrd_diff.model.aux_head import AuxLatHead                       # noqa: E4
 from pxrd_diff.model.denoiser import CrystalDenoiser                 # noqa: E402
 from pxrd_diff.model.lat_head import (                                # noqa: E402
     ConstrainedLatHead,
+    PeakAugmentedLatHead,
     SpaceGroupHead,
     apply_sg_constraints,
 )
@@ -145,13 +146,19 @@ def main():
     encoder.eval()
     denoiser.eval()
 
-    # Lattice prediction head: ConstrainedLatHead (Phase 5B, physical units)
-    # or AuxLatHead (legacy, normalized space). Pick by what the checkpoint
-    # was trained with.
+    # Lattice prediction head: pick by what the checkpoint was trained with.
+    # Priority order: PeakAugmentedLatHead (Phase 5C) > ConstrainedLatHead
+    # (Phase 5B) > AuxLatHead (legacy).
     constrained_lat = bool(train_args.get("constrained_lat_head", False))
+    peak_aug_lat = bool(train_args.get("peak_aug_lat_head", False))
+    n_peaks_train = int(train_args.get("n_peaks", 20))
     aux_head = None
     if "aux_head" in ckpt:
-        if constrained_lat:
+        if peak_aug_lat:
+            aux_head = PeakAugmentedLatHead(
+                d_model=d_model, peak_dim=2 * n_peaks_train,
+            ).to(device)
+        elif constrained_lat:
             aux_head = ConstrainedLatHead(d_model=d_model).to(device)
         else:
             aux_head = AuxLatHead(d_model=d_model).to(device)
@@ -168,16 +175,25 @@ def main():
     lat_std = ckpt.get("lat_std")
     predict_x0 = bool(train_args.get("predict_x0", False))
 
+    head_kind_short = (
+        "PeakAugmented" if peak_aug_lat
+        else "Constrained" if constrained_lat
+        else "Aux" if aux_head is not None
+        else "none"
+    )
     print(f"Loaded checkpoint: step={ckpt['step']}, d_model={d_model}, "
           f"predict_x0={predict_x0}, "
-          f"lat_head={'Constrained' if constrained_lat else 'Aux' if aux_head is not None else 'none'}, "
+          f"lat_head={head_kind_short}, "
           f"sg_head={sg_head is not None}")
     if args.true_lattice:
         print("Mode: coord-only eval with ground-truth lattice")
     elif args.lat_from_aux:
         if aux_head is None:
             sys.exit("--lat-from-aux requested but checkpoint has no aux_head")
-        if constrained_lat:
+        if peak_aug_lat:
+            print(f"Phase 5C: lattice from PeakAugmentedLatHead "
+                  f"(n_peaks={n_peaks_train})")
+        elif constrained_lat:
             print("Phase 5B: lattice from ConstrainedLatHead (physical units, sigmoid-bounded)")
         else:
             print("Phase 5: lattice from AuxLatHead (Path A — known to underperform)")
@@ -191,8 +207,11 @@ def main():
         print(f"Phase 4.2: Rietveld refinement steps={args.refine_steps}, "
               f"lr={args.refine_lr}, refine_lattice={args.refine_lattice}")
 
-    # Dataset
-    ds = CrystalPXRDDataset(ROOT / "data", split=args.split)
+    # Dataset (precompute peak features iff the checkpoint's head needs them)
+    ds = CrystalPXRDDataset(
+        ROOT / "data", split=args.split,
+        n_peaks=n_peaks_train if peak_aug_lat else 0,
+    )
 
     # Collate a batch
     indices = list(range(min(args.n, len(ds))))
@@ -208,6 +227,11 @@ def main():
     wyckoff = None
     if "wyckoff" in batch_items[0]:
         wyckoff = torch.stack([b["wyckoff"] for b in batch_items]).to(device)
+    peak_features = None
+    if peak_aug_lat and "peak_features" in batch_items[0]:
+        peak_features = torch.stack(
+            [b["peak_features"] for b in batch_items]
+        ).to(device)
 
     # DiffPXRD module (used iff Phase 4 features enabled)
     debye = None
@@ -235,9 +259,12 @@ def main():
     if aux_head is not None:
         with torch.no_grad():
             pxrd_global_full, _ = encoder(pxrd)                    # (B, d)
-            head_out = aux_head(pxrd_global_full)                  # (B, 6)
-            if constrained_lat:
-                # ConstrainedLatHead emits physical units already.
+            if peak_aug_lat:
+                head_out = aux_head(pxrd_global_full, peak_features)  # (B, 6)
+            else:
+                head_out = aux_head(pxrd_global_full)              # (B, 6)
+            if constrained_lat or peak_aug_lat:
+                # Heads with sigmoid-bounded outputs emit physical units already.
                 aux_lat_params = head_out
             elif lat_mean is not None and lat_std is not None:
                 aux_lat_params = (head_out * lat_std.to(device)
@@ -265,7 +292,11 @@ def main():
 
         # Aux/constrained-head MAE per dim vs. ground truth (cheap, always shown).
         mae = (aux_lat_params - lattice_params_true).abs().mean(dim=0)
-        head_kind = "Constrained-lat" if constrained_lat else "Aux-head"
+        head_kind = (
+            "PeakAug-lat" if peak_aug_lat
+            else "Constrained-lat" if constrained_lat
+            else "Aux-head"
+        )
         sg_constr_str = " (after SG constraint)" if (sg_head is not None and args.sg_constrain_lat) else ""
         print(f"{head_kind} lattice MAE vs true{sg_constr_str} (a,b,c in Å, α,β,γ in °):")
         print(f"  a={mae[0]:.3f}  b={mae[1]:.3f}  c={mae[2]:.3f}  "
