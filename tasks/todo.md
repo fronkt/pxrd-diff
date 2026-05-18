@@ -806,3 +806,81 @@ helps the MLP memorise but doesn't help it generalise.
 - `paper/phase5d_results/{p5d_baseline, p5d_phase4, p5d_sg_baseline, p5d_sg_phase4}.json`
 - `runs/gpu_v20_p5d/ckpt_final.pt` and intermediate ckpts on the GPU instance
 - `runs/phase5d/*.{json,log}` on the GPU instance
+
+---
+
+## NEXT SESSION — execution notes (added 2026-05-18)
+
+### New GPU instance (vast.ai)
+- `ssh -p 28081 root@202.214.223.66`  (port-forward TensorBoard: `-L 8080:localhost:8080`)
+- **BLOCKER — SSH key mismatch.** The instance has registered key
+  `ssh-ed25519 AAAA...+R1 frankcai222@gmail.com`, but this machine's only
+  private key (`~/.ssh/id_ed25519`) has public key
+  `...zAzw frank@frank` — a *different* keypair. `Permission denied (publickey)`.
+  No private key matching `...+R1` exists on disk.
+  Resolve one of two ways before deploying:
+    1. Paste this machine's pubkey (`~/.ssh/id_ed25519.pub`, `...zAzw`) into the
+       vast.ai instance's authorized_keys / the instance's SSH-key field, OR
+    2. Place the private key matching `...+R1` at `~/.ssh/` and connect with `-i`.
+- Deploy once connected: `git clone https://github.com/fronkt/pxrd-diff` (or pull),
+  `pip install -e .`, then run the data + train scripts below.
+
+### Immediate next step — Phase 8 (data scale-up) is staged but unrun
+The Phase 8.1 data script (full-MP pull via mp-api, MP-20 test split excluded) was
+committed in `3816b29` but has not been executed. Next session:
+- [ ] 8.1.x  Run the full-MP pull on the GPU box; confirm yield + split sizes
+- [ ] 8.1.4  `python scripts/01_simulate_pxrd.py` on the new structures
+- [ ] 8.2.1  Train v21 from scratch, 200k steps, all Phase 5–7 improvements ON
+- [ ] 8.3.1  Eval on MP-20 test split for comparability vs v20
+
+---
+
+## Phase 9 — Hybrid classical indexing + differentiable guidance
+## (a measured, falsifiable improvement over Crystalyze)
+
+**Why this is the right next bet.** Five retrains (v17/v18/v19/v20 + 5D) have now
+proven the same wall: the learned PXRD encoder cannot decode absolute d-spacings,
+so no-true-lattice match rate is pinned at ~1%. Meanwhile Phase 4 showed that
+*given a good lattice* the existing pipeline already hits 6.8% and produces
+near-exact reconstructions (rmsd_median 0.007 Å on matched cases). The bottleneck
+is entirely the unit cell — a problem classical crystallography solved decades ago.
+
+**How Crystalyze does it / where it's weak.** Crystalyze (Riesel et al., JACS 2024)
+generates candidate structures with a generative model, then selects among them by
+*re-simulating each candidate's pattern and DFT-relaxing* — discrete, non-differentiable
+post-hoc filtering. Physics never steers generation; it only ranks finished candidates,
+and the expensive DFT relaxation caps throughput.
+
+**The improvement.** Replace the broken learned-lattice path with classical
+auto-indexing, and replace Crystalyze's discrete filtering with *differentiable
+physics guidance baked into the reverse diffusion*. Two independent, individually
+testable changes:
+
+### 9.1 Classical auto-indexing for the unit cell (removes the encoder wall)
+- [ ] 9.1.1 Peak-extract simulated PXRD (existing peak finder) → feed positions to
+        an auto-indexer (DICVOL/N-TREOR via GSAS-II, or `pyxtal`/`xrayutilities`)
+- [ ] 9.1.2 `index_lattice(pattern) -> lattice_params, crystal_system, figure_of_merit`
+- [ ] 9.1.3 Benchmark indexed-cell MAE vs the v20 learned head on n=1000 test —
+        expect ≪1 Å (clean simulated patterns are the easy case for indexing)
+- [ ] 9.1.4 Feed the indexed cell into the existing Phase 4 pipeline as the lattice;
+        diffusion now does only coords (its strong regime). Re-run the n=1000 eval —
+        this is the first true no-true-lattice number not bottlenecked by the encoder.
+
+### 9.2 Debye-gradient guidance inside the sampler (vs Crystalyze's post-hoc filter)
+- [ ] 9.2.1 In the DDIM sampler, at each reverse step reconstruct x0_pred, compute
+        `DiffPXRD(x0_pred)`, take `∇_x [1 - Pearson(·, target)]`, nudge the sample.
+        `--guide-scale` flag (0 = current behaviour, backward compatible).
+- [ ] 9.2.2 Anneal guidance: apply only on low-noise late steps; clip the step to
+        keep samples on the data manifold.
+- [ ] 9.2.3 Reuse the verified DiffPXRD module — no new physics code.
+
+### 9.3 Head-to-head benchmark (the paper's headline claim)
+- [ ] 9.3.1 Same checkpoint, n=1000 MP-20 test, four configs:
+        (a) unguided single sample;
+        (b) Crystalyze-style: K=20 candidates, discrete re-rank by simulated Rwp;
+        (c) Debye-guided sampling (9.2);
+        (d) guided + classical-indexed lattice (9.1) + Phase 4.2 differentiable refine.
+- [ ] 9.3.2 Headline metric: space-group match % and coord RMSD, no true lattice.
+- [ ] 9.3.3 Claim to test: differentiable physics guidance + classical indexing
+        beats discrete post-hoc candidate filtering. If (c)/(d) > (b), that is a
+        clean, falsifiable improvement over Crystalyze and the paper's centerpiece.
