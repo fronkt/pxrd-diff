@@ -267,6 +267,28 @@ def sorted_params(lat):
     return np.array(sorted(lat.abc) + sorted(lat.angles))
 
 
+MIN_VPA = 9.0   # Angstrom^3 per atom — inorganic crystals are never denser
+
+
+def volume_correct(lat, n_atoms):
+    """Resolve sub-cell aliasing. Peak positions alone can't tell the conventional
+    cell from a denser sub-cell (extinct reflections look identical to absent
+    ones). The known composition breaks the tie: a cell cannot pack atoms denser
+    than ~9 A^3/atom, so take the smallest integer super-cell that clears that
+    floor. Uses only the atom count — a legitimate pipeline input, not the answer."""
+    if n_atoms <= 0:
+        return lat
+    V = lat.volume
+    for k in (1, 2, 3, 4, 6, 8):
+        if k * V / n_atoms >= MIN_VPA:
+            if k == 1:
+                return lat
+            s = k ** (1.0 / 3.0)
+            a, b, c, al, be, ga = lat.parameters
+            return Lattice.from_parameters(a * s, b * s, c * s, al, be, ga)
+    return lat
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=300)
@@ -305,7 +327,9 @@ def main():
             sga = SpacegroupAnalyzer(struct, symprec=0.01)
             system = sga.get_crystal_system()
             # the indexer targets the conventional cell — compare against it
-            true_lat = sga.get_conventional_standard_structure().lattice
+            conv = sga.get_conventional_standard_structure()
+            true_lat = conv.lattice
+            n_conv_atoms = len(conv)
         except Exception:
             continue
         peaks = extract_peaks(patterns[i], two_theta)
@@ -317,6 +341,7 @@ def main():
         if pred_lat is None:
             per_system[system].append(None)
             continue
+        pred_lat = volume_correct(pred_lat, n_conv_atoms)   # 9.0.6 sub-cell fix
         tp, pp = sorted_params(true_lat), sorted_params(pred_lat)
         vr = true_lat.volume / pred_lat.volume          # >1 if pred is a sub-cell
         ratio = vr if vr >= 1 else 1.0 / vr

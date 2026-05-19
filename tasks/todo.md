@@ -894,42 +894,48 @@ No retraining. Pure offline measurement on the MP-20 test split.
 - [x] 9.0.5 **DECISION: qualified GO** — see Review — Phase 9.0 below.
 
 ### Review — Phase 9.0 (indexing viability gate) — QUALIFIED GO
-- Completed: 2026-05-18. `scripts/09_index_benchmark.py`, n=80 pilot
-  (full n=300 running). Results `paper/phase9_results/index_benchmark*.json`.
+- Completed: 2026-05-18. `scripts/09_index_benchmark.py`, full n=300 MP-20 test.
+  Results: `paper/phase9_results/index_benchmark.json` (base),
+  `index_benchmark_volcorr.json` (with 9.0.6 sub-cell correction).
 - Native Q-space indexer (Ito/de-Wolff): peak-find → Q=1/d² → hypothesise
   (hkl) for the lowest peaks → solve the linear Q-form → de-Wolff M20 score
   with a hard coverage gate (a cell must explain ≥80% of observed peaks; among
   survivors M20 rewards parsimony, killing super-cells).
-- **Result (n=80, stratified):**
+- **Result (n=300, with 9.0.6 sub-cell correction):**
   ```
   system        n   strict%  consist%  len_MAE(Å)  ang_MAE
-  cubic        12    41.7      66.7      2.56        0.00
-  tetragonal   11    36.4      72.7      1.56        0.00
-  hexagonal    14    71.4      85.7      0.86        0.00
-  trigonal      9    88.9      77.8      0.48        0.00
-  orthorhombic 13    84.6      84.6      0.28        0.00
-  monoclinic   18     5.6      27.8      2.12        9.98
-  triclinic     3     0.0       0.0       —           —
-  OVERALL      80    48.8      63.8      1.38   (v20 head 1.37)
+  cubic        68    52.9      61.8      1.29        0.00
+  tetragonal   54    50.0      63.0      0.93        0.00
+  hexagonal    35    82.9      88.6      0.44        0.00
+  trigonal     28    64.3      60.7      2.75        0.00
+  orthorhombic 57    63.2      73.7      0.69        0.00
+  monoclinic   45    13.3      31.1      1.90       13.67
+  triclinic    13     0.0       0.0       —           —
+  OVERALL     300    50.7      60.0      1.24   (v20 head 1.37)
   ```
 - **Findings:**
-  1. On higher-symmetry systems (hexagonal/trigonal/orthorhombic) classical
-     indexing recovers the cell at **0.28–0.86 Å len MAE — 2–5× better than
-     the learned head** and good enough to feed the pipeline. Clear GO signal.
+  1. Higher-symmetry systems (hexagonal/orthorhombic) index at **0.44–0.69 Å
+     len MAE — 2–3× better than the learned head** and good enough to feed the
+     pipeline. Clear GO signal there.
   2. **Sub-cell aliasing on cubic/tetragonal**: peak positions are consistent
      with a smaller cell when the conventional-cell reflections are extinct.
-     strict% is low (37–42%) but consistent% is 67–73% — the indexer finds a
-     valid lattice, just not always the conventional setting. Resolvable with
-     intensities / integer super-cell checks (9.0.6).
+     9.0.6 (composition floor: a cell can't pack denser than ~9 Å³/atom, take
+     the smallest integer super-cell clearing it) cut overall len MAE
+     1.50→1.24 Å but barely moved strict% — uniform scaling fixes cell *size*,
+     not *shape*. cubic/tetragonal strict% stays ~50%.
   3. Monoclinic/triclinic are the wall — as the council predicted. The native
      4-/6-param seed search is hypothesis-capped; a real indexer (DICVOL/
-     GSAS-II) is needed for these (9.0.7).
-- **Net:** GO for Phase 9, but the indexed cell is reliable mainly on
-  medium/high-symmetry crystals. Two cheap follow-ups before 9.1:
-- [ ] 9.0.6 Sub-cell disambiguation: when the M20-best cell is a sub-cell, test
-        integer super-cells against peak *intensities* (not just positions)
-- [ ] 9.0.7 Install GSAS-II via conda (miniconda) and re-benchmark monoclinic/
-        triclinic — quantify how much the native indexer's cap is costing
+     GSAS-II) is needed for these.
+  4. trigonal regressed at scale (88.9%→64.3%, len MAE 2.75) — the hexagonal-
+     setting Q-form mis-handles some rhombohedral cells; flagged for 9.0.7.
+- **Net: GO for Phase 9**, scoped: the indexed cell is reliable on hexagonal/
+  orthorhombic (and resolvable on cubic/tetragonal), unreliable on
+  monoclinic/triclinic. Plan 9.1 accordingly — proceed with high-symmetry
+  cells, treat low-symmetry as a known gap.
+- [x] 9.0.6 Sub-cell disambiguation via composition density floor — partial
+        win (len MAE ↓, strict% flat). Intensity-based check deferred.
+- [ ] 9.0.7 (optional) GSAS-II via conda — re-benchmark monoclinic/triclinic +
+        fix the trigonal/rhombohedral Q-form regression
 
 ### 9.1 Wire indexed cells into the pipeline (only if 9.0 passes)
 - [ ] 9.1.1 `index_lattice(pattern) -> [(lattice_params, crystal_system, FoM), ...]`
