@@ -121,6 +121,14 @@ def main():
                          "diffusion sampler's lattice. Ignored when --true-lattice "
                          "is also set (true lattice wins). The aux-vs-true MAE "
                          "diagnostic is always printed regardless of this flag.")
+    # ---- Phase 9 -------------------------------------------------------------
+    ap.add_argument("--lat-from-index", default=None,
+                    help="Phase 9.1: use classically-indexed unit cells as the "
+                         "fixed lattice. Takes a JSON from 09_index_benchmark.py "
+                         "(its `rows`, each with material_id + pred_params). "
+                         "Patterns whose pattern was not indexed fall back to the "
+                         "true lattice; coverage is reported. Ignored when "
+                         "--true-lattice is also set.")
     # ---- Phase 6 -------------------------------------------------------------
     ap.add_argument("--sg-constrain-lat", action="store_true",
                     help="Phase 6.2: project the aux/constrained-head lattice "
@@ -329,12 +337,39 @@ def main():
         aux_lat_clamped[:, 3:] = aux_lat_clamped[:, 3:].clamp(min=10.0, max=170.0)
         aux_lat_matrix = lattice_params_to_matrix(aux_lat_clamped)
 
+    # ---- Phase 9.1: lattice from classical indexing -------------------------
+    index_lat_params = None
+    index_lat_matrix = None
+    use_index_lat = bool(args.lat_from_index) and not args.true_lattice
+    if use_index_lat:
+        with open(args.lat_from_index) as f:
+            idx_rows = json.load(f).get("rows", [])
+        idx_by_id = {r["mid"]: r["pred_params"]
+                     for r in idx_rows if r.get("pred_params")}
+        index_lat_params = lattice_params_true.clone()        # fall back to true
+        n_cov = 0
+        for bi, mid in enumerate(material_ids):
+            if mid in idx_by_id:
+                index_lat_params[bi] = torch.tensor(
+                    idx_by_id[mid], dtype=torch.float32, device=device)
+                n_cov += 1
+        print(f"Phase 9.1: indexed-cell lattice — {n_cov}/{B} covered "
+              f"({100.0 * n_cov / B:.1f}%); uncovered fall back to true lattice")
+        mae = (index_lat_params - lattice_params_true).abs().mean(dim=0)
+        print(f"  indexed-cell MAE vs true: a={mae[0]:.3f} b={mae[1]:.3f} "
+              f"c={mae[2]:.3f}  α={mae[3]:.2f} β={mae[4]:.2f} γ={mae[5]:.2f}")
+        idx_clamped = index_lat_params.clone()
+        idx_clamped[:, :3] = idx_clamped[:, :3].clamp(min=0.5, max=100.0)
+        idx_clamped[:, 3:] = idx_clamped[:, 3:].clamp(min=10.0, max=170.0)
+        index_lat_matrix = lattice_params_to_matrix(idx_clamped)
+
     # When Phase 5 is requested (and we're not in --true-lattice mode), the
     # sampler should use aux-head lattice both as lattice_init and as the
     # final predicted lat_params for downstream eval/refinement.
     use_aux_lat = (args.lat_from_aux and not args.true_lattice
-                   and aux_head is not None)
-    sampler_lattice = aux_lat_matrix if use_aux_lat else lattice
+                   and aux_head is not None and not use_index_lat)
+    sampler_lattice = (index_lat_matrix if use_index_lat
+                       else aux_lat_matrix if use_aux_lat else lattice)
 
     # Allocate output tensors filled in by chunked predict pass
     N = atom_types.shape[1]
@@ -363,7 +398,7 @@ def main():
     # When using a fixed lattice (true or aux), the ensemble selector and the
     # refinement loop should both consume that lattice rather than the
     # sampler's diffusion-predicted one.
-    use_fixed_lat = args.true_lattice or use_aux_lat
+    use_fixed_lat = args.true_lattice or use_aux_lat or use_index_lat
 
     for ci, lo in enumerate(range(0, B, bs)):
         hi = min(lo + bs, B)
@@ -403,9 +438,11 @@ def main():
             pc_c, pl_c = sampler.sample(pxrd_c, at_c, lat_c, mask_c, wyckoff=wyck_c)
             t_sample += time.perf_counter() - t0
 
-        # ---- Phase 5: substitute aux-head lattice for the diffusion lattice
+        # ---- Phase 5/9: substitute external lattice for the diffusion lattice
         if use_aux_lat:
             pl_c = aux_lat_params[lo:hi]
+        elif use_index_lat:
+            pl_c = index_lat_params[lo:hi]
 
         # ---- Refine ---------------------------------------------------------
         if args.refine_steps > 0:

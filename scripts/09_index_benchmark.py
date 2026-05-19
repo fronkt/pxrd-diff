@@ -349,6 +349,7 @@ def main():
         # small-index sub/super-cell of it (the unavoidable peak-position ambiguity)
         near_int = min(abs(ratio - k) for k in (1, 2, 3, 4, 6, 8))
         rec = dict(mid=mid, system=system, indexed_frac=round(frac, 3),
+                   pred_params=[round(float(x), 4) for x in pred_lat.parameters],
                    len_mae=round(float(np.mean(np.abs(tp[:3] - pp[:3]))), 4),
                    ang_mae=round(float(np.mean(np.abs(tp[3:] - pp[3:]))), 3),
                    vol_err=round(float(abs(pred_lat.volume - true_lat.volume)
