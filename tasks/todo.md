@@ -938,9 +938,18 @@ No retraining. Pure offline measurement on the MP-20 test split.
         fix the trigonal/rhombohedral Q-form regression
 
 ### 9.1 Wire indexed cells into the pipeline (9.0 passed — qualified GO)
-- [~] 9.1.0 Retrain v13-equivalent checkpoint on the new box (no checkpoint was
-        available). `gpu_v21_p9`: 100k steps, --predict-x0 --debye-weight 1.0,
-        bs 64, RTX 5090, ~1.5h. IN PROGRESS (launched 2026-05-19).
+- [x] 9.1.0 Retrain v13-equivalent checkpoint. `gpu_v21_p9`: 100k steps,
+        --predict-x0 --debye-weight 1.0, bs 64, RTX 5090, 5785s. Final EMA
+        loss 0.726, coord 0.075 (v13 regime). ckpt_final.pt pulled to local
+        `runs/gpu_v21_p9/` (44 MB, gitignored) + verified.
+- [x] 9.1.w Wiring: `--lat-from-index` in 03_sample.py; 09_index_benchmark.py
+        emits per-structure pred_params. n=1000 indexed test cells committed
+        at `paper/phase9_results/index_cells_test1000.json`.
+- [ ] 9.1.3 QUEUED — run the 9.1 eval (needs a GPU box, ~1-2 min):
+        `03_sample.py --ckpt runs/gpu_v21_p9/ckpt_final.pt --n 1000
+        --lat-from-index paper/phase9_results/index_cells_test1000.json
+        --n-samples 20 --refine-steps 200` + a --true-lattice baseline.
+        First honest no-true-lattice match rate with classically-indexed cells.
 - [ ] 9.1.1 `index_lattice(pattern) -> [(lattice_params, crystal_system, FoM), ...]`
         returning ranked candidates, not a single cell
 - [ ] 9.1.2 Cell-perturbation study: feed Phase 4 oracle cells + synthetic noise
