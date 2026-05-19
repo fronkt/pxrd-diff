@@ -937,7 +937,10 @@ No retraining. Pure offline measurement on the MP-20 test split.
 - [ ] 9.0.7 (optional) GSAS-II via conda — re-benchmark monoclinic/triclinic +
         fix the trigonal/rhombohedral Q-form regression
 
-### 9.1 Wire indexed cells into the pipeline (only if 9.0 passes)
+### 9.1 Wire indexed cells into the pipeline (9.0 passed — qualified GO)
+- [~] 9.1.0 Retrain v13-equivalent checkpoint on the new box (no checkpoint was
+        available). `gpu_v21_p9`: 100k steps, --predict-x0 --debye-weight 1.0,
+        bs 64, RTX 5090, ~1.5h. IN PROGRESS (launched 2026-05-19).
 - [ ] 9.1.1 `index_lattice(pattern) -> [(lattice_params, crystal_system, FoM), ...]`
         returning ranked candidates, not a single cell
 - [ ] 9.1.2 Cell-perturbation study: feed Phase 4 oracle cells + synthetic noise
