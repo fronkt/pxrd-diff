@@ -328,8 +328,11 @@ Make model robust to real PXRD data (not just perfect simulated patterns).
 ---
 
 ## Phase 8 — Full Materials Project data scale-up (~1 day setup + overnight training)
+**DEMOTED (council 2026-05-18).** More data cannot fix the encoder/lattice wall —
+five retrains proved that is architectural blindness, not data starvation. Phase 8
+is deferred to a *B-then-A* lever: only worth running for residual coordinate error
+AFTER Phase 9 fixes the unit cell. Do Phase 9.0 first. Steps below kept for later.
 MP-20 has 27k train structures. Full MP has ~154k DFT-computed structures.
-More data is the safest scaling lever for a diffusion model at this size.
 
 ### 8.1 Data acquisition
 - [ ] 8.1.1 Pull full MP structures via `mp-api`: filter to ≤20 atoms, DFT-converged,
@@ -856,15 +859,86 @@ auto-indexing, and replace Crystalyze's discrete filtering with *differentiable
 physics guidance baked into the reverse diffusion*. Two independent, individually
 testable changes:
 
-### 9.1 Classical auto-indexing for the unit cell (removes the encoder wall)
-- [ ] 9.1.1 Peak-extract simulated PXRD (existing peak finder) → feed positions to
-        an auto-indexer (DICVOL/N-TREOR via GSAS-II, or `pyxtal`/`xrayutilities`)
-- [ ] 9.1.2 `index_lattice(pattern) -> lattice_params, crystal_system, figure_of_merit`
-- [ ] 9.1.3 Benchmark indexed-cell MAE vs the v20 learned head on n=1000 test —
-        expect ≪1 Å (clean simulated patterns are the easy case for indexing)
-- [ ] 9.1.4 Feed the indexed cell into the existing Phase 4 pipeline as the lattice;
-        diffusion now does only coords (its strong regime). Re-run the n=1000 eval —
-        this is the first true no-true-lattice number not bottlenecked by the encoder.
+### Council verdict (2026-05-18) — execution order
+5/5 advisors + 5/5 peer reviews: **do Phase 9, skip Phase 8 as the next step.**
+Key revisions the council forced into this plan:
+  - **Gate everything on a cheap indexing benchmark FIRST.** Do not retrain, do
+    not write the guided sampler, until classical indexing is shown viable.
+    The indexing success rate IS the ceiling of Phase 9 — measure it before
+    committing a month.
+  - The 6.8% Phase-4 number was measured with **oracle (ground-truth) cells**.
+    A real indexer returns cells with error → 9.1.4 must test pipeline
+    sensitivity to imperfect cells, not assume 6.8% survives.
+  - Indexing is **symmetry-stratified**, not pass/fail — report results per
+    crystal system (cubic/tetragonal easy → triclinic hard).
+  - Auto-indexers return **ranked candidate cells with figures of merit** —
+    treat that as uncertainty: feed top-N cells to the sampler, score by Debye
+    fit. Do not collapse to one cell.
+  - Debye-gradient guidance (9.2) is refinement, not the load-bearing fix —
+    **defer it** until 9.1 lands. Lead the paper with the bottleneck diagnosis
+    + the targeted indexing fix.
+  - Phase 8 (more data) is demoted to a **B-then-A** lever for residual
+    coordinate error AFTER the lattice is fixed — not cancelled, just later.
+
+### 9.0 Indexing viability benchmark — GO/NO-GO GATE (do this first, ~2 days)
+No retraining. Pure offline measurement on the MP-20 test split.
+- [x] 9.0.1 `scripts/09_index_benchmark.py`: peak-find → 2θ→d→Q → classical
+        Ito/de-Wolff Q-space auto-indexer (native NumPy/SciPy implementation —
+        GSAS-II is not on PyPI; conda install deferred as a follow-up)
+- [x] 9.0.2 Q-form per crystal system, seed-hypothesis search with a hard
+        hypothesis cap, M20 figure-of-merit scoring with a coverage gate
+- [x] 9.0.3 Metrics stratified by crystal system: strict (recovered the
+        conventional cell) and consistent (conventional OR a small-index
+        sub/super-cell — the unavoidable peak-position ambiguity)
+- [x] 9.0.4 Compared vs v20 learned head (~1.37 Å len MAE)
+- [x] 9.0.5 **DECISION: qualified GO** — see Review — Phase 9.0 below.
+
+### Review — Phase 9.0 (indexing viability gate) — QUALIFIED GO
+- Completed: 2026-05-18. `scripts/09_index_benchmark.py`, n=80 pilot
+  (full n=300 running). Results `paper/phase9_results/index_benchmark*.json`.
+- Native Q-space indexer (Ito/de-Wolff): peak-find → Q=1/d² → hypothesise
+  (hkl) for the lowest peaks → solve the linear Q-form → de-Wolff M20 score
+  with a hard coverage gate (a cell must explain ≥80% of observed peaks; among
+  survivors M20 rewards parsimony, killing super-cells).
+- **Result (n=80, stratified):**
+  ```
+  system        n   strict%  consist%  len_MAE(Å)  ang_MAE
+  cubic        12    41.7      66.7      2.56        0.00
+  tetragonal   11    36.4      72.7      1.56        0.00
+  hexagonal    14    71.4      85.7      0.86        0.00
+  trigonal      9    88.9      77.8      0.48        0.00
+  orthorhombic 13    84.6      84.6      0.28        0.00
+  monoclinic   18     5.6      27.8      2.12        9.98
+  triclinic     3     0.0       0.0       —           —
+  OVERALL      80    48.8      63.8      1.38   (v20 head 1.37)
+  ```
+- **Findings:**
+  1. On higher-symmetry systems (hexagonal/trigonal/orthorhombic) classical
+     indexing recovers the cell at **0.28–0.86 Å len MAE — 2–5× better than
+     the learned head** and good enough to feed the pipeline. Clear GO signal.
+  2. **Sub-cell aliasing on cubic/tetragonal**: peak positions are consistent
+     with a smaller cell when the conventional-cell reflections are extinct.
+     strict% is low (37–42%) but consistent% is 67–73% — the indexer finds a
+     valid lattice, just not always the conventional setting. Resolvable with
+     intensities / integer super-cell checks (9.0.6).
+  3. Monoclinic/triclinic are the wall — as the council predicted. The native
+     4-/6-param seed search is hypothesis-capped; a real indexer (DICVOL/
+     GSAS-II) is needed for these (9.0.7).
+- **Net:** GO for Phase 9, but the indexed cell is reliable mainly on
+  medium/high-symmetry crystals. Two cheap follow-ups before 9.1:
+- [ ] 9.0.6 Sub-cell disambiguation: when the M20-best cell is a sub-cell, test
+        integer super-cells against peak *intensities* (not just positions)
+- [ ] 9.0.7 Install GSAS-II via conda (miniconda) and re-benchmark monoclinic/
+        triclinic — quantify how much the native indexer's cap is costing
+
+### 9.1 Wire indexed cells into the pipeline (only if 9.0 passes)
+- [ ] 9.1.1 `index_lattice(pattern) -> [(lattice_params, crystal_system, FoM), ...]`
+        returning ranked candidates, not a single cell
+- [ ] 9.1.2 Cell-perturbation study: feed Phase 4 oracle cells + synthetic noise
+        at the indexer's measured MAE → confirm 6.8% degrades gracefully
+- [ ] 9.1.3 Feed top-N indexed cells into the Phase 4 pipeline; sample per
+        candidate, score by Debye fit, keep best. Re-run n=1000 eval —
+        first true no-true-lattice number not bottlenecked by the encoder.
 
 ### 9.2 Debye-gradient guidance inside the sampler (vs Crystalyze's post-hoc filter)
 - [ ] 9.2.1 In the DDIM sampler, at each reverse step reconstruct x0_pred, compute
