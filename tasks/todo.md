@@ -945,18 +945,58 @@ No retraining. Pure offline measurement on the MP-20 test split.
 - [x] 9.1.w Wiring: `--lat-from-index` in 03_sample.py; 09_index_benchmark.py
         emits per-structure pred_params. n=1000 indexed test cells committed
         at `paper/phase9_results/index_cells_test1000.json`.
-- [ ] 9.1.3 QUEUED — run the 9.1 eval (needs a GPU box, ~1-2 min):
-        `03_sample.py --ckpt runs/gpu_v21_p9/ckpt_final.pt --n 1000
-        --lat-from-index paper/phase9_results/index_cells_test1000.json
-        --n-samples 20 --refine-steps 200` + a --true-lattice baseline.
+- [x] 9.1.3 Eval run done on RTX 5090 (vast.ai 99.27.206.243).
+        n=1000, --n-samples 20 --refine-steps 200, ddim 50.
+        Results: `paper/phase9_results/p9_truelat_n1000.json`,
+        `paper/phase9_results/p9_idxlat_n1000.json`.
         First honest no-true-lattice match rate with classically-indexed cells.
+        See "Review — Phase 9.1.3" below.
 - [ ] 9.1.1 `index_lattice(pattern) -> [(lattice_params, crystal_system, FoM), ...]`
         returning ranked candidates, not a single cell
 - [ ] 9.1.2 Cell-perturbation study: feed Phase 4 oracle cells + synthetic noise
         at the indexer's measured MAE → confirm 6.8% degrades gracefully
-- [ ] 9.1.3 Feed top-N indexed cells into the Phase 4 pipeline; sample per
+- [ ] 9.1.4 Feed top-N indexed cells into the Phase 4 pipeline; sample per
         candidate, score by Debye fit, keep best. Re-run n=1000 eval —
         first true no-true-lattice number not bottlenecked by the encoder.
+
+### Review — Phase 9.1.3 (first honest no-true-lattice eval) — 2026-05-22
+- Completed on rented RTX 5090 (vast.ai 99.27.206.243). v21 checkpoint
+  (`runs/gpu_v21_p9/ckpt_final.pt`) re-uploaded from local `E:\gpu_v21_p9\`.
+  Test split simulated fresh on the box (`data/cache/test.npz`).
+- Two runs, same v21 ckpt, n=1000 MP-20 test, --n-samples 20 --refine-steps 200,
+  ddim 50, batch 32:
+  ```
+  config                                match%  rmsd_med(Å)  rwp_mean  pearson  sg@0.1%  all-correct%
+  --true-lattice (oracle ceiling)         5.6      0.106       5.57     0.65      1.7        0.6
+  --lat-from-index (classical indexer)    1.6      0.126      11.46     0.40      1.4        0.1
+  v20 learned-head baseline (reference)   ~1.0       —           —        —         —          —
+  ```
+- **Headline:** classical indexing beats the learned PXRD encoder head
+  (1.6% vs ~1.0% — +0.6 pp / +60% relative) on the no-true-lattice metric.
+  This is the first honest match rate for Phase 9.
+- **Oracle gap:** indexer cells leave 4.0 pp on the table vs ground-truth
+  lattice (5.6% → 1.6%). Indexer len MAE (1.24 Å, from 9.0.5) is the
+  dominant remaining error mode. Coordinate-level structure is fine when
+  the cell is right: rmsd_median 0.126 Å is only slightly worse than the
+  oracle 0.106 Å, i.e. once a cell is good enough, refinement finds the
+  right positions.
+- **Versus oracle Phase 4 (6.8% on n=200) — caveat:** the 5.6% on this
+  v21 ckpt at n=1000 is a touch below the historical Phase 4 number.
+  Different ckpt, larger n, expected drift. The 5.6/1.6 pair is the right
+  internally-consistent comparison.
+- **Implications for the plan:**
+  - 9.1.4 (top-N rerank by Debye fit) is now the obvious next single-bet
+    win: the indexer returns ranked candidates, we currently use only the
+    top-1. The strict-vs-consistent gap in 9.0 (e.g. cubic 53→62%, hex
+    83→89%) is candidates the indexer ranked lower but were right — exactly
+    what a Debye-fit rerank should recover.
+  - 9.1.2 (cell-perturbation sensitivity study) is still worth doing
+    cheaply — confirms how Phase 4 degrades at the indexer's actual MAE.
+  - 9.0.7 (GSAS-II for monoclinic/triclinic + trigonal Q-form fix) would
+    lift the indexable fraction (currently 96.1% indexed of 1000) and most
+    importantly fix the worst-case len_MAE in low-symmetry systems —
+    where the residual oracle gap is concentrated.
+- **Artifacts:** `paper/phase9_results/p9_{truelat,idxlat}_n1000.{json,log}`.
 
 ### 9.2 Debye-gradient guidance inside the sampler (vs Crystalyze's post-hoc filter)
 - [ ] 9.2.1 In the DDIM sampler, at each reverse step reconstruct x0_pred, compute
