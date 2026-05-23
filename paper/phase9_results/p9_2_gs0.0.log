@@ -1,0 +1,62 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Mode: coord-only eval with ground-truth lattice
+Phase 4.1: ensemble n_samples=20, eta=0.0
+  val = self.func(instance)
+  val = self.func(instance)
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.143  b=1.054  c=1.744  α=12.56  β=11.31  γ=19.42
+Aux-head lattice validity: 200/200 (100.0%)
+Ensemble: 200 patterns x 20 candidates in chunks of 32 (7 chunks)
+  chunk 1/7 done (sample=5.9s  select=0.6s  refine=0.0s)
+  chunk 2/7 done (sample=11.5s  select=1.0s  refine=0.0s)
+  chunk 3/7 done (sample=17.2s  select=1.4s  refine=0.0s)
+  chunk 4/7 done (sample=22.8s  select=1.8s  refine=0.0s)
+  chunk 5/7 done (sample=28.5s  select=2.2s  refine=0.0s)
+  chunk 6/7 done (sample=34.1s  select=2.6s  refine=0.0s)
+  chunk 7/7 done (sample=35.5s  select=2.7s  refine=0.0s)
+Total: sample=35.5s  select=2.7s  refine=0.0s
+Selected-candidate pearson: mean=0.587 median=0.579
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=9.113  pearson=0.524  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.961  pearson=0.520  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=23.356  pearson=0.408  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.995  pearson=0.541  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=7.919  pearson=0.298  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.701  pearson=0.516  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.840  pearson=0.186  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.321  pearson=0.442  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.762  pearson=0.237  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.083  pearson=0.214  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.837  pearson=0.820  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=7.327  pearson=0.616  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.268  pearson=0.582  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=9.147  pearson=0.311  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=9.177  pearson=0.783  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.130  pearson=0.291  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.241  pearson=0.378  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.532  pearson=0.241  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.405  pearson=0.561  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.156  pearson=0.686  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.265  pearson=0.029  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.239  pearson=0.921  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.195  pearson=0.193  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.268  pearson=0.596  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.268  pearson=0.491  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.760  pearson=0.430  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.239  pearson=0.215  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.528  pearson=0.244  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.367  pearson=0.415  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.249  pearson=0.147  all=N
+--- Aggregate Metrics ---
+                               n: 200
+          composition_match_rate: 1.0000
+                       rmsd_mean: 0.1774
+                     rmsd_median: 0.1967
+   match_rate (StructureMatcher): 0.0200
+                        rwp_mean: 7.3627
+                    pearson_mean: 0.4706
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0200
+                   sg_match@0.05: 0.0200
+                    sg_match@0.1: 0.0200
+                    sg_match@0.2: 0.0150
+Wrote aggregate metrics to paper/phase9_results/p9_2_gs0.0.json

@@ -1,0 +1,43 @@
+{
+  "summary": "Phase 9.2 guide-scale sweep. n=200 MP-20 test, --true-lattice (oracle cells), n_samples=20, refine_steps=0. Isolates Debye-gradient guidance effect from refinement.",
+  "rows": [
+    {
+      "guide_scale": 0.0,
+      "match_pct": 2.0,
+      "pearson_mean": 0.4706,
+      "sg_match_01_pct": 2.0,
+      "rwp_mean": 7.363
+    },
+    {
+      "guide_scale": 0.5,
+      "match_pct": 2.5,
+      "pearson_mean": 0.4673,
+      "sg_match_01_pct": 2.0,
+      "rwp_mean": 7.161
+    },
+    {
+      "guide_scale": 1.0,
+      "match_pct": 1.0,
+      "pearson_mean": 0.4713,
+      "sg_match_01_pct": 2.0,
+      "rwp_mean": 7.489
+    },
+    {
+      "guide_scale": 2.0,
+      "match_pct": 2.0,
+      "pearson_mean": 0.4833,
+      "sg_match_01_pct": 2.0,
+      "rwp_mean": 7.069
+    },
+    {
+      "guide_scale": 5.0,
+      "match_pct": 2.0,
+      "pearson_mean": 0.4544,
+      "sg_match_01_pct": 2.0,
+      "rwp_mean": 7.324
+    }
+  ],
+  "ckpt": "runs/gpu_v21_p9/ckpt_final.pt",
+  "n_per_run": 200,
+  "note": "match% flat in [1, 2.5%] across two orders of magnitude in guide_scale; within noise on n=200."
+}

@@ -184,13 +184,20 @@ def score_cell(lat, Q_obs, rel_tol=0.015):
     return m20, frac
 
 
-def index_pattern(Q_obs, system, max_hyp=150000):
+def index_pattern(Q_obs, system, max_hyp=150000, topk=1):
     """Ito-style: hypothesise (hkl) for the n_free lowest peaks, solve the linear
-    Q-form, score, refine the best. Hypothesis count hard-capped."""
+    Q-form, score, refine the best. Hypothesis count hard-capped.
+
+    Returns:
+        topk=1 (default): (lat, frac)  — back-compatible with previous behaviour.
+        topk>1: list of (lat, frac, fom) sorted by fom desc, len <= topk.
+                Falls back to a coverage-best candidate if none clear the gate.
+    """
     nf = n_free(system)
     refs = reflection_set(system)
     seed_n = min(len(Q_obs), nf + 2)
-    best, best_fom, best_frac = None, 0.0, 0.0       # best cell passing the gate
+    # collect candidates as (lat, frac, fom); dedupe by rounded params at the end
+    cands = []
     fb, fb_frac = None, 0.0                          # fallback: best coverage if none pass
     count = 0
     for picks in combinations(range(seed_n), nf):
@@ -210,17 +217,37 @@ def index_pattern(Q_obs, system, max_hyp=150000):
                 continue
             lat = params_to_lattice(p, system)
             fom, frac = score_cell(lat, Q_obs)
-            if fom > best_fom:
-                best, best_fom, best_frac = lat, fom, frac
-            if best is None and lat is not None and frac > fb_frac:
+            if fom > 0.0:
+                cands.append((lat, frac, fom))
+            elif lat is not None and frac > fb_frac:
                 fb, fb_frac = lat, frac
         if count > max_hyp:
             break
-    if best is None:
+
+    # dedupe by rounded conventional params (catches numerical near-duplicates)
+    seen = {}
+    for lat, frac, fom in cands:
+        key = tuple(round(x, 2) for x in lat.parameters)
+        prev = seen.get(key)
+        if prev is None or fom > prev[2]:
+            seen[key] = (lat, frac, fom)
+    uniq = sorted(seen.values(), key=lambda t: -t[2])[:topk]
+
+    if not uniq:
+        if topk == 1:
+            if fb is None:
+                return None, 0.0
+            return refine_cell(fb, Q_obs, system), fb_frac
         if fb is None:
-            return None, 0.0
-        return refine_cell(fb, Q_obs, system), fb_frac
-    return refine_cell(best, Q_obs, system), best_frac
+            return []
+        return [(refine_cell(fb, Q_obs, system), fb_frac, 0.0)]
+
+    refined = [(refine_cell(lat, Q_obs, system), frac, fom)
+               for (lat, frac, fom) in uniq]
+    if topk == 1:
+        lat, frac, _ = refined[0]
+        return lat, frac
+    return refined
 
 
 def refine_cell(lat, Q_obs, system):
@@ -297,6 +324,9 @@ def main():
     ap.add_argument("--cache", type=str, default=str(ROOT / "data" / "cache" / "test.npz"))
     ap.add_argument("--grid", type=str, default=str(ROOT / "data" / "cache" / "two_theta.npy"))
     ap.add_argument("--csv", type=str, default=str(ROOT / "data" / "raw" / "test.csv"))
+    ap.add_argument("--topk", type=int, default=1,
+                    help=">1 emits ranked candidates per structure in 'candidates' field "
+                         "(9.1.1; consumed by --lat-from-index-topk in 03_sample.py)")
     args = ap.parse_args()
 
     import warnings
@@ -337,11 +367,29 @@ def main():
             per_system[system].append(None)
             continue
         Q_obs = np.sort(two_theta_to_Q(peaks))
-        pred_lat, frac = index_pattern(Q_obs, system)
-        if pred_lat is None:
-            per_system[system].append(None)
-            continue
-        pred_lat = volume_correct(pred_lat, n_conv_atoms)   # 9.0.6 sub-cell fix
+        if args.topk > 1:
+            cands = index_pattern(Q_obs, system, topk=args.topk)
+            if not cands:
+                per_system[system].append(None)
+                continue
+            cand_records = []
+            for (lat, c_frac, c_fom) in cands:
+                lat_vc = volume_correct(lat, n_conv_atoms)
+                cand_records.append(dict(
+                    params=[round(float(x), 4) for x in lat_vc.parameters],
+                    fom=round(float(c_fom), 4),
+                    frac=round(float(c_frac), 3),
+                    vol_ratio=round(float(true_lat.volume / lat_vc.volume), 3),
+                ))
+            pred_lat = volume_correct(cands[0][0], n_conv_atoms)
+            frac = cands[0][1]
+        else:
+            pred_lat, frac = index_pattern(Q_obs, system)
+            if pred_lat is None:
+                per_system[system].append(None)
+                continue
+            pred_lat = volume_correct(pred_lat, n_conv_atoms)   # 9.0.6 sub-cell fix
+            cand_records = None
         tp, pp = sorted_params(true_lat), sorted_params(pred_lat)
         vr = true_lat.volume / pred_lat.volume          # >1 if pred is a sub-cell
         ratio = vr if vr >= 1 else 1.0 / vr
@@ -356,6 +404,8 @@ def main():
                                        / true_lat.volume), 4),
                    vol_ratio=round(float(vr), 3),
                    consistent=bool(frac >= 0.9 and near_int < 0.08))
+        if cand_records is not None:
+            rec["candidates"] = cand_records
         rows.append(rec)
         per_system[system].append(rec)
         if (i + 1) % 50 == 0:

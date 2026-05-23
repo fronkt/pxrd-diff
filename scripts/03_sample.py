@@ -129,6 +129,29 @@ def main():
                          "Patterns whose pattern was not indexed fall back to the "
                          "true lattice; coverage is reported. Ignored when "
                          "--true-lattice is also set.")
+    ap.add_argument("--lat-from-index-topk", default=None,
+                    help="Phase 9.1.4: like --lat-from-index but uses the top-K "
+                         "ranked candidate cells per structure (from indexer run "
+                         "with --topk K). For each pattern, sample "
+                         "--samples-per-cell candidates per cell, score all "
+                         "K*M candidates by Debye-Pearson against target, pick "
+                         "the global best. The picked cell becomes the final "
+                         "predicted lattice. Mutually exclusive with --lat-from-index.")
+    ap.add_argument("--samples-per-cell", type=int, default=4,
+                    help="Phase 9.1.4: samples per candidate cell. With "
+                         "--lat-from-index-topk this overrides --n-samples; "
+                         "total candidates per pattern = K * samples-per-cell.")
+    # ---- Phase 9.2 -----------------------------------------------------------
+    ap.add_argument("--guide-scale", type=float, default=0.0,
+                    help="Phase 9.2: Debye-gradient guidance strength. 0 = "
+                         "current behaviour. ~0.1-1.0 typical. Multiplied per "
+                         "step by (1-t) so late steps get more guidance.")
+    ap.add_argument("--guide-start-t", type=float, default=0.5,
+                    help="Phase 9.2: only apply guidance when t <= this value "
+                         "(skip the noisy early steps). Default 0.5.")
+    ap.add_argument("--guide-clip", type=float, default=0.05,
+                    help="Phase 9.2: per-sample L2-norm clip on the guidance "
+                         "nudge to keep samples on the data manifold.")
     # ---- Phase 6 -------------------------------------------------------------
     ap.add_argument("--sg-constrain-lat", action="store_true",
                     help="Phase 6.2: project the aux/constrained-head lattice "
@@ -256,13 +279,18 @@ def main():
             [b["peak_features"] for b in batch_items]
         ).to(device)
 
-    # DiffPXRD module (used iff Phase 4 features enabled)
+    # DiffPXRD module (used iff Phase 4/9 features enabled)
     debye = None
-    if args.n_samples > 1 or args.refine_steps > 0:
+    if (args.n_samples > 1 or args.refine_steps > 0
+            or args.lat_from_index_topk or args.guide_scale > 0):
         debye = DiffPXRD(
             n_bins=args.debye_n_bins,
             hkl_max=args.debye_hkl_max,
         ).to(device).eval()
+    use_guide = args.guide_scale > 0.0 and debye is not None
+    if use_guide:
+        print(f"Phase 9.2: Debye-gradient guidance — scale={args.guide_scale}, "
+              f"start_t={args.guide_start_t}, clip={args.guide_clip}")
 
     # Sampler
     sampler = DDIMSampler(
@@ -338,6 +366,8 @@ def main():
         aux_lat_matrix = lattice_params_to_matrix(aux_lat_clamped)
 
     # ---- Phase 9.1: lattice from classical indexing -------------------------
+    if args.lat_from_index and args.lat_from_index_topk:
+        sys.exit("--lat-from-index and --lat-from-index-topk are mutually exclusive")
     index_lat_params = None
     index_lat_matrix = None
     use_index_lat = bool(args.lat_from_index) and not args.true_lattice
@@ -363,11 +393,51 @@ def main():
         idx_clamped[:, 3:] = idx_clamped[:, 3:].clamp(min=10.0, max=170.0)
         index_lat_matrix = lattice_params_to_matrix(idx_clamped)
 
+    # ---- Phase 9.1.4: top-K candidate cells, picked by Debye-Pearson rerank --
+    index_topk_lat_params = None      # (B, K, 6)
+    index_topk_lat_matrix = None      # (B, K, 3, 3)
+    use_index_topk = bool(args.lat_from_index_topk) and not args.true_lattice
+    if use_index_topk:
+        with open(args.lat_from_index_topk) as f:
+            topk_rows = json.load(f).get("rows", [])
+        topk_by_id = {r["mid"]: r.get("candidates") for r in topk_rows
+                      if r.get("candidates")}
+        # Determine K from data; pad shorter cell lists by repeating last cell.
+        Ks = [len(c) for c in topk_by_id.values()]
+        if not Ks:
+            sys.exit("--lat-from-index-topk JSON has no candidates")
+        K = max(Ks)
+        print(f"Phase 9.1.4: top-K rerank — K_max={K}, "
+              f"K_observed=[{min(Ks)}, {max(Ks)}], M={args.samples_per_cell} "
+              f"samples per cell → {K * args.samples_per_cell} candidates per pattern")
+        # Fall back: for patterns with no candidates use true lattice (repeated K).
+        index_topk_lat_params = lattice_params_true.unsqueeze(1).expand(-1, K, -1).clone()
+        n_cov_topk = 0
+        for bi, mid in enumerate(material_ids):
+            cands = topk_by_id.get(mid)
+            if not cands:
+                continue
+            n_cov_topk += 1
+            for ki in range(K):
+                # repeat last cell if fewer than K candidates
+                ci = min(ki, len(cands) - 1)
+                index_topk_lat_params[bi, ki] = torch.tensor(
+                    cands[ci]["params"], dtype=torch.float32, device=device)
+        print(f"  coverage: {n_cov_topk}/{B} patterns "
+              f"({100.0 * n_cov_topk / B:.1f}%); uncovered patterns use true cell × K")
+        flat = index_topk_lat_params.reshape(B * K, 6).clone()
+        flat[:, :3] = flat[:, :3].clamp(min=0.5, max=100.0)
+        flat[:, 3:] = flat[:, 3:].clamp(min=10.0, max=170.0)
+        index_topk_lat_matrix = lattice_params_to_matrix(flat).view(B, K, 3, 3)
+
     # When Phase 5 is requested (and we're not in --true-lattice mode), the
     # sampler should use aux-head lattice both as lattice_init and as the
     # final predicted lat_params for downstream eval/refinement.
     use_aux_lat = (args.lat_from_aux and not args.true_lattice
-                   and aux_head is not None and not use_index_lat)
+                   and aux_head is not None and not use_index_lat
+                   and not use_index_topk)
+    # In topk mode the lattice fed to sampler is per-cell (handled inside loop);
+    # use the lattice tensor here as a placeholder.
     sampler_lattice = (index_lat_matrix if use_index_lat
                        else aux_lat_matrix if use_aux_lat else lattice)
 
@@ -398,7 +468,9 @@ def main():
     # When using a fixed lattice (true or aux), the ensemble selector and the
     # refinement loop should both consume that lattice rather than the
     # sampler's diffusion-predicted one.
-    use_fixed_lat = args.true_lattice or use_aux_lat or use_index_lat
+    use_fixed_lat = (args.true_lattice or use_aux_lat or use_index_lat
+                     or use_index_topk)
+    picked_cell_ranks: list[int] = []   # 9.1.4 diagnostic
 
     for ci, lo in enumerate(range(0, B, bs)):
         hi = min(lo + bs, B)
@@ -412,10 +484,73 @@ def main():
 
         # ---- Sample ---------------------------------------------------------
         t0 = time.perf_counter()
-        if args.n_samples > 1:
+        if use_index_topk:
+            # 9.1.4: K candidate cells × M samples per cell.
+            K = index_topk_lat_matrix.shape[1]
+            M = args.samples_per_cell
+            lat_topk_c = index_topk_lat_matrix[lo:hi]              # (cb, K, 3, 3)
+            lat_topk_params_c = index_topk_lat_params[lo:hi]       # (cb, K, 6)
+            # Tile chunk by K: each pattern repeated for each cell.
+            pxrd_kc = pxrd_c.unsqueeze(1).expand(-1, K, *([-1] * (pxrd_c.dim() - 1))) \
+                            .reshape(cb * K, *pxrd_c.shape[1:])
+            at_kc = at_c.unsqueeze(1).expand(-1, K, -1).reshape(cb * K, N)
+            mask_kc = mask_c.unsqueeze(1).expand(-1, K, -1).reshape(cb * K, N)
+            wyck_kc = (wyck_c.unsqueeze(1).expand(-1, K, -1).reshape(cb * K, N)
+                       if wyck_c is not None else None)
+            lat_kc = lat_topk_c.reshape(cb * K, 3, 3)
+            # Sample M candidates per (pattern, cell)
+            cand_coords_kc, cand_lat_kc = sampler.sample_ensemble(
+                pxrd_kc, at_kc, lat_kc, mask_kc,
+                n_samples=M, eta=args.ensemble_eta, wyckoff=wyck_kc,
+                guide_debye=debye if use_guide else None,
+                guide_target=pxrd_kc if use_guide else None,
+                guide_scale=args.guide_scale,
+                guide_start_t=args.guide_start_t,
+                guide_clip=args.guide_clip,
+            )                                                       # (cb*K, M, N, 3)
+            t_sample += time.perf_counter() - t0
+            # Reshape to (cb, K*M, ...)
+            cand_coords_c = cand_coords_kc.view(cb, K, M, N, 3).reshape(cb, K * M, N, 3)
+            cand_lat_c = cand_lat_kc.view(cb, K, M, 6).reshape(cb, K * M, 6)
+            # Lattice for Debye scoring: per-cell, broadcast across M
+            lat_for_score_c = lat_topk_c.unsqueeze(2).expand(-1, K, M, -1, -1) \
+                                        .reshape(cb, K * M, 3, 3)
+            t0 = time.perf_counter()
+            pc_c, _ignored_lat, scores_c = select_best_by_pearson(
+                cand_coords_c, cand_lat_c, at_c, mask_c,
+                lat_for_score_c, pxrd_c, debye,
+            )
+            t_select += time.perf_counter() - t0
+            pearson_scores_all.append(scores_c.detach().cpu())
+            # Recover which cell (0..K-1) was picked per pattern by re-doing argmax
+            # on the per-candidate scores; cheap.
+            with torch.no_grad():
+                coords_flat = cand_coords_c.reshape(cb * K * M, N, 3)
+                at_rep_full = at_c.unsqueeze(1).expand(-1, K * M, -1).reshape(cb * K * M, N)
+                mask_rep_full = mask_c.unsqueeze(1).expand(-1, K * M, -1).reshape(cb * K * M, N)
+                lat_rep_full = lat_for_score_c.reshape(cb * K * M, 3, 3)
+                pred_p = debye(coords_flat, at_rep_full, lat_rep_full, mask_rep_full)
+                from pxrd_diff.sampler import pearson_score                       # noqa: E402
+                targ_p = pxrd_c.unsqueeze(1).expand(-1, K * M, -1).reshape(cb * K * M, -1)
+                scores_full = pearson_score(pred_p, targ_p).view(cb, K, M)
+                cell_idx_per_pattern = scores_full.max(dim=2).values.argmax(dim=1)  # (cb,)
+            for bi in range(cb):
+                picked_cell_ranks.append(int(cell_idx_per_pattern[bi].item()))
+            # The picked lattice (per pattern) becomes the predicted lat_params
+            pl_c = lat_topk_params_c[torch.arange(cb, device=device),
+                                     cell_idx_per_pattern]               # (cb, 6)
+            # Override lat_c for refinement to the per-pattern picked cell
+            lat_c = lat_topk_c[torch.arange(cb, device=device),
+                               cell_idx_per_pattern]                     # (cb, 3, 3)
+        elif args.n_samples > 1:
             cand_coords_c, cand_lat_c = sampler.sample_ensemble(
                 pxrd_c, at_c, lat_c, mask_c,
                 n_samples=args.n_samples, eta=args.ensemble_eta, wyckoff=wyck_c,
+                guide_debye=debye if use_guide else None,
+                guide_target=pxrd_c if use_guide else None,
+                guide_scale=args.guide_scale,
+                guide_start_t=args.guide_start_t,
+                guide_clip=args.guide_clip,
             )
             t_sample += time.perf_counter() - t0
 
@@ -435,7 +570,14 @@ def main():
             t_select += time.perf_counter() - t0
             pearson_scores_all.append(scores_c.detach().cpu())
         else:
-            pc_c, pl_c = sampler.sample(pxrd_c, at_c, lat_c, mask_c, wyckoff=wyck_c)
+            pc_c, pl_c = sampler.sample(
+                pxrd_c, at_c, lat_c, mask_c, wyckoff=wyck_c,
+                guide_debye=debye if use_guide else None,
+                guide_target=pxrd_c if use_guide else None,
+                guide_scale=args.guide_scale,
+                guide_start_t=args.guide_start_t,
+                guide_clip=args.guide_clip,
+            )
             t_sample += time.perf_counter() - t0
 
         # ---- Phase 5/9: substitute external lattice for the diffusion lattice
@@ -443,6 +585,7 @@ def main():
             pl_c = aux_lat_params[lo:hi]
         elif use_index_lat:
             pl_c = index_lat_params[lo:hi]
+        # (use_index_topk: pl_c already set above to the picked cell.)
 
         # ---- Refine ---------------------------------------------------------
         if args.refine_steps > 0:
@@ -483,6 +626,14 @@ def main():
         scores_all = torch.cat(pearson_scores_all)
         print(f"Selected-candidate pearson: mean={scores_all.mean().item():.3f} "
               f"median={scores_all.median().item():.3f}")
+    if use_index_topk and picked_cell_ranks:
+        from collections import Counter
+        ctr = Counter(picked_cell_ranks)
+        K = index_topk_lat_matrix.shape[1]
+        total = sum(ctr.values())
+        dist = "  ".join(f"rank{k}: {ctr.get(k, 0)} ({100*ctr.get(k, 0)/total:.1f}%)"
+                         for k in range(K))
+        print(f"Phase 9.1.4 picked-cell distribution: {dist}")
     if refine_loss_first:
         print(f"Refinement loss avg first->last: "
               f"{sum(refine_loss_first) / len(refine_loss_first):.4f} -> "
@@ -557,6 +708,9 @@ def main():
                 "n": args.n,
                 "true_lattice": args.true_lattice,
                 "lat_from_aux": args.lat_from_aux,
+                "lat_from_index": args.lat_from_index,
+                "lat_from_index_topk": args.lat_from_index_topk,
+                "samples_per_cell": args.samples_per_cell,
                 "sg_constrain_lat": args.sg_constrain_lat,
                 "noise_aug_eval": args.noise_aug_eval,
                 "n_samples": args.n_samples,
@@ -567,6 +721,13 @@ def main():
                 "ddim_steps": args.ddim_steps,
                 "eta": args.eta,
             }
+            if use_index_topk and picked_cell_ranks:
+                from collections import Counter
+                ctr = Counter(picked_cell_ranks)
+                K = index_topk_lat_matrix.shape[1]
+                agg["picked_cell_distribution"] = {
+                    f"rank{k}": ctr.get(k, 0) for k in range(K)
+                }
             Path(args.out_json).write_text(json.dumps(agg, indent=2))
             print(f"\nWrote aggregate metrics to {args.out_json}")
 

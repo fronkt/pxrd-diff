@@ -1,0 +1,73 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Phase 4.1: ensemble n_samples=20, eta=0.0
+Phase 4.2: Rietveld refinement steps=200, lr=0.001, refine_lattice=False
+  val = self.func(instance)
+  val = self.func(instance)
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.184  b=1.054  c=1.546  α=12.30  β=11.13  γ=19.34
+Aux-head lattice validity: 300/300 (100.0%)
+Phase 9.1: indexed-cell lattice — 300/300 covered (100.0%); uncovered fall back to true lattice
+  indexed-cell MAE vs true: a=2.457 b=2.287 c=2.594  α=14.15 β=15.78 γ=17.54
+Ensemble: 300 patterns x 20 candidates in chunks of 32 (10 chunks)
+Refinement: 200 Adam steps @ lr=0.001, refine_lattice=False
+  chunk 1/10 done (sample=6.0s  select=0.5s  refine=2.0s)
+  chunk 2/10 done (sample=11.6s  select=1.0s  refine=2.7s)
+  chunk 3/10 done (sample=17.2s  select=1.4s  refine=3.3s)
+  chunk 4/10 done (sample=22.9s  select=1.8s  refine=3.9s)
+  chunk 5/10 done (sample=28.6s  select=2.2s  refine=4.6s)
+  chunk 6/10 done (sample=34.3s  select=2.6s  refine=5.2s)
+  chunk 7/10 done (sample=40.0s  select=3.0s  refine=5.8s)
+  chunk 8/10 done (sample=45.7s  select=3.4s  refine=6.5s)
+  chunk 9/10 done (sample=51.4s  select=3.9s  refine=7.1s)
+  chunk 10/10 done (sample=53.5s  select=4.0s  refine=7.7s)
+Total: sample=53.5s  select=4.0s  refine=7.7s
+Selected-candidate pearson: mean=0.027 median=-0.008
+Refinement loss avg first->last: 0.9748 -> 0.8377
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.879  pearson=0.002  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.256  pearson=0.010  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=25.093  pearson=-0.013  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.456  pearson=0.060  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.110  pearson=0.094  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.493  pearson=-0.011  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=18.187  pearson=0.277  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.176  pearson=-0.007  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.902  pearson=0.098  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=8.576  pearson=0.054  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.238  pearson=-0.004  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.754  pearson=0.079  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.028  pearson=0.210  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.147  pearson=0.013  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.188  pearson=-0.007  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=31.663  pearson=0.015  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.817  pearson=-0.007  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.284  pearson=0.010  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.312  pearson=0.112  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.599  pearson=0.164  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.121  pearson=-0.005  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.201  pearson=-0.005  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.066  pearson=0.113  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.658  pearson=0.001  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.109  pearson=0.151  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.417  pearson=0.005  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=26.270  pearson=0.012  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.889  pearson=-0.009  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.846  pearson=0.037  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.720  pearson=-0.004  all=N
+/workspace/pxrd-diff/src/pxrd_diff/eval.py:135: RuntimeWarning: Mean of empty slice
+  "rmsd_mean": float(np.nanmean(rmsd)),
+/workspace/pxrd-diff/src/pxrd_diff/eval.py:136: RuntimeWarning: All-NaN slice encountered
+  "rmsd_median": float(np.nanmedian(rmsd)),
+--- Aggregate Metrics ---
+                               n: 300
+          composition_match_rate: 1.0000
+                       rmsd_mean: nan
+                     rmsd_median: nan
+   match_rate (StructureMatcher): 0.0000
+                        rwp_mean: 16.4878
+                    pearson_mean: 0.0396
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0167
+                   sg_match@0.05: 0.0167
+                    sg_match@0.1: 0.0167
+                    sg_match@0.2: 0.0133
+Wrote aggregate metrics to paper/phase9_results/perturb/p9_2_sl2.0.json

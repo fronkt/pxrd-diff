@@ -1,0 +1,79 @@
+{
+  "summary": "Phase 9.1.2 cell-perturbation sensitivity. True conventional cells + Gaussian noise (\u03c3_ang=0). n=300 MP-20 test per \u03c3.",
+  "rows": [
+    {
+      "sigma_len_A": 0.0,
+      "realised_len_mae_A": 0.0,
+      "n": 300,
+      "match_pct": 2.0,
+      "rmsd_median": 0.0431,
+      "rwp_mean": 10.873,
+      "pearson_mean": 0.5192,
+      "sg_match_01_pct": 1.67
+    },
+    {
+      "sigma_len_A": 0.5,
+      "realised_len_mae_A": 0.4056,
+      "n": 300,
+      "match_pct": 0.33,
+      "rmsd_median": 0.2873,
+      "rwp_mean": 16.609,
+      "pearson_mean": 0.0541,
+      "sg_match_01_pct": 1.67
+    },
+    {
+      "sigma_len_A": 1.0,
+      "realised_len_mae_A": 0.8111,
+      "n": 300,
+      "match_pct": 0.33,
+      "rmsd_median": 0.2657,
+      "rwp_mean": 16.326,
+      "pearson_mean": 0.0418,
+      "sg_match_01_pct": 2.0
+    },
+    {
+      "sigma_len_A": 1.24,
+      "realised_len_mae_A": 1.0058,
+      "n": 300,
+      "match_pct": 0.0,
+      "rmsd_median": null,
+      "rwp_mean": 16.121,
+      "pearson_mean": 0.0405,
+      "sg_match_01_pct": 2.0
+    },
+    {
+      "sigma_len_A": 1.5,
+      "realised_len_mae_A": 1.2167,
+      "n": 300,
+      "match_pct": 0.0,
+      "rmsd_median": null,
+      "rwp_mean": 16.565,
+      "pearson_mean": 0.0481,
+      "sg_match_01_pct": 1.33
+    },
+    {
+      "sigma_len_A": 2.0,
+      "realised_len_mae_A": 1.6222,
+      "n": 300,
+      "match_pct": 0.0,
+      "rmsd_median": null,
+      "rwp_mean": 16.488,
+      "pearson_mean": 0.0396,
+      "sg_match_01_pct": 1.67
+    },
+    {
+      "sigma_len_A": 3.0,
+      "realised_len_mae_A": 2.4334,
+      "n": 300,
+      "match_pct": 0.0,
+      "rmsd_median": null,
+      "rwp_mean": 15.728,
+      "pearson_mean": 0.0381,
+      "sg_match_01_pct": 1.67
+    }
+  ],
+  "ckpt": "runs/gpu_v21_p9/ckpt_final.pt",
+  "n_samples": 20,
+  "refine_steps": 200,
+  "n_per_run": 300
+}

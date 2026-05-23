@@ -1,0 +1,69 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Phase 4.1: ensemble n_samples=20, eta=0.0
+Phase 4.2: Rietveld refinement steps=200, lr=0.001, refine_lattice=False
+  val = self.func(instance)
+  val = self.func(instance)
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.184  b=1.054  c=1.546  α=12.30  β=11.13  γ=19.34
+Aux-head lattice validity: 300/300 (100.0%)
+Phase 9.1: indexed-cell lattice — 300/300 covered (100.0%); uncovered fall back to true lattice
+  indexed-cell MAE vs true: a=1.918 b=1.797 c=2.048  α=14.15 β=15.78 γ=17.54
+Ensemble: 300 patterns x 20 candidates in chunks of 32 (10 chunks)
+Refinement: 200 Adam steps @ lr=0.001, refine_lattice=False
+  chunk 1/10 done (sample=6.0s  select=0.5s  refine=2.3s)
+  chunk 2/10 done (sample=11.6s  select=1.0s  refine=2.9s)
+  chunk 3/10 done (sample=17.3s  select=1.4s  refine=3.6s)
+  chunk 4/10 done (sample=22.9s  select=1.8s  refine=4.3s)
+  chunk 5/10 done (sample=28.6s  select=2.2s  refine=4.9s)
+  chunk 6/10 done (sample=34.3s  select=2.6s  refine=5.5s)
+  chunk 7/10 done (sample=40.0s  select=3.0s  refine=6.2s)
+  chunk 8/10 done (sample=45.7s  select=3.4s  refine=6.8s)
+  chunk 9/10 done (sample=51.4s  select=3.9s  refine=7.5s)
+  chunk 10/10 done (sample=53.5s  select=4.0s  refine=8.1s)
+Total: sample=53.5s  select=4.0s  refine=8.1s
+Selected-candidate pearson: mean=0.037 median=-0.007
+Refinement loss avg first->last: 0.9623 -> 0.8290
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.012  pearson=-0.001  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.215  pearson=0.005  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.084  pearson=-0.012  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.056  pearson=0.011  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.041  pearson=0.028  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.163  pearson=0.027  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.298  pearson=0.002  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.572  pearson=0.054  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.071  pearson=0.055  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=8.572  pearson=-0.008  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=28.705  pearson=-0.009  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.812  pearson=0.008  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=5.631  pearson=0.192  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.428  pearson=0.004  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.943  pearson=0.080  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=19.768  pearson=0.002  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.230  pearson=-0.007  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.048  pearson=0.026  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.544  pearson=0.130  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.502  pearson=0.228  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.880  pearson=0.112  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=18.498  pearson=0.069  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.329  pearson=0.051  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.293  pearson=-0.006  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.897  pearson=0.057  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=35.971  pearson=0.024  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.578  pearson=-0.011  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.662  pearson=0.002  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=18.786  pearson=0.016  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=9.378  pearson=-0.006  all=N
+--- Aggregate Metrics ---
+                               n: 300
+          composition_match_rate: 1.0000
+                       rmsd_mean: 0.2657
+                     rmsd_median: 0.2657
+   match_rate (StructureMatcher): 0.0033
+                        rwp_mean: 16.3256
+                    pearson_mean: 0.0418
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0167
+                   sg_match@0.05: 0.0167
+                    sg_match@0.1: 0.0200
+                    sg_match@0.2: 0.0167
+Wrote aggregate metrics to paper/phase9_results/perturb/p9_2_sl1.0.json

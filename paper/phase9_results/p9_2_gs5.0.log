@@ -1,0 +1,63 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Mode: coord-only eval with ground-truth lattice
+Phase 4.1: ensemble n_samples=20, eta=0.0
+  val = self.func(instance)
+  val = self.func(instance)
+Phase 9.2: Debye-gradient guidance — scale=5.0, start_t=0.5, clip=0.05
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.143  b=1.054  c=1.744  α=12.56  β=11.31  γ=19.42
+Aux-head lattice validity: 200/200 (100.0%)
+Ensemble: 200 patterns x 20 candidates in chunks of 32 (7 chunks)
+  chunk 1/7 done (sample=7.1s  select=0.0s  refine=0.0s)
+  chunk 2/7 done (sample=13.6s  select=0.1s  refine=0.0s)
+  chunk 3/7 done (sample=20.2s  select=0.1s  refine=0.0s)
+  chunk 4/7 done (sample=26.8s  select=0.1s  refine=0.0s)
+  chunk 5/7 done (sample=33.4s  select=0.1s  refine=0.0s)
+  chunk 6/7 done (sample=40.0s  select=0.1s  refine=0.0s)
+  chunk 7/7 done (sample=41.8s  select=0.1s  refine=0.0s)
+Total: sample=41.8s  select=0.1s  refine=0.0s
+Selected-candidate pearson: mean=0.587 median=0.581
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.189  pearson=0.695  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.893  pearson=0.554  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.037  pearson=0.222  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.807  pearson=0.576  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.624  pearson=0.414  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=19.578  pearson=0.531  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=19.616  pearson=0.294  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.325  pearson=0.359  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.001  pearson=0.357  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.593  pearson=0.399  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.417  pearson=0.642  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.253  pearson=0.899  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=0.977  pearson=0.657  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=7.538  pearson=0.403  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.102  pearson=0.793  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.125  pearson=0.389  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.013  pearson=0.487  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.838  pearson=0.227  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.436  pearson=0.088  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.784  pearson=0.411  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.175  pearson=0.162  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.413  pearson=0.914  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.204  pearson=0.173  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.992  pearson=0.486  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=0.998  pearson=0.499  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.212  pearson=0.462  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.167  pearson=0.423  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.597  pearson=0.438  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.298  pearson=0.587  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.296  pearson=0.122  all=N
+--- Aggregate Metrics ---
+                               n: 200
+          composition_match_rate: 1.0000
+                       rmsd_mean: 0.1694
+                     rmsd_median: 0.1662
+   match_rate (StructureMatcher): 0.0200
+                        rwp_mean: 7.3240
+                    pearson_mean: 0.4544
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0200
+                   sg_match@0.05: 0.0200
+                    sg_match@0.1: 0.0200
+                    sg_match@0.2: 0.0150
+Wrote aggregate metrics to paper/phase9_results/p9_2_gs5.0.json

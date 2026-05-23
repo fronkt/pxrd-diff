@@ -1,0 +1,37 @@
+[bench] indexing 1000 test structures (LAMBDA=1.54184 Cu-Ka)
+  50/1000  (310s)
+  100/1000  (434s)
+  150/1000  (619s)
+  200/1000  (860s)
+  250/1000  (1043s)
+  300/1000  (1273s)
+  350/1000  (1500s)
+  400/1000  (1731s)
+  450/1000  (1923s)
+  500/1000  (2073s)
+  550/1000  (2359s)
+  600/1000  (2535s)
+  650/1000  (2789s)
+  700/1000  (3009s)
+  750/1000  (3272s)
+  800/1000  (3559s)
+  850/1000  (3849s)
+  900/1000  (4065s)
+  950/1000  (4307s)
+  1000/1000  (4450s)
+=== Phase 9.0 indexing benchmark — stratified by crystal system ===
+strict = recovered the conventional cell;  consistent = explains the
+pattern via the conventional cell OR a small-index sub/super-cell.
+system            n  strict%  consist%  len_MAE  ang_MAE expl_frac
+------------------------------------------------------------------
+cubic           238    52.9%     59.2%    1.136     0.00      0.96
+tetragonal      180    52.8%     65.0%    0.956     0.00      0.94
+hexagonal       104    77.9%     85.6%    0.529     0.00      0.98
+trigonal         97    43.3%     46.4%    4.617     0.00      0.92
+orthorhombic    194    59.8%     66.0%    0.957     0.00      0.94
+monoclinic      148    18.9%     28.4%    1.762    15.41      0.88
+triclinic        39     0.0%      0.0%      nan      nan       nan
+------------------------------------------------------------------
+OVERALL: indexed 961/1000, strict 48.8%, consistent 56.2%, len MAE 1.4484 A (v20 learned head ~1.37 A)
+[bench] wrote paper/phase9_results/index_cells_test1000_top5.json  (4450s total)
+GO/NO-GO: classical indexing is viable if solved% materially beats the learned head (len MAE << 1.37 A) on at least the higher-symmetry systems.

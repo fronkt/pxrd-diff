@@ -92,18 +92,36 @@ class DDIMSampler:
         self.lat_std = lat_std
         self.predict_x0 = predict_x0
 
-    @torch.no_grad()
     def sample(self, pxrd: torch.Tensor, atom_types: torch.Tensor,
                lattice_init: torch.Tensor, mask: torch.Tensor,
                wyckoff: torch.Tensor | None = None,
+               guide_debye: "nn.Module | None" = None,
+               guide_target: "torch.Tensor | None" = None,
+               guide_scale: float = 0.0,
+               guide_start_t: float = 0.5,
+               guide_clip: float = 0.05,
                ) -> tuple[torch.Tensor, torch.Tensor]:
+        """DDIM reverse sampling with optional Debye-gradient guidance (Phase 9.2).
+
+        Guidance: at each step where t <= guide_start_t (late, low-noise steps),
+        compute x0_pred from the current (x_t, eps), render its PXRD via
+        guide_debye, take ∇_{x0_pred}[1 - Pearson(pred, target)], nudge x0_pred
+        opposite the gradient, and recompute eps. Step size is annealed by
+        (1 - t_now) and norm-clipped per-sample to guide_clip to stay on the
+        data manifold. Lattice is guided when not fixed by --true/--aux/--index;
+        coordinates are always guided when active.
+        """
         device = pxrd.device
         B, N = atom_types.shape
 
-        pxrd_global, pxrd_feats = self.encoder(pxrd)
+        do_guide = (guide_scale > 0.0 and guide_debye is not None
+                    and guide_target is not None)
 
-        x_t = torch.randn(B, N, 3, device=device)
-        l_t = torch.randn(B, 6, device=device)
+        with torch.no_grad():
+            pxrd_global, pxrd_feats = self.encoder(pxrd)
+
+            x_t = torch.randn(B, N, 3, device=device)
+            l_t = torch.randn(B, 6, device=device)
 
         timesteps = torch.linspace(1.0 - 0.5 / self.n_steps, 1e-4,
                                     self.n_steps + 1, device=device)
@@ -114,27 +132,66 @@ class DDIMSampler:
             ab_next = cosine_alpha_bar(t_next.unsqueeze(0))
             t_batch = t_now.expand(B)
 
-            lattice_for_dist = self._params_to_approx_lattice(l_t, lattice_init)
+            with torch.no_grad():
+                lattice_for_dist = self._params_to_approx_lattice(l_t, lattice_init)
+                pred_c, pred_l = self.denoiser(
+                    x_t % 1.0, atom_types, lattice_for_dist, t_batch,
+                    pxrd_global, pxrd_feats, mask, l_t,
+                    wyckoff=wyckoff,
+                )
 
-            pred_c, pred_l = self.denoiser(
-                x_t % 1.0, atom_types, lattice_for_dist, t_batch,
-                pxrd_global, pxrd_feats, mask, l_t,
-                wyckoff=wyckoff,
-            )
+                if self.predict_x0:
+                    # Model output is residual: x0_pred = x_t + pred
+                    x0_c = (x_t % 1.0) + pred_c
+                    x0_l = l_t + pred_l
+                    eps_c = (x_t - ab_now.view(-1, 1, 1).sqrt() * x0_c) / (1 - ab_now.view(-1, 1, 1)).sqrt().clamp(min=0.05)
+                    eps_l = (l_t - ab_now.view(-1, 1).sqrt() * x0_l) / (1 - ab_now.view(-1, 1)).sqrt().clamp(min=0.05)
+                else:
+                    eps_c = pred_c
+                    eps_l = pred_l
 
-            if self.predict_x0:
-                # Model output is residual: x0_pred = x_t + pred
-                x0_c = (x_t % 1.0) + pred_c
-                x0_l = l_t + pred_l
-                # Convert to eps for DDIM step
-                eps_c = (x_t - ab_now.view(-1, 1, 1).sqrt() * x0_c) / (1 - ab_now.view(-1, 1, 1)).sqrt().clamp(min=0.05)
-                eps_l = (l_t - ab_now.view(-1, 1).sqrt() * x0_l) / (1 - ab_now.view(-1, 1)).sqrt().clamp(min=0.05)
-            else:
-                eps_c = pred_c
-                eps_l = pred_l
+            # ---- Phase 9.2: Debye-gradient guidance ----------------------
+            if do_guide and float(t_now.item()) <= guide_start_t:
+                # Recompute x0_c from eps to keep this branch self-contained
+                with torch.no_grad():
+                    abc = ab_now.view(-1, 1, 1)
+                    x0_c_recon = (x_t - (1 - abc).sqrt() * eps_c) / abc.sqrt().clamp(min=0.05)
+                    abl = ab_now.view(-1, 1)
+                    x0_l_recon = (l_t - (1 - abl).sqrt() * eps_l) / abl.sqrt().clamp(min=0.05)
+                    # Convert l_t (normalised) to physical params for DiffPXRD
+                    if self.lat_mean is not None and self.lat_std is not None:
+                        lp_phys = (x0_l_recon * self.lat_std.to(device)
+                                   + self.lat_mean.to(device))
+                    else:
+                        lp_phys = x0_l_recon
+                    lp_phys = torch.cat([
+                        lp_phys[..., :3].clamp(0.5, 100.0),
+                        lp_phys[..., 3:].clamp(10.0, 170.0),
+                    ], dim=-1)
+                    lat_mat_phys = lattice_params_to_matrix(lp_phys)
+                # Enable grad just for the Debye + Pearson path on x0_c
+                x0_c_g = (x0_c_recon % 1.0).detach().clone().requires_grad_(True)
+                with torch.enable_grad():
+                    pred_pxrd = guide_debye(x0_c_g, atom_types, lat_mat_phys, mask)
+                    scores = pearson_score(pred_pxrd, guide_target)
+                    loss = (1.0 - scores).sum()
+                    grad = torch.autograd.grad(loss, x0_c_g)[0]
+                with torch.no_grad():
+                    # Anneal: stronger guidance near low noise (small t_now)
+                    eff = float(guide_scale) * (1.0 - float(t_now.item()))
+                    # Per-sample L2-norm clip on the nudge
+                    flat_norm = grad.reshape(B, -1).norm(dim=1).clamp(min=1e-6)
+                    scale_clip = (guide_clip / flat_norm).clamp(max=1.0).view(B, 1, 1)
+                    nudge = grad * (eff * scale_clip)
+                    # Zero on padding atoms
+                    nudge = nudge * mask.float().unsqueeze(-1)
+                    x0_c_nudged = x0_c_recon - nudge
+                    # Reconstruct eps_c from nudged x0
+                    eps_c = (x_t - abc.sqrt() * x0_c_nudged) / (1 - abc).sqrt().clamp(min=0.05)
 
-            x_t = self._ddim_step(x_t, eps_c, ab_now, ab_next) % 1.0
-            l_t = self._ddim_step(l_t, eps_l, ab_now, ab_next)
+            with torch.no_grad():
+                x_t = self._ddim_step(x_t, eps_c, ab_now, ab_next) % 1.0
+                l_t = self._ddim_step(l_t, eps_l, ab_now, ab_next)
 
         if self.lat_mean is not None and self.lat_std is not None:
             lat_mean = self.lat_mean.to(device)
@@ -145,12 +202,16 @@ class DDIMSampler:
 
         return x_t % 1.0, lattice_params
 
-    @torch.no_grad()
     def sample_ensemble(self, pxrd: torch.Tensor, atom_types: torch.Tensor,
                         lattice_init: torch.Tensor, mask: torch.Tensor,
                         n_samples: int = 10,
                         eta: float | None = None,
                         wyckoff: torch.Tensor | None = None,
+                        guide_debye: "nn.Module | None" = None,
+                        guide_target: "torch.Tensor | None" = None,
+                        guide_scale: float = 0.0,
+                        guide_start_t: float = 0.5,
+                        guide_clip: float = 0.05,
                         ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate n_samples candidate structures per input pattern.
 
@@ -185,12 +246,25 @@ class DDIMSampler:
         else:
             wyck_rep = None
 
+        # Replicate guide_target across the S-axis too (per-sample target)
+        if guide_target is not None:
+            guide_target_rep = guide_target.unsqueeze(1).expand(
+                -1, S, *([-1] * (guide_target.dim() - 1))
+            ).reshape(B * S, *guide_target.shape[1:])
+        else:
+            guide_target_rep = None
+
         old_eta = self.eta
         if eta is not None:
             self.eta = eta
         try:
             coords_flat, lat_params_flat = self.sample(
                 pxrd_rep, at_rep, lat_rep, mask_rep, wyck_rep,
+                guide_debye=guide_debye,
+                guide_target=guide_target_rep,
+                guide_scale=guide_scale,
+                guide_start_t=guide_start_t,
+                guide_clip=guide_clip,
             )
         finally:
             self.eta = old_eta

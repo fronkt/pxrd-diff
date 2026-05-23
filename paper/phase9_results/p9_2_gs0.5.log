@@ -1,0 +1,63 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Mode: coord-only eval with ground-truth lattice
+Phase 4.1: ensemble n_samples=20, eta=0.0
+  val = self.func(instance)
+  val = self.func(instance)
+Phase 9.2: Debye-gradient guidance — scale=0.5, start_t=0.5, clip=0.05
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.143  b=1.054  c=1.744  α=12.56  β=11.31  γ=19.42
+Aux-head lattice validity: 200/200 (100.0%)
+Ensemble: 200 patterns x 20 candidates in chunks of 32 (7 chunks)
+  chunk 1/7 done (sample=7.0s  select=0.0s  refine=0.0s)
+  chunk 2/7 done (sample=13.6s  select=0.0s  refine=0.0s)
+  chunk 3/7 done (sample=20.1s  select=0.0s  refine=0.0s)
+  chunk 4/7 done (sample=26.6s  select=0.1s  refine=0.0s)
+  chunk 5/7 done (sample=33.2s  select=0.1s  refine=0.0s)
+  chunk 6/7 done (sample=39.7s  select=0.1s  refine=0.0s)
+  chunk 7/7 done (sample=41.5s  select=0.1s  refine=0.0s)
+Total: sample=41.5s  select=0.1s  refine=0.0s
+Selected-candidate pearson: mean=0.576 median=0.590
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.824  pearson=0.378  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.688  pearson=0.478  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.010  pearson=0.178  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.357  pearson=0.707  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=5.148  pearson=0.350  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.515  pearson=0.268  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.792  pearson=0.209  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.404  pearson=0.585  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.756  pearson=0.244  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.298  pearson=0.408  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.877  pearson=0.583  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.898  pearson=0.539  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=0.846  pearson=0.720  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.964  pearson=0.305  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.189  pearson=0.590  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.491  pearson=0.537  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.965  pearson=0.409  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.587  pearson=0.292  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.463  pearson=0.251  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.863  pearson=0.824  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=25.316  pearson=0.317  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=5.142  pearson=0.884  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.125  pearson=0.347  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.794  pearson=0.247  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.325  pearson=0.560  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.830  pearson=0.295  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.254  pearson=0.240  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.974  pearson=0.203  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.270  pearson=0.469  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=9.908  pearson=0.232  all=N
+--- Aggregate Metrics ---
+                               n: 200
+          composition_match_rate: 1.0000
+                       rmsd_mean: 0.2587
+                     rmsd_median: 0.2566
+   match_rate (StructureMatcher): 0.0250
+                        rwp_mean: 7.1605
+                    pearson_mean: 0.4673
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0200
+                   sg_match@0.05: 0.0200
+                    sg_match@0.1: 0.0200
+                    sg_match@0.2: 0.0150
+Wrote aggregate metrics to paper/phase9_results/p9_2_gs0.5.json

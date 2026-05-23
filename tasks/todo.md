@@ -951,13 +951,24 @@ No retraining. Pure offline measurement on the MP-20 test split.
         `paper/phase9_results/p9_idxlat_n1000.json`.
         First honest no-true-lattice match rate with classically-indexed cells.
         See "Review — Phase 9.1.3" below.
-- [ ] 9.1.1 `index_lattice(pattern) -> [(lattice_params, crystal_system, FoM), ...]`
-        returning ranked candidates, not a single cell
-- [ ] 9.1.2 Cell-perturbation study: feed Phase 4 oracle cells + synthetic noise
-        at the indexer's measured MAE → confirm 6.8% degrades gracefully
-- [ ] 9.1.4 Feed top-N indexed cells into the Phase 4 pipeline; sample per
-        candidate, score by Debye fit, keep best. Re-run n=1000 eval —
-        first true no-true-lattice number not bottlenecked by the encoder.
+- [x] 9.1.1 `index_lattice(pattern) -> [(lattice_params, crystal_system, FoM), ...]`
+        returning ranked candidates, not a single cell. Implemented in
+        `09_index_benchmark.py` via `--topk K`. Top-5 artifact for full
+        test1000 at `paper/phase9_results/index_cells_test1000_top5.json`
+        (961/1000 indexed; FoM is the de-Wolff M20).
+- [x] 9.1.2 Cell-perturbation study. `scripts/09a_make_perturbed_cells.py` +
+        7-σ sweep at `paper/phase9_results/perturb/` + consolidated
+        `cell_perturb_sensitivity.json`. **Finding: not graceful.** σ_len
+        as small as 0.5 Å drops match% from oracle 2.0% to 0.33%; σ≥1.0 Å
+        gives 0% match. See Review — Phase 9.1.2 below.
+- [x] 9.1.4 Feed top-N indexed cells into the pipeline; sample per
+        candidate, score by Debye fit, keep best. `--lat-from-index-topk`
+        + `--samples-per-cell` in `03_sample.py`. n=1000, K=5, M=4
+        (same compute as 9.1.3). **Finding: 1.0% match — worse than 9.1.3
+        top-1 baseline (1.6%).** Reranker picks non-top-1 cells 65% of the
+        time and trades correct-cell hits for wrong-cell mistakes.
+        Artifact: `paper/phase9_results/p9_1_4_topk5_n1000.{json,log}`.
+        See Review — Phase 9.1.4 below.
 
 ### Review — Phase 9.1.3 (first honest no-true-lattice eval) — 2026-05-22
 - Completed on rented RTX 5090 (vast.ai 99.27.206.243). v21 checkpoint
@@ -998,21 +1009,166 @@ No retraining. Pure offline measurement on the MP-20 test split.
     where the residual oracle gap is concentrated.
 - **Artifacts:** `paper/phase9_results/p9_{truelat,idxlat}_n1000.{json,log}`.
 
+### Review — Phase 9.1.2 (cell-perturbation sensitivity) — 2026-05-22
+- True conventional cells (`09a_make_perturbed_cells.py`) + Gaussian noise
+  on lengths only (σ_ang=0; the indexer is also angle-perfect on high-sym
+  systems). n=300 MP-20 test per σ, v21 ckpt, n_samples 20, refine 200.
+- ```
+  σ_len (Å)   realised len MAE (Å)   match%   rmsd_med (Å)   pearson
+  0.00         0.000                  2.00     0.043          0.519
+  0.50         0.398                  0.33     0.287          0.054
+  1.00         0.797                  0.33     0.266          0.042
+  1.24         0.989                  0.00     n/a            0.040
+  1.50         1.197                  0.00     n/a            0.048
+  2.00         1.622                  0.00     n/a            0.040
+  3.00         2.433                  0.00     n/a            0.038
+  ```
+- **Not graceful.** σ_len of just 0.5 Å — much less than the indexer's
+  overall 1.24 Å MAE — already drops match% by 6× and Pearson by ~10×.
+  Cell error above ~0.5 Å destroys recovery entirely on n=300.
+- **Why 9.1.3 saw 1.6% at indexer MAE 1.24 Å then.** The indexer's MAE is
+  not uniformly distributed: hexagonal/orthorhombic hit 0.44-0.69 Å,
+  monoclinic/triclinic blow up to 1.90 Å+. Phase 9.1.3 scored 1.6% because
+  the model recovered the *easy, high-symmetry* structures the indexer
+  cells well. My Gaussian-noise model is a worst-case proxy that
+  flattens this distribution — useful for understanding tolerance but
+  pessimistic for predicting indexer-driven match rate.
+- **Implication.** Improving the indexer's worst-case (monoclinic/triclinic
+  via GSAS-II, 9.0.7) is more valuable than reducing average error. And
+  the 200-step coordinate refinement does *not* rescue cell error —
+  cell quality is the load-bearing variable.
+- **Artifacts:** `paper/phase9_results/perturb/*` +
+  `paper/phase9_results/cell_perturb_sensitivity.json`.
+
+### Review — Phase 9.1.4 (top-K Debye-Pearson rerank) — 2026-05-22
+- `--lat-from-index-topk` + `--samples-per-cell` added to `03_sample.py`.
+  K candidate cells × M samples per cell, score all K×M candidates by
+  `DiffPXRD-Pearson` against target, pick the global best. Picked-cell
+  rank reported.
+- n=1000 MP-20 test, v21 ckpt, K=5, M=4 (so K×M=20 = same total candidate
+  count as 9.1.3's n_samples=20), refine 200:
+  ```
+  config                                match%  rmsd_med  pearson  picked rank0/1/2/3/4
+  9.1.3 top-1 indexed + refine          1.6     0.126     0.397    100/0/0/0/0
+  9.1.4 top-5 rerank + refine           1.0     0.066     0.440     35/19/17/16/14
+  ```
+- **Reranker overcorrects.** It picks non-top-1 cells 65% of the time —
+  the indexer's M20-best is not always the Debye-Pearson-best. But the
+  match rate *drops* (1.6 → 1.0%): the reranker is finding higher-Pearson
+  cells that are actually wrong. When it does land a match, rmsd_median
+  is half (0.066 vs 0.126 Å) — so the rerank IS finding better-cell
+  candidates when they exist, but introduces more wrong-cell errors than
+  it fixes correct-cell ones.
+- **Why this happens.** Pearson on simulated PXRD measures pattern fit, not
+  structural correctness; a wrong cell with coords adapted by the
+  diffusion sampler can produce a *higher* Pearson than the right cell
+  with the same diffusion-sampled coords. The reranker is exploiting
+  the model's flexibility against itself.
+- **Not the council's bet.** The "obvious next single-bet win" prediction
+  in the 9.1.3 review (top-K rerank by Debye fit) is falsified at this
+  configuration. Possible fixes: (i) weight Pearson by indexer M20 FoM
+  to bias toward high-confidence cells, (ii) use Rwp instead of Pearson
+  (sensitive to intensity scale, harder to fake), (iii) ensemble at
+  M=20-per-cell so each cell gets fair exploration before scoring —
+  but at 5× compute. None of these explored further; the result is a
+  negative finding.
+- **Artifacts:** `paper/phase9_results/p9_1_4_topk5_n1000.{json,log}` +
+  `paper/phase9_results/index_cells_test1000_top5.json` (top-5 indexer
+  artifact, 961/1000 indexed).
+
 ### 9.2 Debye-gradient guidance inside the sampler (vs Crystalyze's post-hoc filter)
-- [ ] 9.2.1 In the DDIM sampler, at each reverse step reconstruct x0_pred, compute
-        `DiffPXRD(x0_pred)`, take `∇_x [1 - Pearson(·, target)]`, nudge the sample.
-        `--guide-scale` flag (0 = current behaviour, backward compatible).
-- [ ] 9.2.2 Anneal guidance: apply only on low-noise late steps; clip the step to
-        keep samples on the data manifold.
-- [ ] 9.2.3 Reuse the verified DiffPXRD module — no new physics code.
+- [x] 9.2.1 In the DDIM sampler, reconstruct x0_pred at each reverse step,
+        compute `DiffPXRD(x0_pred)`, take `∇_{x0}[1 - Pearson(·, target)]`,
+        nudge x0_pred and reconstruct eps. `--guide-scale` flag
+        (0 = current behaviour, backward compatible) in `03_sample.py`;
+        propagated through `sample` and `sample_ensemble` in
+        `src/pxrd_diff/sampler.py`.
+- [x] 9.2.2 Anneal: `--guide-start-t` gates on noise level (skip the
+        noisy early steps); guidance is scaled per-step by `(1 - t_now)`
+        so it grows as noise shrinks. `--guide-clip` does per-sample L2
+        clip on the nudge magnitude.
+- [x] 9.2.3 Reuses DiffPXRD verbatim. No new physics code; just one
+        autograd-enabled forward + backward per guided step.
+- See Review — Phase 9.2/9.3 below.
 
 ### 9.3 Head-to-head benchmark (the paper's headline claim)
-- [ ] 9.3.1 Same checkpoint, n=1000 MP-20 test, four configs:
-        (a) unguided single sample;
-        (b) Crystalyze-style: K=20 candidates, discrete re-rank by simulated Rwp;
-        (c) Debye-guided sampling (9.2);
-        (d) guided + classical-indexed lattice (9.1) + Phase 4.2 differentiable refine.
-- [ ] 9.3.2 Headline metric: space-group match % and coord RMSD, no true lattice.
-- [ ] 9.3.3 Claim to test: differentiable physics guidance + classical indexing
-        beats discrete post-hoc candidate filtering. If (c)/(d) > (b), that is a
-        clean, falsifiable improvement over Crystalyze and the paper's centerpiece.
+- [~] 9.3.1 Only config (d) ran cleanly at n=1000. Configs (a)–(c) hit a
+        StructureMatcher slowness wall: the model's diffusion-predicted
+        lattice is near-random (Phase 5/6/7 wall, the whole reason for
+        Phase 9), and pymatgen's matcher chokes on valid-by-trivial-check
+        but physically nonsense cells in the eval loop. Knocked back to
+        a guide-scale sweep instead (see Review).
+- [x] 9.3.2 Headline (no true lattice, n=1000): 9.3d (guidance + indexed
+        + refine) = 1.4% match — slightly *worse* than 9.1.3 (no guidance,
+        same other args) at 1.6%. Coord rmsd_median identical (0.126 Å).
+- [x] 9.3.3 Claim falsified at default scale. Differentiable physics
+        guidance does NOT outperform the existing pipeline. The 200-step
+        coordinate refinement subsumes what guidance was meant to do —
+        the same Debye-Pearson loss, applied more thoroughly after
+        sampling. Adding guidance during sampling adds noise to the
+        sample without adding new optimisation pressure.
+
+### Review — Phase 9.2 / 9.3 (Debye guidance + head-to-head) — 2026-05-22
+- **9.3d run** (v21 ckpt, n=1000, n_samples 20, refine 200, lat-from-index
+  top-1, guide_scale 0.5, guide_start_t 0.5):
+  ```
+  match% = 1.4    rmsd_median = 0.126    rwp = 11.54    pearson = 0.394
+  ```
+  vs 9.1.3 (same args, no guidance):
+  ```
+  match% = 1.6    rmsd_median = 0.126    rwp = 11.46    pearson = 0.397
+  ```
+  Guidance slightly hurts on the headline metric. Pearson and rmsd
+  are essentially identical, so guidance is shifting which candidates
+  pass the StructureMatcher gate without changing aggregate fit quality.
+- **Guide-scale sweep** (n=200, --true-lattice, refine 0; isolates the
+  guidance effect from refinement):
+  ```
+  gs=0.0   match=2.00%   pearson=0.471    (no guidance)
+  gs=0.5   match=2.50%   pearson=0.467    (the 9.3d value; +0.5pp noise)
+  gs=1.0   match=1.00%   pearson=0.471
+  gs=2.0   match=2.00%   pearson=0.483
+  gs=5.0   match=2.00%   pearson=0.454
+  ```
+  Match% is flat in [1, 2.5%] across two orders of magnitude in
+  guide_scale; Pearson moves by ±0.03. **Within noise on n=200.**
+- **Why guidance doesn't help.** The Phase 4.2 refinement step is
+  basically guidance with infinite scale, infinite steps, and the same
+  loss — 200 Adam steps on coords with the same `(1 - Pearson(DiffPXRD,
+  target))` objective. Once refinement is in the pipeline, guidance
+  during sampling is redundant. Strong guidance (gs ≥ 1.0) starts
+  pushing samples off-manifold without adding signal.
+- **Why it isn't worthless.** Guidance might still be the right tool when
+  refinement is too expensive (e.g., per-step gradients are cheaper
+  than a 200-step Adam pass), or when sampling for unconditional
+  generation. For PXRD inversion with refinement enabled, it's not a
+  paper claim.
+- **Net Phase 9 picture.**
+  | config                                     | match% (n=1000) | δ vs 9.1.3 |
+  |--------------------------------------------|-----------------|------------|
+  | --true-lattice oracle (ceiling)            | 5.6             | +4.0       |
+  | 9.1.3 indexed top-1 + refine               | 1.6             |  0         |
+  | 9.1.4 indexed top-5 rerank + refine        | 1.0             | -0.6       |
+  | 9.3d indexed top-1 + refine + guide=0.5    | 1.4             | -0.2       |
+  | v20 learned head (reference)               | ~1.0            | -0.6       |
+- **Where the gain lives.** Phase 9's only real lever was the substitution
+  of classical indexing for the broken learned-lattice head (9.0 → 9.1.3,
+  +0.6 pp / +60% over the learned baseline). Downstream cleverness —
+  top-K rerank, gradient guidance — does not add to this. The remaining
+  4 pp oracle gap is concentrated on low-symmetry systems where the
+  native Q-space indexer's len MAE is large. **9.0.7 (GSAS-II for
+  monoclinic/triclinic) is now the highest-EV remaining work.**
+- **Paper framing implication.** The original 9.3.3 claim
+  ("differentiable physics guidance + classical indexing beats discrete
+  post-hoc candidate filtering") doesn't survive. Reframe to:
+  *"Classical Q-space indexing as a drop-in replacement for the learned
+  PXRD lattice head closes a previously-thought-fundamental encoder
+  bottleneck on high-symmetry MP-20 structures; downstream sampling-time
+  tricks (top-K rerank, gradient guidance) add no measurable signal
+  beyond a 200-step gradient refinement."*
+  This is a smaller, sharper, *true* claim.
+- **Artifacts:**
+  - `paper/phase9_results/p9_3_d_guided_idx_refine.{json,log}` (the
+    headline run at n=1000)
+  - `paper/phase9_results/p9_2_gs{0.0,0.5,1.0,2.0,5.0}.{json,log}` (the
+    guide-scale sweep at n=200 true-lattice)

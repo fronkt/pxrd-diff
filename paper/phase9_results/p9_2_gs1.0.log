@@ -1,0 +1,66 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Mode: coord-only eval with ground-truth lattice
+Phase 4.1: ensemble n_samples=20, eta=0.0
+  val = self.func(instance)
+  val = self.func(instance)
+Phase 9.2: Debye-gradient guidance — scale=1.0, start_t=0.5, clip=0.05
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.143  b=1.054  c=1.744  α=12.56  β=11.31  γ=19.42
+Aux-head lattice validity: 200/200 (100.0%)
+Ensemble: 200 patterns x 20 candidates in chunks of 32 (7 chunks)
+Traceback (most recent call last):
+  File "/workspace/pxrd-diff/scripts/03_sample.py", line 738, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/pxrd-diff/scripts/03_sample.py", line 546, in main
+    cand_coords_c, cand_lat_c = sampler.sample_ensemble(
+                                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/pxrd-diff/src/pxrd_diff/sampler.py", line 261, in sample_ensemble
+    coords_flat, lat_params_flat = self.sample(
+                                   ^^^^^^^^^^^^
+  File "/workspace/pxrd-diff/src/pxrd_diff/sampler.py", line 137, in sample
+    pred_c, pred_l = self.denoiser(
+                     ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/pxrd-diff/src/pxrd_diff/model/denoiser.py", line 145, in forward
+    h = layer(h, rbf, mask, t_cond, pxrd_feats)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/pxrd-diff/src/pxrd_diff/model/denoiser.py", line 85, in forward
+    h = self.cross_attn(h, pxrd_feats, mask)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/pxrd-diff/src/pxrd_diff/model/denoiser.py", line 55, in forward
+    out, _ = self.attn(h, pxrd_feats, pxrd_feats,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/activation.py", line 1492, in forward
+    attn_output, attn_output_weights = F.multi_head_attention_forward(
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/functional.py", line 6478, in multi_head_attention_forward
+    q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/functional.py", line 5855, in _in_projection_packed
+    kv_proj = linear(k, w_kv, b_kv)
+              ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 5.19 GiB. GPU 0 has a total capacity of 31.36 GiB of which 2.76 GiB is free. Process 13031 has 20.82 GiB memory in use. Including non-PyTorch memory, this process has 7.22 GiB memory in use. Process 14229 has 558.00 MiB memory in use. Of the allocated memory 6.46 GiB is allocated by PyTorch, and 160.44 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

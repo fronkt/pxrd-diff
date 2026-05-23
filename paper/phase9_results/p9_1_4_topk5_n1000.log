@@ -1,0 +1,80 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Phase 4.2: Rietveld refinement steps=200, lr=0.001, refine_lattice=False
+  val = self.func(instance)
+  val = self.func(instance)
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.260  b=1.135  c=1.552  α=13.79  β=12.68  γ=20.23
+Aux-head lattice validity: 998/1000 (99.8%)
+Phase 9.1.4: top-K rerank — K_max=5, K_observed=[1, 5], M=4 samples per cell → 20 candidates per pattern
+  coverage: 961/1000 patterns (96.1%); uncovered patterns use true cell × K
+Sampling 1000 structures in chunks of 32 (32 chunks, 50 DDIM steps)
+Refinement: 200 Adam steps @ lr=0.001, refine_lattice=False
+  chunk 3/32 done (sample=17.2s  select=1.4s  refine=3.7s)
+  chunk 6/32 done (sample=34.2s  select=2.6s  refine=5.7s)
+  chunk 9/32 done (sample=51.2s  select=3.8s  refine=7.9s)
+  chunk 12/32 done (sample=68.3s  select=5.1s  refine=9.9s)
+  chunk 15/32 done (sample=85.4s  select=6.3s  refine=12.1s)
+  chunk 18/32 done (sample=102.6s  select=7.5s  refine=14.1s)
+  chunk 21/32 done (sample=119.8s  select=8.8s  refine=16.1s)
+  chunk 24/32 done (sample=137.0s  select=10.0s  refine=18.0s)
+  chunk 27/32 done (sample=154.3s  select=11.3s  refine=20.0s)
+  chunk 30/32 done (sample=171.5s  select=12.5s  refine=22.0s)
+  chunk 32/32 done (sample=178.7s  select=13.1s  refine=23.3s)
+Total: sample=178.7s  select=13.1s  refine=23.3s
+Selected-candidate pearson: mean=0.394 median=0.350
+Phase 9.1.4 picked-cell distribution: rank0: 346 (34.6%)  rank1: 185 (18.5%)  rank2: 171 (17.1%)  rank3: 159 (15.9%)  rank4: 139 (13.9%)
+Refinement loss avg first->last: 0.6055 -> 0.3036
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.620  pearson=0.554  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.824  pearson=0.232  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=36.719  pearson=-0.005  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=5.193  pearson=0.718  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.879  pearson=0.200  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.957  pearson=0.728  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.782  pearson=-0.007  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.960  pearson=0.151  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=9.722  pearson=0.393  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=8.377  pearson=0.035  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.015  pearson=0.391  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.098  pearson=0.390  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=8.785  pearson=0.402  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.217  pearson=0.249  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.519  pearson=0.500  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=29.349  pearson=0.482  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.007  pearson=0.023  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=7.010  pearson=0.307  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=11.959  pearson=0.020  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.248  pearson=0.463  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=18.786  pearson=0.369  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.040  pearson=0.083  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.615  pearson=0.514  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=2.005  pearson=0.673  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.506  pearson=0.704  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=32.419  pearson=0.079  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.445  pearson=0.331  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.249  pearson=0.003  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.379  pearson=0.421  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.161  pearson=0.041  all=N
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+--- Aggregate Metrics ---
+                               n: 1000
+          composition_match_rate: 1.0000
+                       rmsd_mean: 0.0860
+                     rmsd_median: 0.0659
+   match_rate (StructureMatcher): 0.0100
+                        rwp_mean: 11.6580
+                    pearson_mean: 0.4397
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0140
+                   sg_match@0.05: 0.0130
+                    sg_match@0.1: 0.0130
+                    sg_match@0.2: 0.0080
+Wrote aggregate metrics to paper/phase9_results/p9_1_4_topk5_n1000.json
