@@ -1,0 +1,29 @@
+{
+  "n": 990,
+  "composition_match_rate": 0.8353535353535354,
+  "rmsd_mean": 0.04121265315370696,
+  "rmsd_median": 0.0014013650897996659,
+  "match_rate (StructureMatcher)": 0.18888888888888888,
+  "rwp_mean": 16.9088354141805,
+  "pearson_mean": 0.024162138522675847,
+  "headline_all_correct": 0.15858585858585858,
+  "sg_match@0.01": 0.20909090909090908,
+  "sg_match@0.05": 0.20909090909090908,
+  "sg_match@0.1": 0.21313131313131314,
+  "sg_match@0.2": 0.21414141414141413,
+  "n_requested": 1000,
+  "n_skipped_input": 0,
+  "n_parse_fail": 10,
+  "config": {
+    "model_name": "knc6/diffractgpt_mistral_chemical_formula",
+    "max_seq_length": 2048,
+    "max_new_tokens": 1024,
+    "pattern_bins": 300,
+    "theta_range": [
+      0.0,
+      90.0
+    ],
+    "bin_step": 0.3,
+    "scoring": "pxrd_diff.eval (StructureMatcher ltol=0.2 stol=0.3 angle_tol=5)"
+  }
+}
