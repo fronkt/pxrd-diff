@@ -37,6 +37,14 @@ sys.path.insert(0, str(ROOT / "src"))
 from pymatgen.core import Lattice, Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
+# 9.0.7: GSAS-II fallback for the systems where the native Q-space indexer
+# under-performs. Monoclinic (4 free params) and triclinic (6 free params) are
+# combinatorically capped in the native path; trigonal regresses at scale
+# because the hex-setting Q-form mis-handles rhombohedral cells (GSAS-II
+# Bravais code 3 = R hexagonal handles them explicitly). Imported lazily
+# inside the dispatcher so the native-only path stays usable without GSAS-II.
+GSAS_SYSTEMS = {"monoclinic", "triclinic", "trigonal"}
+
 LAMBDA = 1.54184  # CuKalpha weighted average (Angstrom), matches pymatgen XRDCalculator
 SYSTEMS = ("cubic", "tetragonal", "hexagonal", "trigonal",
            "orthorhombic", "monoclinic", "triclinic")
@@ -250,6 +258,48 @@ def index_pattern(Q_obs, system, max_hyp=150000, topk=1):
     return refined
 
 
+def dispatch_index_pattern(peaks_2theta, Q_obs, system, topk=1, use_gsas=True):
+    """9.0.7 dispatcher: route monoclinic/triclinic through GSAS-II, everything
+    else through the native Q-space indexer. Output schema matches the native
+    `index_pattern` exactly so the caller does not need to know which path ran.
+
+    For GSAS-II cells the `frac` (indexed fraction) is computed post-hoc with
+    `score_cell` against `Q_obs`, so the downstream `consistent` check at
+    line ~406 still works.
+    """
+    if use_gsas and system in GSAS_SYSTEMS:
+        from pxrd_diff.indexer_gsas import index_pattern_gsas
+        try:
+            gsas_cells = index_pattern_gsas(
+                peaks_two_theta=peaks_2theta,
+                intensities=None,
+                system=system,
+                topk=topk,
+            )
+        except ImportError:
+            gsas_cells = []
+        # Score each GSAS-II cell against Q_obs for the frac metric, refine
+        # with the same LSQ as the native path so the comparison is apples-
+        # to-apples on coordinate precision.
+        scored = []
+        for (lat, m20) in gsas_cells:
+            fom_native, frac = score_cell(lat, Q_obs)
+            lat_ref = refine_cell(lat, Q_obs, system)
+            # Re-score after refinement (LSQ may have moved frac slightly).
+            _, frac_ref = score_cell(lat_ref, Q_obs)
+            scored.append((lat_ref, frac_ref, m20))
+        scored.sort(key=lambda t: -t[2])
+        if topk == 1:
+            if not scored:
+                return None, 0.0
+            lat, frac, _ = scored[0]
+            return lat, frac
+        return scored[:topk]
+
+    # Native path — unchanged behaviour.
+    return index_pattern(Q_obs, system, topk=topk)
+
+
 def refine_cell(lat, Q_obs, system):
     """Least-squares refine the cell against the observed Q values."""
     p0 = np.array(lat.parameters)
@@ -327,6 +377,14 @@ def main():
     ap.add_argument("--topk", type=int, default=1,
                     help=">1 emits ranked candidates per structure in 'candidates' field "
                          "(9.1.1; consumed by --lat-from-index-topk in 03_sample.py)")
+    ap.add_argument("--use-gsas", action="store_true",
+                    help="9.0.7 (experimental): route monoclinic/triclinic/trigonal "
+                         "patterns through GSAS-II's DoIndexPeaks. Adapter is wired "
+                         "and works on some inputs, but GSAS-II's inner search loop "
+                         "(findBestCell) hangs on certain real test patterns and the "
+                         "documented `timeout` parameter only fires between Bravais "
+                         "iterations. Off by default; native indexer is the shipped "
+                         "path. See src/pxrd_diff/indexer_gsas.py for status.")
     args = ap.parse_args()
 
     import warnings
@@ -367,8 +425,10 @@ def main():
             per_system[system].append(None)
             continue
         Q_obs = np.sort(two_theta_to_Q(peaks))
+        use_gsas = args.use_gsas
         if args.topk > 1:
-            cands = index_pattern(Q_obs, system, topk=args.topk)
+            cands = dispatch_index_pattern(peaks, Q_obs, system,
+                                           topk=args.topk, use_gsas=use_gsas)
             if not cands:
                 per_system[system].append(None)
                 continue
@@ -384,7 +444,8 @@ def main():
             pred_lat = volume_correct(cands[0][0], n_conv_atoms)
             frac = cands[0][1]
         else:
-            pred_lat, frac = index_pattern(Q_obs, system)
+            pred_lat, frac = dispatch_index_pattern(peaks, Q_obs, system,
+                                                   topk=1, use_gsas=use_gsas)
             if pred_lat is None:
                 per_system[system].append(None)
                 continue
