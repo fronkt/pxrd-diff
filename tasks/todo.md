@@ -1172,3 +1172,137 @@ No retraining. Pure offline measurement on the MP-20 test split.
     headline run at n=1000)
   - `paper/phase9_results/p9_2_gs{0.0,0.5,1.0,2.0,5.0}.{json,log}` (the
     guide-scale sweep at n=200 true-lattice)
+
+### 9.0.7 GSAS-II fallback for low-symmetry + native n=1000 rerun
+- [x] 9.0.7a Native n=1000 indexer rerun (`scripts/09_index_benchmark.py
+        --n 1000`). Artifact:
+        `paper/phase9_results/index_benchmark_v2_native.json`.
+        See Review — Phase 9.0.7 below.
+- [x] 9.0.7b GSAS-II adapter (`src/pxrd_diff/indexer_gsas.py`) +
+        dispatcher (`--use-gsas` opt-in in `09_index_benchmark.py`).
+        Shipped as gated-experimental — does not run in default flow.
+- [~] 9.0.7c GSAS-II `DoIndexPeaks` integration: imports + finds cells
+        on synthetic high-sym inputs, but hangs on real MP-20 patterns
+        in `findBestCell` inner loop. GSAS-II's documented `timeout`
+        parameter only fires between Bravais iterations, not inside
+        `findBestCell`. ~1.5 hr API spelunking; would need either
+        upstream patch or G2Project histogram path (different overhead
+        envelope). Deferred. See Review — Phase 9.0.7 below.
+- [ ] 9.0.7d Re-run 9.1.3 eval with v2 indexed cells from the GSAS-II
+        path once 9.0.7c is unblocked.
+
+### 9.4 External baseline reproduction (head-to-head on n=1000 MP-20 test)
+- [-] 9.4a Crystalyze (Riesel et al., JACS 2024, repo
+        `ML-PXRD/Crystalyze`). **BLOCKED.** Their README says the
+        Google Drive checkpoint link "is not yet active, but will be
+        made public once the repository is fully online." Cannot
+        reproduce without their pretrained model. Documented as a
+        Limitations entry for the paper; re-attempt when checkpoint
+        becomes downloadable. Their pattern format (8500-bin pv_xrd,
+        q-space, multi-pass FullStructureSnapper inference) would also
+        require a non-trivial port from our 4251-bin 2-theta format.
+- [x] 9.4b DiffractGPT (Choudhary et al., J. Phys. Chem. Lett. 2024,
+        repo `atomgptlab/atomgpt`, HF model
+        `knc6/diffractgpt_mistral_chemical_formula`). Reproduced via
+        `scripts/10_diffractgpt_eval.py` on n=50 MP-20 test: **20.0%
+        match / 14.0% all-correct / rmsd_med 0.03 Å / sg@0.1 26%**.
+        n=1000 run launched overnight. Artifacts:
+        `paper/phase9_results/baseline_diffractgpt_n{50,1000}.json`.
+        See Review — Phase 9.4b below.
+
+### Review — Phase 9.0.7 (native n=1000 + GSAS-II attempt) — 2026-05-25
+- **Native indexer at n=1000** reproduces the per-system pattern from
+  the 9.0 review on the full test split:
+  ```
+  system        n   strict%  consist%  len_MAE
+  cubic        238    52.9      59.2     1.14
+  tetragonal   180    52.8      65.0     0.96
+  hexagonal    104    77.9      85.6     0.53
+  trigonal      97    43.3      46.4     4.62
+  orthorhombic 194    59.8      66.0     0.96
+  monoclinic   148    18.9      28.4     1.76
+  triclinic     39     0.0       0.0      NaN
+  OVERALL     1000    48.8      56.2     1.45  (v20 learned head ~1.37)
+  ```
+- **Two new facts at scale.**
+  1. Trigonal regresses worse than the n=300 review: 64.3% → 43.3%
+     strict, len_MAE 2.75 → 4.62 Å. The hex-setting Q-form mis-handles
+     rhombohedral cells, and at n=1000 the rhombohedral subset is large
+     enough to dominate the trigonal column.
+  2. Overall len_MAE (1.45 Å) is *slightly worse* than the v20 learned
+     head (1.37 Å). Classical indexing wins on hex+ortho (~0.5–1.0 Å)
+     and loses on trigonal+mono+tri (>1.7 Å). The Phase 9.1.3 match%
+     win (1.6% vs ~1.0%) survives because the indexer-correct subset
+     (hex/ortho) is the same subset the downstream sampler refines well;
+     averaged MAE is a misleading view.
+- **GSAS-II `DoIndexPeaks` attempt.** Installed from
+  `AdvancedPhotonSource/GSAS-II` (meson + gfortran + cython build).
+  Adapter (`src/pxrd_diff/indexer_gsas.py`) returns reasonable cells on
+  synthetic high-symmetry inputs in seconds, but hangs in `findBestCell`
+  on real MP-20 monoclinic/triclinic/trigonal patterns. The documented
+  `timeout` parameter is checked between Bravais iterations only, not
+  inside the dichotomy search itself. Two paths forward: (i) patch
+  upstream `findBestCell` with a signal-alarm wrapper (brittle in
+  threads), (ii) use the higher-level `G2Project.add_powder_histogram`
+  + `cell_index_peaks` path (per-call setup overhead, but documented
+  happy path). Both are multi-session work; not pursued.
+- **Decision.** Ship the GSAS-II adapter as `--use-gsas` opt-in
+  (default off), keep native as the production path, and document the
+  hang for future work. The reframed 9.2/9.3 claim does not depend on
+  GSAS-II being live; the native indexer numbers are the honest
+  baseline.
+- **Artifacts:**
+  - `paper/phase9_results/index_benchmark_v2_native.json`
+  - `src/pxrd_diff/indexer_gsas.py`, `scripts/09_index_benchmark.py`
+    (dispatcher with `--use-gsas` opt-in)
+
+### Review — Phase 9.4b (DiffractGPT n=50, n=1000 pending) — 2026-05-25
+- **First external-baseline number on our split.** DiffractGPT
+  (Mistral-7B + LoRA, loaded via vanilla HF `AutoModelForCausalLM` in
+  4-bit because the unsloth `FastLanguageModel.for_inference` path
+  requires xformers, which has no wheel for torch 2.11+cu130).
+  Patterns rebinned from our 4251-bin 5–90°/0.02° grid to their
+  300-bin 0–90°/0.3° format via linear interpolation; pred structures
+  parsed via `text2atoms` (lattice lengths line + angles line + atom
+  rows). Scored with our own `pxrd_diff.eval` StructureMatcher harness
+  for apples-to-apples comparison.
+  ```
+  metric                                  DGpt n=50    ours 9.1.3 n=1000
+  match_rate (StructureMatcher)            20.0%         1.6%
+  headline_all_correct (sg + rmsd<0.1)     14.0%         0.1%
+  composition_match_rate                   74.0%        100.0%
+  rmsd_median (when matched)               0.030 Å      0.126 Å
+  sg_match @ symprec=0.1                   26.0%         1.4%
+  rwp_mean                                 17.3         11.5
+  pearson_mean                              0.02         0.40
+  n_parse_fail                              0            —
+  ```
+- **Two findings worth flagging now (before n=1000 finishes).**
+  1. **DGpt is ~10× ahead on match%** at n=50. Our 1.6% on n=1000 vs
+     their 20% on n=50. n=50 is high-variance, but even if n=1000 drops
+     to 10%, the gap is real. This shifts the paper framing materially —
+     we are not 60% of an external baseline, we are 1/10th.
+  2. **DGpt is worse on Pearson (0.02) than us (0.40)** despite winning
+     on match%. The predicted structures match the true structure
+     geometrically (per StructureMatcher) but their *predicted PXRD*
+     differs from the input pattern. Likely because the model produces
+     a different polymorph or different element placement that gives a
+     valid match under StructureMatcher's tolerances but a different
+     XRD. This is a clean illustration of the eval-protocol pitfall
+     called out in our paper's introduction.
+- **n=1000 run.** Launched overnight on the same RTX 5090 vast.ai box.
+  ~17 s/inference (vanilla HF generate, max_new_tokens=512) → ETA
+  ~4.7 hr. Output: `paper/phase9_results/baseline_diffractgpt_n1000.json`.
+- **Paper framing implication.** Update the reframed claim from
+  Phase 9.2/9.3 review. Old claim was indexer-substitution closes the
+  encoder bottleneck "on high-symmetry MP-20 structures" — that still
+  stands. But the new claim has to add: *"despite this fix, a 7B
+  transformer baseline (DiffractGPT) recovers ~10× more structures on
+  the same split, suggesting that scale, not architecture, is what
+  remains load-bearing on MP-20 PXRD inversion."* That is honest,
+  non-trivial, and publishable as a methods-and-negative-results paper.
+- **Artifacts:**
+  - `paper/phase9_results/baseline_diffractgpt_n50.json` (in-repo)
+  - `paper/phase9_results/baseline_diffractgpt_n1000.json` (pending
+    overnight run, ETA ~4.7 hr from 2026-05-25 01:05)
+  - `scripts/10_diffractgpt_eval.py`
