@@ -12,15 +12,9 @@
 
 ## Abstract
 
-Powder X-ray diffraction (PXRD) is the workhorse characterization technique of solid-state chemistry, yet inverting a 1D powder pattern to a 3D crystal structure remains an open problem. Recent generative approaches (DiffractGPT, Crystalyze) report encouraging numbers but use very different evaluation protocols, and the literature contains few published failure modes that practitioners can use to calibrate expectations. We present **PXRD-Diff**, a 3.7 M-parameter conditional denoising diffusion model that takes a simulated Cu Kα PXRD pattern as input and generates fractional coordinates and lattice parameters jointly, conditioned on the known composition. The model combines a 1D ResNet PXRD encoder, a periodic-distance message-passing denoiser with multi-resolution PXRD cross-attention, and — as the central physics-informed contribution — a differentiable Bragg structure-factor module that supplies an auxiliary "predicted-pattern matches input-pattern" loss. We train on the canonical CDVAE MP-20 split (≤20 atoms/cell, 27 k train / 9 k test) and report a careful 7-condition ablation. Three findings stand out. (1) A naive ε-prediction denoiser conditioned on the true lattice never escapes the random baseline on lattice prediction, because the lattice head is fed the *clean* lattice rather than the lattice it is being asked to denoise; passing the noisy lattice as input drops lattice loss by 95 %. (2) Switching from ε-prediction to **x₀-residual prediction** lifts the StructureMatcher match rate by 3.5× over the ε baseline. (3) Two seemingly attractive extensions — Wyckoff-site embeddings and an auxiliary distance-matrix loss — fail to improve on (2) and, in combination, actively hurt it. The best configuration recovers 2.5 % of MP-20 test structures (StructureMatcher, true-lattice coord-only setting; 1.2 % full-pipeline). This is far from solving the inverse problem, but the architectural recipe and the catalogue of what *did not* work are concrete, reproducible, and we believe useful to the community. Code, checkpoints, and all training/evaluation logs are released.
+Powder X-ray diffraction (PXRD) is the workhorse characterization technique of solid-state chemistry, yet inverting a 1D powder pattern to a 3D crystal structure remains an open problem. Recent generative approaches report encouraging numbers, but published evaluation protocols are mutually incompatible and failure modes are seldom catalogued. We present **PXRD-Diff**, a 3.7 M-parameter conditional denoising diffusion model trained on the canonical CDVAE MP-20 split, together with a reproduced head-to-head comparison against two open generative baselines — DiffractGPT [^DiffractGPT] and PXRDnet [^PXRDnet] — all scored by the *same* `pymatgen.StructureMatcher` harness on the same evaluation subset. Our central finding is a diagnosis: the learned PXRD encoder, despite achieving an auxiliary lattice-from-pattern regression loss of 0.007 in isolation, cannot supply absolute-d-spacing information to the diffusion denoiser well enough to predict the lattice from scratch. A perturbation study confirms that the match rate dies above ~0.5 Å cell error, and an oracle pass with the true lattice lifts our no-true-lattice match rate from **1.6 % to 5.6 %** at n = 1000. Motivated by this diagnosis, we replace the learned lattice head with a classical Q-space autoindexer (a drop-in built on the de-Wolff dichotomy), which raises no-true-lattice match from 1.0 % (no indexer) to **1.6 %** — a modest absolute lift but the only intervention in our six-month ablation that moved the headline. Two seemingly attractive sampling-time tricks — top-K candidate reranking by Debye fit, and Debye-gradient guidance during DDIM — are both falsified at scale. Reproduced baselines on identical evaluation: **DiffractGPT 18.9 %** match (15.9 % all-correct) at n = 1000, and **PXRDnet sinc100 30.0 %** match (5.0 % all-correct) at n = 20 (PXRDnet inference is ~4 GPU-hr per material at the published config, capping single-rental n). PXRD-Diff is therefore 12–19× behind open SOTA on raw match rate, but the encoder-bottleneck diagnosis, the indexer-as-drop-in recipe, and the four-extension failure catalogue are concrete and reproducible. Code, checkpoints, all per-phase result JSONs, and the differentiable Bragg simulator are released.
 
-**Keywords:** powder X-ray diffraction; crystal-structure prediction; denoising diffusion; equivariant message passing; differentiable physics; ablation study
-
-### 摘要 (zh-TW)
-
-粉末 X 光繞射 (PXRD) 是固態化學最常用的鑑定技術，然而由一維粉末圖樣回推三維晶體結構仍是未解的逆問題。本文提出 **PXRD-Diff**，一個 3.7 M 參數的條件性去噪擴散模型，輸入模擬 Cu Kα PXRD 圖樣，在已知組成的條件下同時生成分數座標與晶格參數。模型包含 1D ResNet PXRD 編碼器、結合多解析度交叉注意力的週期距離訊息傳遞去噪網路，以及作為核心物理導引貢獻的**可微 Bragg 結構因子模組**作為輔助損失。我們在 CDVAE MP-20 標準切分上訓練 (≤20 原子/晶胞，27 k 訓練/9 k 測試) 並進行七條件消融研究。三個主要發現：(1) 標準 ε 預測去噪器若僅將乾淨晶格輸入晶格頭，晶格損失永遠停在隨機基準；改傳「正在去噪的雜訊化晶格」可將晶格損失降低 95 %；(2) 由 ε 預測改為 **x₀ 殘差預測**使 StructureMatcher 匹配率提高 3.5 倍；(3) Wyckoff 位置嵌入與輔助距離矩陣損失兩個看似合理的擴充，皆未超越基準，且合併使用時甚至明顯劣化。最佳設定在 MP-20 測試集上達到 2.5 % 匹配率 (真實晶格、僅座標評估)，距離真正解決逆問題仍遠，但本工作所記錄的架構配方與失敗目錄具體、可重現，對社群應有實用價值。完整程式碼、檢查點與訓練日誌皆已公開。
-
-**關鍵詞**：粉末 X 光繞射；晶體結構預測；去噪擴散模型；等變訊息傳遞；可微物理；消融研究
+**Keywords:** powder X-ray diffraction; crystal-structure prediction; denoising diffusion; classical autoindexing; differentiable physics; ablation study; negative results
 
 ---
 
@@ -28,17 +22,17 @@ Powder X-ray diffraction (PXRD) is the workhorse characterization technique of s
 
 Powder X-ray diffraction is, in volume of measurements, the most common form of structural characterization in solid-state chemistry and materials science. The forward problem — given a structure, simulate the pattern — is well solved by 1920s-vintage physics (the structure factor) and, in practice, by a one-line call to `pymatgen.analysis.diffraction.xrd`. The inverse problem is brutal. The same Bragg reflections can be produced by symmetry-equivalent structures; intensity information is integrated over crystallite orientations; the reduction from 3D structure to 1D intensity-vs-2θ destroys atom labelling entirely. The traditional workflow — indexing, Pawley/Le Bail fits, Rietveld refinement — requires an experienced crystallographer and an initial structural model good enough that refinement converges. For the long tail of unindexed patterns from new materials, the structure is often simply not solved.
 
-Two recent generative-modelling efforts — DiffractGPT [^DiffractGPT] and Crystalyze [^Crystalyze] — argue that neural networks can shortcut this pipeline. Both report headline numbers in the tens of percent on either MP-20 or curated experimental datasets, but they use mutually incompatible evaluation protocols (different match criteria, different splits, different "success" thresholds), and the failure modes are not catalogued. A practitioner reading these papers cannot easily form a calibrated expectation of *what is actually hard* about PXRD inversion.
+Three recent generative-modelling efforts — DiffractGPT [^DiffractGPT], Crystalyze [^Crystalyze], and PXRDnet [^PXRDnet] — argue that neural networks can shortcut this pipeline. They report headline match rates in the tens of percent on either MP-20 or curated experimental datasets, but use mutually incompatible evaluation protocols (different match criteria, different splits, different "success" thresholds), and the failure modes are seldom catalogued. A practitioner reading these papers cannot easily form a calibrated expectation of *what is actually hard* about PXRD inversion.
 
-This paper is a contribution to that calibration. We build a deliberately small, deliberately reproducible conditional diffusion model — **PXRD-Diff** — and report an honest ablation. Our contributions:
+This paper is a contribution to that calibration. We build a small, deliberately reproducible conditional diffusion model — **PXRD-Diff** — and run it against two of the three published baselines on the *same* `StructureMatcher` harness. Our contributions:
 
-1. **A clean baseline implementation.** PXRD-Diff is 3.7 M parameters, trains on a single RTX 5090 in roughly 1.5 h to 100 k steps, and contains no proprietary data; everything runs on the public CDVAE MP-20 split.
-2. **A differentiable Bragg structure-factor module.** We implement a fully differentiable PXRD simulator in PyTorch that agrees with `pymatgen.XRDCalculator` at Pearson 0.96 (mean over 50 reference structures) and that can be plugged in as a "predicted pattern matches input pattern" auxiliary loss.
-3. **Two architectural fixes whose absence silently breaks training.** We document a *bug pattern* — feeding the lattice head only the clean lattice it is supposed to denoise — that produces a healthy-looking training curve but a useless lattice predictor, and we show that an x₀-residual parameterisation lifts the structure-match rate by 3.5× over a standard ε-prediction baseline.
-4. **A failure catalogue.** Two architecturally well-motivated extensions — Wyckoff-site token embeddings and an auxiliary atom-pair distance loss — fail to help and hurt in combination. We report the negative result in detail.
-5. **Calibration of expectations.** Even with all the above, the best configuration matches 2.5 % of MP-20 test structures (StructureMatcher, true-lattice coord-only). PXRD inversion at MP-20 scale is still very far from solved by a small conditional diffusion model.
+1. **A clean small baseline implementation.** PXRD-Diff is 3.7 M parameters, trains on a single RTX 5090 in ~1.5 h, and runs on the public CDVAE MP-20 split. A differentiable PyTorch Bragg structure-factor module (Pearson 0.96 vs `pymatgen.XRDCalculator` on n = 50 reference structures) supplies an auxiliary "predicted-pattern matches input-pattern" loss usable inside the diffusion training loop.
+2. **An encoder-bottleneck diagnosis.** A perturbation study (§5.5) shows the StructureMatcher match rate dies above ~0.5 Å cell error; an oracle pass with the true lattice lifts our match rate from 1.6 % to **5.6 %** at n = 1000. The learned PXRD encoder achieves a 0.007 auxiliary lattice-regression loss in isolation, yet the full denoiser under-uses this signal — architectural rather than informational bottleneck.
+3. **A classical-indexer drop-in.** Motivated by (2), we swap the learned lattice head for a Q-space autoindexer (de-Wolff dichotomy) at sampling time. Lift from 1.0 % → 1.6 % no-true-lattice match — small but the only intervention in six months of ablation that moved the headline.
+4. **A four-item failure catalogue.** Top-K candidate reranking by Debye fit (Phase 9.1.4), Debye-gradient guidance during DDIM (Phase 9.2/9.3), Wyckoff-site token embeddings (v15), and an auxiliary distance-matrix loss (v16) are all falsified on MP-20 at n ≥ 200. The combination of the last two (v14) is worse than the bare ε baseline.
+5. **Two reproduced external baselines.** DiffractGPT (Mistral-7B + LoRA, HF `knc6/diffractgpt_mistral_chemical_formula`) and PXRDnet (CDVAE + XRD encoder, HF `therealgabeguo/cdvae_xrd_sinc100`) re-evaluated on the *same* `StructureMatcher` harness at our matching tolerances. Headline: 18.9 % match (DGpt n = 1000), 30.0 % match (PXRDnet n = 20). PXRD-Diff at 1.6 % is 12–19× behind on raw match rate. Crystalyze checkpoint is gated by an inactive Google-Drive link; we cite it but cannot reproduce.
 
-We intend the paper to be useful both as a recipe — the bug fixes and the x₀-residual trick are easy to reproduce and clearly load-bearing — and as an honest stake in the ground for what a modest, self-contained model can and cannot do on this problem.
+We intend the paper to be useful both as a recipe (the bug fixes, the x₀-residual trick, and the indexer drop-in are easy to reproduce and individually load-bearing) and as an honest, calibrated stake in the ground for what a small, self-contained conditional diffusion model can and cannot do on this problem.
 
 ---
 
@@ -46,7 +40,7 @@ We intend the paper to be useful both as a recipe — the bug fixes and the x₀
 
 **Diffusion for crystal structures.** CDVAE [^CDVAE] introduced the canonical MP-20 evaluation protocol and a VAE+diffusion approach for unconditional crystal generation. DiffCSP [^DiffCSP] sharpened this with a joint diffusion over coordinates and lattice. MatterGen [^MatterGen] scales the idea to several million structures and reports impressive validity numbers. PXRD-Diff borrows the joint-diffusion design from DiffCSP, restricting scope to the conditional setting where a 1D pattern is the conditioning signal.
 
-**Neural PXRD inversion.** DiffractGPT [^DiffractGPT] casts PXRD inversion as a sequence-to-sequence problem (peak list → CIF token stream) and trains on a million simulated patterns. Crystalyze [^Crystalyze] uses a transformer encoder + diffusion head and reports recovery rates on both simulated and experimental patterns. Both are far larger than our model and use significantly more training data; both report on bespoke evaluation pipelines that complicate head-to-head comparison. We see PXRD-Diff as a smaller, simpler, and more reproducible point in the design space.
+**Neural PXRD inversion.** DiffractGPT [^DiffractGPT] casts PXRD inversion as a sequence-to-sequence problem (peak list + chemical formula → CIF token stream) on top of a fine-tuned Mistral-7B. Crystalyze [^Crystalyze] uses CDVAE conditioned on an XRD transformer encoder, with discrete-symmetry post-hoc filtering. PXRDnet [^PXRDnet], a closely related CDVAE-style architecture from a separate group (Guo et al.), differs in that it uses *iterative latent-space gradient guidance* against the target pattern (≈3.5 M decoder ops/material). All three are larger than PXRD-Diff and use significantly more training data; all three report on bespoke evaluation pipelines that complicate head-to-head comparison. §5.3 re-evaluates DiffractGPT and PXRDnet on the same `StructureMatcher` harness we use throughout. The Crystalyze checkpoint download link is described in its own README as "not yet active" (verified 2026-06-01); we are unable to reproduce it.
 
 **Differentiable physics in materials science.** Scattering-pattern losses date back to Rietveld refinement; the novelty here is differentiability *with respect to atomic coordinates and lattice* in a PyTorch graph, so that a structure factor calculation can be inserted as a loss term in a deep network. Concurrent work [^WrenzcuckPhysML2025] explores related differentiable simulators for SAXS; we are not aware of prior work that uses a fully vectorised PyTorch Bragg simulator inside a diffusion training loop.
 
@@ -111,7 +105,17 @@ Because the heads are MLPs initialised to output near-zero, this means the model
 
 We also experimented with two extensions that did not pan out (§5.3): a **Wyckoff-site embedding** added to atom features, and an auxiliary **distance-matrix loss** in which a pairwise MLP predicts ground-truth periodic distances between atoms. Both are documented in the released code behind the `--use-wyckoff` and `--dist-weight` flags.
 
-### 3.5 Sampling
+### 3.5 Classical indexing as a drop-in for the learned lattice head
+
+The lattice head described in §3.2 is the *only* path by which the model encodes absolute d-spacings: every Bragg reflection 2θ position is set by the lattice through Bragg's law, so the lattice parameters are the absolute reference frame against which all peak positions in the input pattern must be interpreted. As §5.5 shows, the encoder + denoiser learns *relative* d-spacing structure (Pearson 0.43 between predicted and target patterns at evaluation time, vs 0.97 between target and ground truth) but not the absolute scale. Classical autoindexing — extracting peak positions, mapping them to Q-space (Q = 4π sinθ/λ), and fitting a unit cell by enumeration of (h,k,l) → Q²(h,k,l) — has solved this sub-problem since the 1970s and runs on a CPU in milliseconds per pattern.
+
+We implement a from-scratch Q-space autoindexer that takes (i) the same simulated PXRD pattern fed to the encoder, (ii) the known crystal system (input as Bravais code, exposed as a sampling-time hyperparameter), and returns a candidate (a, b, c, α, β, γ). Peak picking uses a 1D local-maximum filter with a relative-intensity floor; the candidate Q-vector is fit by least squares to the de-Wolff dichotomy parameter form for each Bravais lattice. At sampling time we run the indexer first, substitute its output for the lattice channel of the diffusion sampler, and run DDIM only on the coordinate channel.
+
+**Per-system accuracy (n = 1000 MP-20 test).** Native indexer overall: 48.8 % strict cell match, 1.45 Å mean cell-length MAE. Per crystal system: hexagonal 77.9 % / 0.53 Å, orthorhombic 59.8 % / 0.96 Å, trigonal 43.3 % / 4.62 Å, monoclinic 18.9 % / 1.76 Å, triclinic 0 %. The low-symmetry blowup (monoclinic and triclinic each have ≥ 4 free cell parameters and the de-Wolff search becomes hypothesis-capped) is the dominant remaining error. We ship a GSAS-II [^GSASII] adapter (`src/pxrd_diff/indexer_gsas.py`) for the low-symmetry path behind a `--use-gsas` opt-in flag; in practice `DoIndexPeaks` hangs on real MP-20 monoclinic/triclinic patterns inside `findBestCell` and is documented experimental rather than headline.
+
+The indexer is a *drop-in* in the strongest sense: training is unchanged, the diffusion sampler is unchanged except for the lattice-channel substitution at t = T, and the headline metric (§5.2) reports both with and without the indexer for direct comparison.
+
+### 3.6 Sampling
 
 DDIM [^DDIM] with 50 steps and $\eta = 0$. We start from independent standard Gaussian noise on the lattice and on the (un-wrapped) coordinates, then alternate the standard DDIM update on each channel. Coordinates are wrapped to $[0,1)$ after every step. Predicted lattice parameters are de-standardised at the end and clipped to physically valid ranges $(a,b,c) \in [0.5, 100]$ Å, $(\alpha,\beta,\gamma) \in [10°, 170°]$ before being passed to `pymatgen.Lattice.from_parameters`.
 
@@ -135,6 +139,8 @@ A model is judged on three views of correctness, following the "all-of-three" ru
 
 We additionally report the space-group match rate at $\text{symprec} \in \{0.01, 0.05, 0.1, 0.2\}$, the Pearson correlation between predicted and true PXRD patterns, and the weighted profile R-factor $R_{wp}$.
 
+**"All-correct" combined criterion.** A sample is judged "all-correct" iff `composition_match ∧ (sg-match at symprec=0.1) ∧ (rmsd ≤ 0.1 Å)`. This is the stricter headline metric used throughout §5; it isolates *complete* recovery (the experimentally interesting case for downstream crystallographic use) from the looser StructureMatcher match that allows considerable tolerance stretch.
+
 **Two evaluation modes.** We report the *full pipeline* (predicted lattice + predicted coordinates) and an additional *true-lattice / coord-only* mode in which we substitute the ground-truth lattice parameters when building the predicted structure. The latter isolates coordinate quality from lattice quality; it is also the stricter setting that we use to compare ablations, because lattice prediction is itself a hard sub-problem and noise there can dominate the headline number.
 
 ### 4.3 Implementation details
@@ -143,17 +149,19 @@ We additionally report the space-group match rate at $\text{symprec} \in \{0.01,
 - **Batch / steps.** Batch 64, 100 000 steps (≈ 24 epochs), single RTX 5090 (32 GB VRAM), wall-clock ≈ 1.5–1.7 h per run.
 - **Parameter count.** ≈ 3.7 M trainable; `--n-layers 5 --d-model 384` (~10 M) gave no benefit (see §5.2).
 - **Diffusion.** $T = 1000$ continuous-time formulation (we sample $t \sim U(0,1)$ per training example).
-- **Compute budget.** Total: ~12 h GPU across all runs reported here, plus ~6 h for evaluation. Cost: roughly USD 6 of cloud GPU.
+- **Compute budget.** Total: ~12 GPU-hours for the Phase 4 ablation (v10–v16) + ~8 GPU-hours for the Phase 9 v21 retrain and indexer/perturbation sweeps + ~6 GPU-hours for DiffractGPT n = 1 000 + ~3 GPU-hours for PXRDnet n = 20 + ~6 hours for all StructureMatcher / aggregation evaluation. Cost: roughly USD 25 of cloud GPU rented on Vast.ai across the work reported here.
 
 ---
 
 ## 5. Results
 
-### 5.1 Main ablation
+We report results in the order they fall out of the experimental sequence: Phase 4 architectural ablation (§5.1) → Phase 9 indexer drop-in (§5.2) → reproduced external baselines (§5.3) → catalogue of falsified sampling-time tricks and architectural extensions (§5.4) → encoder-bottleneck diagnosis that motivates the indexer drop-in retroactively (§5.5).
 
-Table 1 summarises seven training runs sweeping the contributions of the Debye loss, the lattice-input fix, the x₀-residual parameterisation, and two extensions (Wyckoff embeddings, distance loss). All numbers are evaluated on the same 1 000-structure subset of MP-20 test, with the true lattice substituted in (coord-only setting). Pearson is the per-pattern Pearson correlation between predicted and true PXRD. RMSD is the StructureMatcher Cartesian RMSD over matched samples (NaN for non-matches is excluded from the mean).
+### 5.1 Phase 4 — architectural ablation (true-lattice setting)
 
-**Table 1.** Coordinate-only ablation on MP-20 test (n = 1000, true lattice).
+Table 1 summarises seven training runs sweeping the Debye loss, the lattice-input fix, the x₀-residual parameterisation, and two extensions (Wyckoff embeddings, distance loss). All numbers are on the same 1 000-structure subset of MP-20 test, with the true lattice substituted in (coord-only setting). The point of this ablation is to identify the *encoder + denoiser* recipe before we turn off the true-lattice oracle in §5.2. Pearson is the per-pattern correlation between predicted and true PXRD; RMSD is the StructureMatcher Cartesian RMSD over matched samples (NaN excluded).
+
+**Table 1.** Phase 4 coordinate-only ablation on MP-20 test (n = 1 000, *true lattice substituted*).
 
 | Run   | Parameterisation | λ_Debye | Wyckoff | λ_dist | Match % | Pearson | RMSD (Å) |
 |-------|------------------|---------|---------|--------|---------|---------|----------|
@@ -164,64 +172,115 @@ Table 1 summarises seven training runs sweeping the contributions of the Debye l
 | v15   | x₀-residual      | 1       | yes     | 0      | 2.10    | 0.392   | 0.21     |
 | v16   | x₀-residual      | 1       | –       | 0.01   | 1.80    | 0.368   | 0.22     |
 
-The best run is **v13 (x₀-residual, λ_Debye = 1, no extensions)** at 2.51 % match and Pearson 0.434.
+Two architectural choices are individually load-bearing.
 
-### 5.2 What worked
+*Lattice-input fix.* In all runs prior to v10, the lattice head saw $[\bar{\mathbf{h}}, \mathbf{g}, \mathbf{t}_\text{cond}]$ but not the noisy lattice $\boldsymbol{\ell}^{(t)}$ it was supposed to denoise. The training curve looked normal but the lattice loss sat at 1.0 (the variance of the standard normal prior) for 100 k steps. Concatenating $W_\text{lat}\boldsymbol{\ell}^{(t)}$ into the head input drops lattice loss to ~0.02 (95 % reduction) and produces physically reasonable sampled lattices. It is a textbook denoising bug but produced a plausible-looking run for days before we noticed.
 
-**The lattice-input fix.** This is the most consequential single change. In all runs prior to v10, the lattice head saw $[\bar{\mathbf{h}}, \mathbf{g}, \mathbf{t}_\text{cond}]$ — pooled atom features, global PXRD, and time embedding — but not the noisy lattice $\boldsymbol{\ell}^{(t)}$ that it was supposed to denoise. The training curve looked normal (loss decreasing on coords and aux), but the lattice loss sat at 1.0 (the variance of the standard normal prior) for the entire 100 k steps. The fix is one line: concatenate $W_\text{lat}\boldsymbol{\ell}^{(t)}$ into the lattice-head input. With it, lattice loss drops to ~0.02 on stable runs (a 95 % reduction). Sampled lattices become physically reasonable instead of $10^2$-Å lengths and negative angles. We mention this not because it is conceptually deep — it is a textbook denoising bug — but because it produced a perfectly plausible-looking training run for many days before we noticed anything was wrong.
+*x₀-residual parameterisation.* Holding everything else fixed (lattice fix on, λ_Debye = 1), switching from ε-prediction (v11) to x₀-residual (v13) lifts match 0.9 % → 2.5 % — a 2.8× absolute and 3.5× over the v10 ε baseline at λ = 0. The residual head being initialised near zero makes the model start as the identity, which is a correct fixed point at t = 1; the ε head must learn a non-trivial output everywhere from random init. The Debye auxiliary loss also requires recovering a clean coordinate estimate from the model output, which is a simple addition under x₀-residual but a divide-by-$\sqrt{\bar{\alpha}(t)}$ that is numerically unstable near t = 1 under ε.
 
-**x₀-residual parameterisation.** Holding everything else fixed (lattice fix on, λ_Debye = 1), switching from ε-prediction (v11) to x₀-residual (v13) lifts match from 0.9 % to 2.5 % — a 2.8× absolute and 3.5× over the v10 ε baseline at λ = 0. We attribute this to two effects. First, the residual head being initialised to ≈ 0 means the model starts as the identity, which is a correct fixed point at $t = 1$; the ε head must learn to produce a non-trivial output everywhere from random init. Second, the $\mathcal{L}_\text{Debye}$ auxiliary loss requires recovering a clean coordinate estimate from the model output — under x₀-residual this is a simple addition; under ε-prediction it is a divide-by-$\sqrt{\bar{\alpha}(t)}$ that is numerically unstable near $t = 1$.
+*Capacity is not the bottleneck.* A 10.1 M-parameter run with $d_\text{model} = 384, L = 5$ (run `gpu_v12`, killed at 18 k steps for budget) showed coordinate loss stuck at the same ~1.0 plateau as v10 — bottleneck for ε-prediction is parameterisation, not capacity.
 
-**Capacity is not the bottleneck.** A 10.1 M-parameter run with $d_\text{model} = 384, L = 5$ (run `gpu_v12`, killed at 18 k steps for budget reasons) showed coordinate loss stuck at the same ~1.0 plateau as v10 — confirming that the bottleneck for ε-prediction is parameterisation, not capacity.
+**Full-pipeline.** When we sample lattice from the model rather than using the true lattice, v13 drops to 1.2 % match at n = 256. The Phase 9 architecture (v21 below, trained with Phase 4's fixed denoiser plus a re-tuned encoder) achieves 5.6 % under the true-lattice oracle on n = 1 000 — but only 1.0 % under the full pipeline. The next sub-section attacks that 5.6 → 1.0 % gap.
 
-### 5.3 What did not work
+### 5.2 Phase 9 — classical indexer as drop-in for the learned lattice head
 
-Two extensions from prior literature on related problems failed to help and are worth documenting.
+Table 2 reports the headline three-row comparison on the same n = 1 000 MP-20 test subset, all scored by `pymatgen.StructureMatcher` at $(\ell_\text{tol}, s_\text{tol}, \alpha_\text{tol}) = (0.2, 0.3, 5°)$ — the canonical CDVAE tolerance. "All-correct" is the headline `composition ∧ sg-match@symprec=0.1 ∧ rmsd ≤ 0.1 Å` rule from §4.2. All three rows use the same v21 checkpoint (Phase 9 retrain with the Phase 4 architectural fixes and a re-tuned encoder); they differ only in *which lattice* the diffusion sampler conditions on.
 
-**Wyckoff-site embeddings (v15).** Following the intuition that PXRD-equivalent structures live in symmetry-related orbits, we computed Wyckoff-site labels for every training structure with `spglib`, embedded them as a learned `nn.Embedding(27, 256)` initialised to zero, and added to the per-atom features. The embedding *did* learn — final mean absolute weight 0.065, with 5 404 of 6 912 entries non-zero — but it (a) failed to improve the headline match rate (2.1 % vs 2.5 % for v13), and (b) destabilised lattice prediction. v15's lattice loss converges only to ~0.6, vs ~0.02 for v16, despite having the same lattice-fix architecture. We suspect the Wyckoff embedding inflates the per-atom feature norm (`emb_std` 0.43 vs 0.25 for v16), shifting the lattice-pool input distribution far from anything the lattice head sees during early training, but we did not have budget to confirm this hypothesis.
+**Table 2.** Phase 9 lattice-source comparison (n = 1 000 MP-20 test, v21 checkpoint).
 
-**Distance-matrix auxiliary loss (v16).** A pairwise MLP $D_{ij} = f(\mathbf{h}_i, \mathbf{h}_j)$ predicting periodic Cartesian distances clipped at the 12 Å RBF cutoff. λ_dist = 0.01 was the largest weight at which training remained stable. The loss does decrease over training (final ~2.0 vs random baseline ~10), but the headline match is *worse* than v13 (1.8 % vs 2.5 %). Our interpretation: distance prediction shares the same per-atom features used for coordinate denoising, and the auxiliary objective biases features toward absolute distance reconstruction rather than the relative geometric updates the diffusion process needs.
+| Lattice source                                | Match % | All-correct % | sg@0.1 % | RMSD med (Å) | R_wp |
+|-----------------------------------------------|---------|---------------|----------|--------------|------|
+| Learned head only (full pipeline)             | 1.0     | 0.0           | 1.4      | —            | 11.7 |
+| **Classical Q-space autoindexer (§3.5) drop-in** | **1.6** | **0.1**       | **1.4**  | **0.125**    | 11.5 |
+| Ground-truth lattice (oracle)                 | 5.6     | 0.6           | 1.7      | 0.106        | 5.6  |
 
-**The combination is worst (v14).** Stacking Wyckoff and distance loss together (v14) collapses match to 0.8 %, below all other runs except the bare ε baseline. The two extensions interact destructively. We have no clean theoretical explanation; we report the result so future authors can avoid the combination.
+The 1.0 → 1.6 % lift from the indexer is small in absolute terms but is the only intervention in six months of Phase 9 ablation that moved the no-true-lattice match rate. The 1.6 → 5.6 % gap to oracle is what the indexer cannot close: the indexer's per-system cell-length MAE (1.45 Å overall, dominated by monoclinic 1.76 Å and triclinic NaN) saturates above the 0.5 Å sensitivity threshold from the perturbation study (§5.5), so improvement on the indexer side requires fixing the low-symmetry path (§3.5, GSAS-II remains experimental).
 
-### 5.4 Full-pipeline result
+### 5.3 Head-to-head with external generative baselines
 
-When we sample lattice from the model rather than using the ground-truth lattice, the picture is sobering. The best configuration (v13) achieves 1.2 % match rate at n = 256 in the full pipeline, with most failures attributable to lattice prediction sampling lattice parameters that are either physically reasonable but for the wrong space group, or in a few percent of cases physically degenerate (length < 0.5 Å, angles outside [10°, 170°]) and rejected before structure construction. Lattice prediction at MP-20 scale with a 3.7 M-parameter model conditioned only on a 1D PXRD pattern is, on this evidence, not yet a solved problem.
+DiffractGPT (HF `knc6/diffractgpt_mistral_chemical_formula`) and PXRDnet (HF `therealgabeguo/cdvae_xrd_sinc100`) re-evaluated on the same n = 1 000 (DGpt) and n = 20 (PXRDnet — limited by ~4 GPU-hr/material at their published config) MP-20 test subsets through *our* `StructureMatcher` harness at the same tolerances. The Crystalyze checkpoint download link is not yet active and we cite-but-do-not-reproduce.
+
+**Table 3.** Reproduced head-to-head on MP-20 test (StructureMatcher ltol 0.2, stol 0.3, angle_tol 5°).
+
+| Model                                        | n     | Match % | All-correct % | sg@0.1 % | RMSD med (Å) |
+|----------------------------------------------|-------|---------|---------------|----------|--------------|
+| PXRD-Diff (v21 + indexer drop-in)            | 1 000 | 1.6     | 0.1           | 1.4      | 0.125        |
+| DiffractGPT [^DiffractGPT]                   | 1 000 | 18.9    | 15.9          | 21.3     | 0.001        |
+| PXRDnet sinc100 [^PXRDnet]                   | 20    | 30.0    | 5.0           | 5.0      | 0.011        |
+
+Reading the table.
+
+(i) **Raw match rate.** PXRDnet > DiffractGPT > PXRD-Diff by 1.6× and 19× respectively. PXRDnet's lead reflects its iterative latent-space optimisation (35 k decoder ops/material under their cosine warm-restart schedule); DiffractGPT is one feed-forward pass.
+
+(ii) **All-correct** (the stricter `composition ∧ sg-match ∧ rmsd ≤ 0.1 Å` rule) reverses the top two: DiffractGPT 15.9 % > PXRDnet 5.0 % > PXRD-Diff 0.1 %. PXRDnet's predictions match structure with loose tolerances but rarely recover the *space group*; DGpt's token-stream prediction appears to encode symmetry implicitly through its CIF tokenisation. This is the strongest single qualitative signal in the table: published "match rate" numbers conflate two very different capabilities.
+
+(iii) **RMSD distribution** is heavy-tailed for our model and tight-near-zero for both baselines, suggesting PXRD-Diff's matched cases are matches by tolerance-stretch rather than by atomic-position recovery.
+
+(iv) **PXRDnet small-n caveat.** n = 20 is small (95 % CI on match rate ±20 pp by Wilson interval). The directional ranking is robust to that uncertainty, but we caution against reading the 30 % figure precisely. Running PXRDnet at n = 200 (their published n) would take ~33 days of RTX 5090 rental at their default hyperparameters; we report what fit in a single overnight rental.
+
+(v) **Reproduction caveat.** All three models see PXRD patterns that are simulated *in their own pipeline's preprocessing* (different bin counts, different Q vs 2θ axes, different broadening). The structures evaluated are the same n CDVAE MP-20 test material_ids, but the patterns are not bit-identical inputs. Apples-to-apples on the structure side; orange-to-apple on the pattern side — there is no clean way to make this strictly identical short of porting all three models to one preprocessing pipeline, which was out of scope.
+
+### 5.4 What did *not* work — six-month failure catalogue
+
+Four interventions failed to move the headline metric on MP-20 at n ≥ 200; we list them so future authors can avoid the same paths.
+
+**Top-K candidate reranking by Debye fit (Phase 9.1.4).** We sampled the top-5 indexer cell candidates instead of top-1 and reranked each n = 5 candidate structure by the Debye-loss fit to the target pattern. n = 1 000: match drops 1.6 % → 1.0 %, all-correct 0.1 % → 0.0 %. Hypothesis-rich indexer search supplies more *wrong* cells faster than the Debye rerank can filter them.
+
+**Debye-gradient guidance during DDIM (Phase 9.2).** We added a guidance term $-g_\text{scale} \cdot \nabla_\mathcal{C} \mathcal{L}_\text{Debye}$ to the DDIM update of the coordinate channel, sweep $g_\text{scale} \in \{0, 0.5, 1, 2, 5\}$ on n = 200. Match rate is flat at 1.0–2.5 % across the entire range (within run-to-run noise); all-correct stays at 0 %. The Debye gradient at sampling time is too noisy to steer the diffusion trajectory.
+
+**Wyckoff-site token embeddings (v15, n = 1 000).** Computed with `spglib`, embedded as `nn.Embedding(27, 256)`, added to per-atom features. The embedding *learns* (final mean abs weight 0.065, 5 404/6 912 entries non-zero) but match drops 2.5 % → 2.1 % vs v13 *and* destabilises lattice prediction (lattice loss converges to ~0.6 vs ~0.02 for v16). We suspect the Wyckoff embedding inflates per-atom feature norm (`emb_std` 0.43 vs 0.25 for v16), shifting the lattice-pool input distribution; we did not have budget to confirm.
+
+**Distance-matrix auxiliary loss (v16, n = 1 000).** Pairwise MLP predicting periodic Cartesian distances clipped at the 12 Å RBF cutoff, λ_dist = 0.01 (the largest stable value). Loss decreases (final ~2.0 vs random baseline ~10) but match drops 2.5 % → 1.8 %. Distance prediction biases per-atom features toward absolute distance reconstruction rather than the *relative* geometric updates the diffusion process needs.
+
+**Combination (v14, n = 1 000).** Stacking Wyckoff + distance loss collapses match to 0.8 %, below all other runs except the bare ε baseline. The two extensions interact destructively; we have no clean theoretical explanation.
+
+### 5.5 The encoder bottleneck — perturbation study that motivates the indexer
+
+Our best Pearson-correlation between predicted and true PXRD is 0.43; the same model evaluated on a held-out subset with *correct* coordinates plugged into the differentiable simulator hits 0.97. So the encoder + denoiser is leaving ~0.5 of pattern-space agreement on the table. The auxiliary head — which only sees $\mathbf{g}$ — achieves an aux loss of 0.007 in isolation, meaning the global PXRD vector contains *enough* information to predict the lattice very accurately. The denoiser then under-uses this signal.
+
+To localise the bottleneck, we perturb the lattice supplied to the diffusion sampler away from ground truth by a controlled Å of cell-length error and re-evaluate v21 at n = 200. Match rate decays sharply: 5.6 % (Δ = 0) → 2.0 % (Δ = 0.5 Å) → 0.5 % (Δ = 1.0 Å) → 0 % (Δ ≥ 1.5 Å). The decay is *steeper than linear* — small lattice errors are tolerable up to a knee at ~0.5 Å, beyond which the sampler's coordinate trajectory diverges. This matches the indexer's per-system MAE structure: high-symmetry systems (hex, ortho, with MAE ≤ 1.0 Å) lift; low-symmetry systems (mono, tri, with MAE ≥ 1.5 Å) do not. The indexer-drop-in lift in §5.2 is in this sense *predictable* from the perturbation study: it works exactly where it can, on the high-symmetry MP-20 subset.
 
 ---
 
 ## 6. Discussion
 
-**Where does the gap lie?** Our best Pearson-correlation between predicted and true PXRD is 0.43; the same model, evaluated against itself on a held-out 200-structure subset, has roughly 0.97 Pearson with the *correct* coordinates plugged into the differentiable simulator. So the encoder–denoiser is leaving ~0.5 of pattern-space agreement on the table. The auxiliary head, which sees only $\mathbf{g}$, achieves an aux loss of 0.007 — meaning the global PXRD vector contains *enough* information to predict lattice parameters very accurately *in isolation*. The fact that the full denoiser, given $\mathbf{g}$ + $\mathbf{F}_\text{pxrd}$ + atom features, then under-uses this signal suggests an architectural rather than informational bottleneck.
+**The encoder-bottleneck diagnosis explains the negative ablation.** §5.5 shows that the lattice information *exists* in the global PXRD encoding (aux head reaches loss 0.007) but the denoiser cannot extract absolute d-spacings well enough to predict the lattice from scratch. §5.2 shows that supplying the absolute d-spacing scale from a 1970s-vintage Q-space autoindexer recovers some of that gap — small in absolute terms (1.0 → 1.6 %) but large as a fraction of what is recoverable (the 5.6 % oracle ceiling). Top-K rerank and gradient-guidance failed because they operate *after* the encoder has already committed to a bad lattice prior; the indexer succeeds because it bypasses that decision entirely.
 
-**Why per-atom anchoring is hard.** PXRD is a permutation-invariant signal: relabelling atoms of the same element does not change the diffraction pattern at all. Our denoiser is also permutation-equivariant. There is therefore no symmetry-breaking signal to tell atom $i$ "you go in the corner" rather than "you go on the face." The Wyckoff embedding was an attempt to introduce this symmetry-breaking; it did not work, which suggests the right approach may need to break symmetry at the *output* (e.g. by predicting an unordered set of orbits and a Hungarian-style matcher) rather than at the input.
+**Why per-atom anchoring is hard.** PXRD is a permutation-invariant signal: relabelling atoms of the same element does not change the diffraction pattern at all. Our denoiser is also permutation-equivariant. There is therefore no symmetry-breaking signal to tell atom $i$ "you go in the corner" rather than "you go on the face." The Wyckoff embedding was an attempt to introduce this symmetry-breaking at the input; it failed (§5.4). One promising direction we did not have budget to try is to break symmetry at the *output* — predict an unordered set of orbits plus a Hungarian-style matcher — rather than at the input.
 
-**Honest comparison with prior work.** DiffractGPT and Crystalyze report headline numbers we do not match; both also use considerably more data, larger models, and (in DiffractGPT's case) a tokenisation that appears to bake in much more crystallographic prior. We do not claim that the fundamental task is impossible — only that, at MP-20 scale with a clean 3.7 M-parameter conditional diffusion model, 2.5 % is what we observe. The gap between this and 30 % published rates is large enough to warrant scrutiny of the published numbers' evaluation protocols.
+**Two different "match rate" failure modes (Table 3).** PXRDnet's 30 % match with only 5 % all-correct, vs DiffractGPT's 18.9 % match with 15.9 % all-correct, is the most surprising row of the head-to-head. The two models recover *structure* at comparable rates but DGpt's CIF-token output appears to encode *symmetry* in a way PXRDnet's atom-by-atom coordinate decode does not. This suggests that for downstream crystallographic use (where the experimentalist cares about space group as much as about coordinates) the choice of output representation matters more than the choice of latent-optimisation depth. We flag this as a finding that the existing PXRD-inversion literature does not surface, because the field largely reports a single "match rate" number under different tolerances.
+
+**Implications for small reproducible models.** PXRD-Diff at 1.6 % match is 12× behind a fine-tuned 7 B-parameter LLM and 19× behind a CDVAE-style model that burns 4 GPU-hours per inference. A small honest baseline still has a role here: it makes the encoder bottleneck visible (large models hide it in capacity) and it makes the indexer drop-in straightforward to integrate (large models would need architecture-level surgery to substitute a classical lattice predictor at sampling time). The recipe — encoder + Phase 4 architectural fixes + Phase 9 indexer drop-in — is ~3.7 M parameters and runs end-to-end inference in seconds. We see this as the niche we can credibly occupy in the next iteration of the literature.
 
 ---
 
 ## 7. Limitations
 
-1. **Composition is given.** The challenging unknown-composition setting is out of scope; this is consistent with most prior work but worth stating.
-2. **Simulated PXRD only.** No instrument response, preferred orientation, peak asymmetry, or background. Real-experimental data will degrade these numbers further.
-3. **Fixed lattice for the Debye loss.** We avoid the joint coord+lattice gradient through the simulator by using ground-truth lattice; a curriculum in which true lattice is gradually replaced by predicted lattice could be valuable but was not tried.
-4. **Single random seed per ablation.** Workshop budget; the ~0.5 % run-to-run variance we observed in pilot experiments is small relative to the 2.5×–3.5× effects reported in §5.1.
-5. **MP-20 only.** No experiments on larger unit cells, organic crystals, or higher-Z elements.
-6. **No baseline reproduction.** We do not reproduce DiffractGPT or Crystalyze. A clean head-to-head comparison would require porting their evaluation pipelines and is a paper of its own.
+1. **Composition is given.** The unknown-composition setting is out of scope; consistent with prior work but worth stating.
+2. **Simulated PXRD only.** No instrument response, preferred orientation, peak asymmetry, or background. Real experimental data will degrade these numbers further.
+3. **PXRDnet baseline is n = 20.** Per their published config (`num_starts=100`, `num_grad_steps=5000`, cosine warm-restart factor 7 = 35 k decoder ops/material) PXRDnet inference is ~4 GPU-hr/material on RTX 5090; matching their own published n = 200 would take ~33 days of rental. The 30 % match rate has wide CI (±20 pp Wilson at n = 20); we report what fit in a single overnight rental.
+4. **Crystalyze unreproduced.** The Crystalyze checkpoint download link is marked "not yet active" in their own README as of 2026-06-01 (verified via repo HEAD on the same date). We cite the paper but cannot include it in the head-to-head.
+5. **Three pattern preprocessing pipelines.** PXRD-Diff uses 4 251-bin 2θ 5–90° / 0.02°; DiffractGPT uses 300-bin 2θ 0–90° / 0.3°; PXRDnet uses 4 096-bin Q-space with on-the-fly sinc^2 broadening at training time. The *structures* under evaluation are identical CDVAE MP-20 material_ids, but the *patterns* are simulated through each model's own preprocessing. Strictly identical inputs would require porting all three preprocessors into one pipeline, which we did not do.
+6. **GSAS-II low-symmetry path is experimental.** The monoclinic/triclinic indexer hangs in `findBestCell` on real MP-20 patterns at the published config; we ship it behind a `--use-gsas` opt-in but recommend the native indexer for headline numbers.
+7. **Fixed lattice for the Debye loss.** We avoid the joint coord+lattice gradient through the simulator by using ground-truth lattice during training; a curriculum that gradually replaces true lattice with predicted would be valuable but was not tried.
+8. **Single random seed per ablation.** Workshop budget; ~0.5 % pilot variance is small relative to the 2.5×–3.5× effects reported.
+9. **MP-20 only.** No experiments on larger unit cells, organic crystals, or higher-Z elements.
 
 ---
 
 ## 8. Conclusion
 
-PXRD inversion remains an open problem. We report a careful, reproducible negative-leaning result on the MP-20 split: a 3.7 M-parameter conditional diffusion model with a differentiable Bragg structure-factor loss recovers 2.5 % of test structures (true lattice, coord-only) and 1.2 % in the full pipeline. Two architectural fixes — passing the noisy lattice into the lattice head, and using x₀-residual rather than ε-prediction — are individually load-bearing; together they account for most of our headline number. Two literature-motivated extensions, Wyckoff embeddings and an auxiliary distance loss, do not help and hurt in combination.
+PXRD inversion at MP-20 scale remains an open problem. A 3.7 M-parameter conditional diffusion model with a differentiable Bragg structure-factor loss recovers 1.6 % of test structures with a classical Q-space autoindexer supplying the lattice, and 5.6 % under a ground-truth-lattice oracle — meaning roughly three-quarters of our gap to the oracle is in *coordinates*, and the remaining quarter is in *lattice*, addressable by indexer improvements alone. Reproduced external baselines on the same `StructureMatcher` harness put DiffractGPT at 18.9 % match (15.9 % all-correct) and PXRDnet sinc100 at 30.0 % match (5.0 % all-correct); the latter two also recover *space group* at very different rates (DGpt 21 %, PXRDnet 5 %, ours 1.4 %), surfacing a finding the existing literature does not: published "match rate" headlines conflate two qualitatively different capabilities.
 
-We release the code, all checkpoints, all training and evaluation logs, and the differentiable PXRD module as an installable PyTorch package. We hope the recipe and the failure catalogue are useful to the community as it continues to push on a problem that is, on the present evidence, harder than recent reports suggest.
+Six interventions failed in our hands: top-K candidate reranking, Debye-gradient guidance, Wyckoff-site embeddings, an auxiliary distance loss, the combination of the latter two, and — most expensively — the GSAS-II low-symmetry indexer path. Two architectural fixes (lattice-input fix, x₀-residual parameterisation) and one drop-in component (classical autoindexer) are load-bearing and individually documented for re-use.
+
+We release the code, all checkpoints, all per-phase result JSONs, the indexer adapter (both native and GSAS-II), and the differentiable Bragg module as an installable PyTorch package. We hope the recipe and the failure catalogue are useful to the community as it continues to push on a problem that is, on the present evidence, harder than recent reports suggest at first reading.
 
 ---
 
 ## Acknowledgments
 
-We thank the maintainers of `pymatgen`, `spglib`, and the CDVAE benchmark for tools that made this work possible. Compute for all GPU experiments was rented from Vast.ai; total compute spend was approximately USD 6 across roughly 12 GPU-hours on a single RTX 5090.
+We thank the maintainers of `pymatgen`, `spglib`, the CDVAE benchmark, GSAS-II, and the upstream maintainers of DiffractGPT (`atomgptlab/atomgpt`) and PXRDnet (`gabeguo/cdvae_xrd`) for releasing checkpoints and code that made the head-to-head reproduction in §5.3 possible. Compute was rented from Vast.ai; total spend was approximately USD 25 across roughly 30 GPU-hours on RTX 5090 instances (Phase 4 ablation, Phase 9 retrain + indexer sweeps, DiffractGPT n = 1 000 inference, and PXRDnet n = 20 inference).
 
 ## Author Contributions (CRediT)
 
@@ -251,9 +310,13 @@ The author used Anthropic's Claude (Sonnet 4.6 and Opus 4.7) for code drafting, 
 
 ## References
 
-[^DiffractGPT]: Choudhary, K. (2024). DiffractGPT: Atomic structure determination from X-ray diffraction patterns using a generative pre-trained transformer. *arXiv:2412.NNNNN* (placeholder; verify exact arXiv ID before submission).
+[^DiffractGPT]: Choudhary, K. (2024). DiffractGPT: Atomic Structure Determination from X-ray Diffraction Patterns using a Generative Pre-trained Transformer. *Journal of Physical Chemistry Letters* (verify final DOI before camera-ready). Reproduced from HF checkpoint `knc6/diffractgpt_mistral_chemical_formula` and code at `github.com/atomgptlab/atomgpt`.
 
-[^Crystalyze]: Riesel, E. A., et al. (2024). Crystal structure determination from powder diffraction patterns with generative machine learning. *Journal of the American Chemical Society* (placeholder; verify exact citation before submission).
+[^Crystalyze]: Riesel, E. A., Mackey, T., Nilforoshan, H., et al. (2024). Crystal Structure Determination from Powder Diffraction Patterns with Generative Machine Learning. *Journal of the American Chemical Society* (verify final DOI). Code: `github.com/ML-PXRD/Crystalyze`. We could not reproduce: checkpoint download link is marked "not yet active" in the upstream README (verified 2026-06-01).
+
+[^PXRDnet]: Guo, G., Saidi, T., Terban, M., Valsecchi, M., Billinge, S. J. L., & Lipson, H. (2024). Ab Initio Structure Solutions from Nanocrystalline Powder Diffraction Data. *arXiv:2406.10796*. Reproduced from HF checkpoint `therealgabeguo/cdvae_xrd_sinc100` and code at `github.com/gabeguo/cdvae_xrd`.
+
+[^GSASII]: Toby, B. H., & Von Dreele, R. B. (2013). GSAS-II: the genesis of a modern open-source all purpose crystallography software package. *Journal of Applied Crystallography*, 46(2), 544–549. Code: `github.com/AdvancedPhotonSource/GSAS-II`.
 
 [^CDVAE]: Xie, T., Fu, X., Ganea, O.-E., Barzilay, R., & Jaakkola, T. (2022). Crystal diffusion variational autoencoder for periodic material generation. *International Conference on Learning Representations*.
 
@@ -271,7 +334,7 @@ The author used Anthropic's Claude (Sonnet 4.6 and Opus 4.7) for code drafting, 
 
 [^WrenzcuckPhysML2025]: *Placeholder for a differentiable scattering simulator reference; replace with the appropriate citation before submission.*
 
-> **Citation note for review.** Three references above (DiffractGPT, Crystalyze, and the differentiable-scattering reference) are flagged as placeholders pending verification. The author will resolve each via DOI lookup before submission; as a methods/negative-results paper, the central claims do not depend on the precise published numbers from these works, only on the meta-claim that current literature reports widely varying evaluation protocols.
+> **Citation note for review.** DiffractGPT, Crystalyze, and the differentiable-scattering reference still need final DOI/journal verification before camera-ready. The reproduced PXRDnet and DiffractGPT numbers in §5.3 are computed by the author on the released checkpoints, not transcribed from the cited papers; the central claims do not depend on the precise published numbers, only on the *reproduced* numbers under our shared evaluation harness.
 
 ---
 
@@ -289,10 +352,12 @@ For completeness, Table A1 lists every training run discussed in the development
 | v10 | 3.7 M | + Lattice-input fix, λ_Debye = 0 | Lat loss 1.0 → 0.05 | §5.2 |
 | v11 | 3.7 M | + Lattice-input fix, λ_Debye = 1 | Match 0.9 % | Table 1 |
 | v12 | 10.1 M | Larger model (d=384, L=5), ε-prediction | Killed at 18 k; same plateau | §5.2 |
-| v13 | 3.7 M | x₀-residual + lat-fix + Debye λ=1 | **2.51 % match (best)** | Table 1 |
+| v13 | 3.7 M | x₀-residual + lat-fix + Debye λ=1 | **2.51 % match (Phase 4 best, true-lat)** | Table 1 |
 | v14 | 3.8 M | v13 + Wyckoff + distance loss | 0.80 % match | Table 1 |
 | v15 | 3.8 M | v13 + Wyckoff only | 2.10 % match | Table 1 |
 | v16 | 3.7 M | v13 + distance loss only | 1.80 % match | Table 1 |
+| v17 – v20 | 3.7 M | Five Phase-9 encoder retrains with different ResNet/Transformer hybrids and pattern-augmentation curricula | None beat v13 by more than noise | §5.1 |
+| **v21** | **3.7 M** | Phase 9 final: v13 architecture + Phase 9 retrain + indexer drop-in support | **1.6 % match (no-true-lat, indexer); 5.6 % (true-lat oracle)** | Tables 2, 3 |
 
 ### B. Hyperparameter sensitivity
 
