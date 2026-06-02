@@ -1,0 +1,29 @@
+{
+  "n": 7,
+  "composition_match_rate": 0.42857142857142855,
+  "rmsd_mean": 0.011082433159305903,
+  "rmsd_median": 0.011082433159305903,
+  "match_rate (StructureMatcher)": 0.2857142857142857,
+  "rwp_mean": 27.331424360246483,
+  "pearson_mean": 0.06516595097142949,
+  "headline_all_correct": 0.0,
+  "sg_match@0.01": 0.0,
+  "sg_match@0.05": 0.0,
+  "sg_match@0.1": 0.0,
+  "sg_match@0.2": 0.2857142857142857,
+  "n_requested": 20,
+  "n_skipped_input": 0,
+  "n_parse_fail": 13,
+  "config": {
+    "model_name": "therealgabeguo/cdvae_xrd_sinc100 (PXRDnet, Guo et al. 2406.10796)",
+    "ckpt": "/workspace/pxrdnet_ckpt/mp_20_sinc100",
+    "num_starting_points": 100,
+    "num_gradient_steps": 5000,
+    "num_candidates": 10,
+    "nanomaterial_size_angstrom": 100,
+    "pattern_bins": 512,
+    "pattern_domain": "Q (CuKa, 0..4pi/lambda)",
+    "scoring": "pxrd_diff.eval (StructureMatcher ltol=0.2 stol=0.3 angle_tol=5)",
+    "note": "PXRDnet test pickle (their pre-computed xrd) used as input; predictions scored against CDVAE MP-20 true CIFs via our matcher."
+  }
+}

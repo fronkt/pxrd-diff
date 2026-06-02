@@ -83,9 +83,15 @@ def _bootstrap_env(pxrdnet_repo: Path):
 # CIF -> graph_arrays; on 128 cores it'd still take ~2 min for the full 1130
 # but ~3s for n=20.
 # ---------------------------------------------------------------------------
-def make_subset_pickle(full_pickle: Path, n: int, out_pickle: Path) -> list[str]:
+def make_subset_pickle(full_pickle: Path, n: int, out_pickle: Path,
+                       material_ids: list[str] | None = None) -> list[str]:
     df = pd.read_pickle(full_pickle)
-    df_subset = df.iloc[:n].reset_index(drop=True)
+    if material_ids:
+        df_subset = df[df["material_id"].isin(material_ids)].reset_index(drop=True)
+        # Preserve user-specified order.
+        df_subset = df_subset.set_index("material_id").loc[material_ids].reset_index()
+    else:
+        df_subset = df.iloc[:n].reset_index(drop=True)
     out_pickle.parent.mkdir(parents=True, exist_ok=True)
     df_subset.to_pickle(out_pickle)
     return df_subset["material_id"].tolist()
@@ -96,13 +102,14 @@ def make_subset_pickle(full_pickle: Path, n: int, out_pickle: Path) -> list[str]
 # strips file IO / plotting / wandb / smooth-vs-sinc viz so we can iterate
 # fast. Returns (best_pred_struct, target_xrd_512) for downstream scoring.
 # ---------------------------------------------------------------------------
-def run_one(args, model, ld_kwargs, batch):
+def run_one(args, model, ld_kwargs, batch, dataset):
     """Run PXRDnet inference on one batch (batch_size=1) and return the
     top-ranked predicted pymatgen.Structure.
     """
-    from conditional_generation import optimize_latent_code   # type: ignore
+    from conditional_generation import optimize_latent_code, smooth_xrds   # type: ignore
     from visualization.visualize_materials import create_materials  # type: ignore
-    from compute_metrics import Crystal  # type: ignore
+    from pymatgen.core import Lattice, Structure
+    from types import SimpleNamespace as _NS
     import wandb
 
     # optimize_latent_code calls wandb.log internally; init disabled per material.
@@ -133,23 +140,31 @@ def run_one(args, model, ld_kwargs, batch):
         xrd_vector_dim=4096,
         max_theta=180, min_theta=0,
     )
-    (_, _, _opt_xrds, gen_crystals_list) = create_materials(
+    (_, _, opt_xrds, gen_crystals_list) = create_materials(
         xrd_args, crystals["frac_coords"], crystals["num_atoms"],
         crystals["atom_types"], crystals["lengths"], crystals["angles"],
         create_xrd=True, symprec=0.01,
     )
 
-    # Step 4: rank by predicted-XRD vs target similarity (L1). PXRDnet's
-    # `fc_property` outputs a 512-bin XRD prediction we can score against
-    # target without re-simulating each candidate.
+    # Step 4: rank by SIMULATED XRD of each candidate vs target (their method).
+    # smooth_xrds applies the dataset's sinc + downsample to 512-bin so the
+    # comparison is on the same scale as `batch.y`.
     with torch.no_grad():
-        pred_xrds = model.fc_property(z).reshape(-1, 512)
-    target = target_noisy_xrd.expand_as(pred_xrds)
-    l1 = torch.abs(pred_xrds - target).mean(dim=1)
-    best_idx = int(l1.argmin().item())
+        opt_smoothed, _ = smooth_xrds(opt_generated_xrds=opt_xrds,
+                                      data_loader=_NS(dataset=dataset))
+        opt_smoothed = opt_smoothed.to(target_noisy_xrd.device)
+        target = target_noisy_xrd.expand_as(opt_smoothed)
+        l1 = torch.abs(opt_smoothed - target).mean(dim=1)
+        best_idx = int(l1.argmin().item())
 
-    best_crystal = Crystal(gen_crystals_list[best_idx])
-    return best_crystal.structure, target_noisy_xrd.squeeze().cpu().numpy()
+    # Don't wrap in compute_metrics.Crystal — that triggers smact_validity ->
+    # smact.neutral_ratios which broke in newer SMACT (returns 0-tuple where
+    # cdvae expects 2). We just need a pymatgen Structure for our matcher.
+    cd = gen_crystals_list[best_idx]
+    lat = Lattice.from_parameters(*(list(cd["lengths"]) + list(cd["angles"])))
+    pred_struct = Structure(lat, cd["atom_types"], cd["frac_coords"],
+                            coords_are_cartesian=False)
+    return pred_struct, target_noisy_xrd.squeeze().cpu().numpy()
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +174,9 @@ def run_one(args, model, ld_kwargs, batch):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=20,
-                    help="Number of test structures to evaluate.")
+                    help="Number of test structures to evaluate (first N from their test pickle).")
+    ap.add_argument("--material-ids", default=None,
+                    help="Comma-separated material_ids to subset to (overrides --n).")
     ap.add_argument("--pxrdnet-repo", default=str(PXRDNET_REPO))
     ap.add_argument("--ckpt-dir", default=str(PXRDNET_CKPT_ROOT / "mp_20_sinc100"))
     ap.add_argument("--test-pickle", default=str(PXRDNET_REPO / "data" / "mp_20" / "test.csv"))
@@ -209,9 +226,18 @@ def main():
     print(f"[pxrdnet] model ready ({time.time()-t0:.0f}s)", flush=True)
 
     # Build subset pickle and a CrystDataset on it.
-    subset_pkl = Path(args.subset_pickle_dir) / f"test_first{args.n}.csv"
-    subset_ids = make_subset_pickle(Path(args.test_pickle), args.n, subset_pkl)
-    print(f"[pxrdnet] subset = first {args.n} from {args.test_pickle}", flush=True)
+    if args.material_ids:
+        mids = [m.strip() for m in args.material_ids.split(",") if m.strip()]
+        subset_pkl = Path(args.subset_pickle_dir) / f"test_custom{len(mids)}.csv"
+        subset_ids = make_subset_pickle(Path(args.test_pickle), len(mids), subset_pkl,
+                                        material_ids=mids)
+        args.n = len(subset_ids)
+        print(f"[pxrdnet] subset = {len(subset_ids)} custom material_ids "
+              f"from {args.test_pickle}", flush=True)
+    else:
+        subset_pkl = Path(args.subset_pickle_dir) / f"test_first{args.n}.csv"
+        subset_ids = make_subset_pickle(Path(args.test_pickle), args.n, subset_pkl)
+        print(f"[pxrdnet] subset = first {args.n} from {args.test_pickle}", flush=True)
 
     print(f"[pxrdnet] building CrystDataset (preprocessing {args.n} CIFs)...", flush=True)
     dataset = CrystDataset(
@@ -272,10 +298,12 @@ def main():
 
         t_one = time.time()
         try:
-            pred_struct, _target = run_one(args, model, ld_kwargs, batch)
+            pred_struct, _target = run_one(args, model, ld_kwargs, batch, dataset)
         except Exception as e:
+            import traceback
             print(f"  [{i+1}/{args.n}] {mid}: inference error: {type(e).__name__}: {e}",
                   flush=True)
+            print("    " + traceback.format_exc().replace("\n", "\n    "), flush=True)
             parse_fail += 1
             continue
 
