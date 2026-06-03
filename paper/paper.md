@@ -381,4 +381,3 @@ Gradient sanity: for all 50 structures we confirmed `∂L/∂F` and `∂L/∂L` 
 - [x] Random seed: single seed (42) per run; pilot variance ≈ 0.5 % match-rate absolute
 - [x] Compute environment: PyTorch 2.x, CUDA 12.x, single RTX 5090; Python 3.12
 - [x] Code, checkpoints, logs, and full training scripts released
-- [x] AI tool usage disclosed (§AI Disclosure)
