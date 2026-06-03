@@ -1306,3 +1306,38 @@ No retraining. Pure offline measurement on the MP-20 test split.
   - `paper/phase9_results/baseline_diffractgpt_n1000.json` (pending
     overnight run, ETA ~4.7 hr from 2026-05-25 01:05)
   - `scripts/10_diffractgpt_eval.py`
+
+### Phase 11 — Workshop camera-ready prep — 2026-06-03
+
+- [x] 11.1 DOI verification (DiffractGPT + Crystalyze). Crossref-checked
+        both ACS DOIs (10.1021/acs.jpclett.4c03137, 10.1021/jacs.4c10244).
+        Crystalyze entry was already complete; DiffractGPT gained
+        volume = 16, number = 8, pages = 2110–2119.
+- [x] 11.2 New figures fig4 + fig5 added to `paper/make_figures.py`,
+        rendered to PDF+PNG, embedded in `paper/paper.md`.
+        - fig4 = per-system indexer benchmark (strict% + len_MAE)
+          sourced from `index_benchmark_v2_native.json`.
+        - fig5 = three-way headline bar (match% / all-correct / Pearson)
+          across ours / DGpt n=1000 / PXRDnet n=20.
+- [x] 11.3 Paper trimmed 7,519 → 4,788 words for workshop budget.
+        Per-section deltas: §3 1571 → 833, §5 2013 → 1265, §6 448 → 273,
+        Abstract 343 → 238, §7 324 → 133, §8 250 → 131. Front matter
+        and references/appendix unchanged. All load-bearing claims
+        preserved.
+- [x] 11.4 v21 ckpt re-eval on v2 indexer cells (was Phase 9.0.7e).
+        On fresh vast.ai RTX 5090 (64.31.38.214:3642), v21 +
+        `--lat-from-index paper/phase9_results/index_benchmark_v2_native.json`,
+        n=1000, n_samples=20, refine 200, ddim 50.
+        Result: **1.5 % match / 0.1 % all-correct / rmsd_med 0.104 Å /
+        Pearson 0.40**. v1-cells comparable run was 1.6 % / 0.1 % / 0.126 / 0.40.
+        Within run-to-run noise — the 49 mids where v2 indexer differs
+        from v1 don't move the headline. Table 2 in `paper.md` stays
+        at the v1 number (1.6 %).
+        Artifact: `paper/phase9_results/p9_idxlat_n1000_v2.json`.
+
+**Outstanding (deferred):**
+- `paper/paper.tex` is stale (last touched Phase 2.6.5, pre-reframe).
+  paper.md is the canonical source. Regenerating the .tex via pandoc
+  + manual cleanup is its own task — flag for a separate session
+  before camera-ready submission.
+- Crystalyze checkpoint download link still inactive — recheck monthly.

@@ -1,12 +1,15 @@
 """Generate publication figures for PXRD-Diff paper.
 
 Outputs (all 300 dpi PNG + matched PDF):
-  fig1_ablation.{png,pdf}     -- main ablation bar chart
-  fig2_training_curves.{png,pdf} -- v15 vs v16 lattice loss
-  fig3_diffpxrd_validation.{png,pdf} -- Pearson histogram for diff simulator
+  fig1_ablation.{png,pdf}             -- main ablation bar chart (Phase 4)
+  fig2_training_curves.{png,pdf}      -- v15 vs v16 lattice loss   (Phase 4)
+  fig3_diffpxrd_validation.{png,pdf}  -- Pearson histogram         (Phase 4)
+  fig4_indexer_bench.{png,pdf}        -- per-system indexer benchmark (Phase 9 reframe)
+  fig5_threeway_headline.{png,pdf}    -- ours vs DGpt vs PXRDnet headline bars
 """
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -183,8 +186,133 @@ def fig3_diffpxrd_validation():
     print("wrote fig3_diffpxrd_validation.{png,pdf}")
 
 
+def fig4_indexer_bench():
+    """Per-crystal-system strict% and len_MAE from the v2 native indexer.
+
+    Source: paper/phase9_results/index_benchmark_v2_native.json (n=1000 MP-20 test).
+    """
+    d = json.loads((ROOT / "phase9_results" / "index_benchmark_v2_native.json").read_text())
+    ps = d["per_system"]
+    order = ["cubic", "tetragonal", "hexagonal", "trigonal",
+             "orthorhombic", "monoclinic", "triclinic"]
+    labels = [s.capitalize() for s in order]
+    ns = [ps[s]["n"] for s in order]
+    strict = [ps[s]["strict_pct"] for s in order]
+    consist = [ps[s]["consistent_pct"] for s in order]
+    lenmae = [ps[s]["len_mae"] for s in order]
+    # triclinic len_mae is NaN — substitute with 0 for plotting and annotate
+    lenmae_plot = [(v if v == v else 0.0) for v in lenmae]
+    overall = d["overall"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.9), constrained_layout=True)
+    x = np.arange(len(order))
+    width = 0.4
+
+    # (a) strict / consistent match rate
+    ax = axes[0]
+    ax.bar(x - width / 2, strict, width, color=CB["blue"], edgecolor=CB["black"],
+           linewidth=0.6, label="Strict")
+    ax.bar(x + width / 2, consist, width, color=CB["skyblue"], edgecolor=CB["black"],
+           linewidth=0.6, label="Consistent")
+    ax.axhline(overall["overall_strict_pct"], color=CB["red"], lw=0.8, ls="--",
+               label=f"overall strict {overall['overall_strict_pct']:.1f}%")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=7.5, rotation=25, ha="right")
+    ax.set_ylabel("Indexing accuracy (%)", fontsize=9)
+    ax.set_title("(a) Per-system match rate", fontsize=9, loc="left")
+    ax.set_ylim(0, 100)
+    ax.legend(fontsize=6.5, frameon=False, loc="upper right")
+    for i, (v, n) in enumerate(zip(strict, ns)):
+        ax.text(i - width / 2, v + 1.5, f"{v:.0f}", ha="center", fontsize=6.5)
+        ax.text(i, -8, f"n={n}", ha="center", fontsize=6, color="gray")
+
+    # (b) lattice-length MAE (Å)
+    ax = axes[1]
+    bar_colors = [CB["green"] if v <= 1.0 else CB["orange"] if v <= 2.0 else CB["red"]
+                  for v in lenmae_plot]
+    bars = ax.bar(x, lenmae_plot, color=bar_colors, edgecolor=CB["black"], linewidth=0.6)
+    ax.axhline(overall["v20_learned_head_len_mae"], color=CB["black"], lw=0.8, ls=":",
+               label=f"v20 learned head ({overall['v20_learned_head_len_mae']:.2f} Å)")
+    ax.axhline(overall["overall_len_mae"], color=CB["red"], lw=0.8, ls="--",
+               label=f"overall ({overall['overall_len_mae']:.2f} Å)")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=7.5, rotation=25, ha="right")
+    ax.set_ylabel("Lattice-length MAE (Å)", fontsize=9)
+    ax.set_title("(b) Per-system lattice error", fontsize=9, loc="left")
+    ax.set_ylim(0, 5.2)
+    ax.legend(fontsize=6.5, frameon=False, loc="upper left")
+    for i, v in enumerate(lenmae):
+        if v != v:
+            ax.text(i, 0.2, "n/a", ha="center", fontsize=7, color="gray")
+        else:
+            ax.text(i, v + 0.1, f"{v:.2f}", ha="center", fontsize=6.5)
+
+    fig.suptitle(
+        "Classical Q-space indexer: wins on high-symmetry, fails on low-symmetry",
+        fontsize=10, y=1.04)
+    for ext in ("png", "pdf"):
+        fig.savefig(ROOT / f"fig4_indexer_bench.{ext}")
+    plt.close(fig)
+    print("wrote fig4_indexer_bench.{png,pdf}")
+
+
+def fig5_threeway_headline():
+    """Three-way head-to-head: ours (9.1.3) vs DiffractGPT (n=1000) vs PXRDnet (n=20).
+
+    Sources:
+      paper/phase9_results/p9_idxlat_n1000.json         (ours, n=1000)
+      paper/phase9_results/baseline_diffractgpt_n1000.json
+      paper/phase9_results/baseline_pxrdnet_sinc100_n20.json
+    """
+    def load(name):
+        return json.loads((ROOT / "phase9_results" / name).read_text())
+
+    ours = load("p9_idxlat_n1000.json")
+    dgpt = load("baseline_diffractgpt_n1000.json")
+    pxnt = load("baseline_pxrdnet_sinc100_n20.json")
+
+    systems = [
+        ("PXRD-Diff\n(ours, n=1000)", ours, CB["blue"]),
+        ("DiffractGPT\n(n=1000)",     dgpt, CB["orange"]),
+        ("PXRDnet\n(n=20)",           pxnt, CB["green"]),
+    ]
+
+    metrics = [
+        ("Match rate (%)",        "match_rate (StructureMatcher)", True),
+        ("All-correct (%)",       "headline_all_correct",          True),
+        ("Pearson (pred vs true)","pearson_mean",                  False),
+    ]
+
+    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.6), constrained_layout=True)
+    x = np.arange(len(systems))
+
+    for ax, (ylabel, key, pct) in zip(axes, metrics):
+        vals = [s[1][key] * (100 if pct else 1) for s in systems]
+        colors = [s[2] for s in systems]
+        ax.bar(x, vals, color=colors, edgecolor=CB["black"], linewidth=0.6)
+        ax.set_xticks(x)
+        ax.set_xticklabels([s[0] for s in systems], fontsize=7.5)
+        ax.set_ylabel(ylabel, fontsize=9)
+        ax.set_title(ylabel.split("(")[0].strip(), fontsize=9, loc="left")
+        for i, v in enumerate(vals):
+            fmt = f"{v:.1f}" if pct else f"{v:.2f}"
+            ax.text(i, v, fmt, ha="center", va="bottom", fontsize=7.5)
+        ax.margins(y=0.20)
+        ax.tick_params(axis="y", labelsize=8)
+
+    fig.suptitle(
+        "Open generative baselines on the same MP-20 evaluation harness",
+        fontsize=10, y=1.05)
+    for ext in ("png", "pdf"):
+        fig.savefig(ROOT / f"fig5_threeway_headline.{ext}")
+    plt.close(fig)
+    print("wrote fig5_threeway_headline.{png,pdf}")
+
+
 if __name__ == "__main__":
     fig1_ablation()
     fig2_training_curves()
     fig3_diffpxrd_validation()
+    fig4_indexer_bench()
+    fig5_threeway_headline()
     print("done.")

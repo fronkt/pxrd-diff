@@ -1,0 +1,32 @@
+{
+  "n": 1000,
+  "composition_match_rate": 1.0,
+  "rmsd_mean": 0.11398379065290695,
+  "rmsd_median": 0.10402487940289246,
+  "match_rate (StructureMatcher)": 0.015,
+  "rwp_mean": 11.43555304851258,
+  "pearson_mean": 0.3999331152098723,
+  "headline_all_correct": 0.001,
+  "sg_match@0.01": 0.017,
+  "sg_match@0.05": 0.015,
+  "sg_match@0.1": 0.013,
+  "sg_match@0.2": 0.009,
+  "config": {
+    "ckpt": "runs/gpu_v21_p9/ckpt_final.pt",
+    "n": 1000,
+    "true_lattice": false,
+    "lat_from_aux": false,
+    "lat_from_index": "paper/phase9_results/index_benchmark_v2_native.json",
+    "lat_from_index_topk": null,
+    "samples_per_cell": 4,
+    "sg_constrain_lat": false,
+    "noise_aug_eval": false,
+    "n_samples": 20,
+    "ensemble_eta": 0.0,
+    "refine_steps": 200,
+    "refine_lr": 0.001,
+    "refine_lattice": false,
+    "ddim_steps": 50,
+    "eta": 0.0
+  }
+}
