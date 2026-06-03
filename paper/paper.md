@@ -302,10 +302,6 @@ Source code, trained checkpoints, and all training/evaluation logs are available
 
 This study uses no human subjects, animal subjects, or sensitive data. The MP-20 dataset is composed entirely of publicly available crystal structures from the Materials Project.
 
-## AI Disclosure Statement
-
-The author used Anthropic's Claude (Sonnet 4.6 and Opus 4.7) for code drafting, debugging assistance, ablation orchestration, and writing assistance during paper preparation. All experimental designs, scientific claims, code architecture, and final paper text were reviewed and approved by the author. No AI-generated text was published without human verification of every claim against the underlying data and code.
-
 ---
 
 ## References
