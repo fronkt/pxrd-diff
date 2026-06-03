@@ -43,3 +43,4 @@ tasks/           # todo.md, lessons.md (agentic-eng-workflow)
 ## Compute
 - Phase 0–1: CPU only (Windows Python 3.12)
 - Phase 2+: rented cloud GPU (Vast.ai/RunPod RTX 3090)
+- Phase 3+: Cloud GPU 5090. 100+ DP
