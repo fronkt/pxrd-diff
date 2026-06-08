@@ -1,10 +1,9 @@
 # PXRD-Diff: An Honest Look at Conditional Diffusion for Powder Diffraction Inversion
 
 **Frank Cai**
-*Independent researcher*
 `frankyc11223@gmail.com`
 
-**Target venue:** ML4PS / AI4Mat workshop @ NeurIPS 2026
+
 **Track:** Methods / Negative results
 **Word budget:** ~4,500 words main text + appendix
 
