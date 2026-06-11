@@ -4,8 +4,6 @@ E(3)-equivariant conditional diffusion for inverting 1D powder X-ray diffraction
 
 **Core novelty:** differentiable Debye scattering loss as physics-informed training signal alongside denoising score matching.
 
-**Target venue:** AI4Mat or ML4PS workshop @ NeurIPS 2026.
-
 ## Status
 Phase 0 — Data pipeline + evaluation harness (no model code yet).
 
