@@ -1384,9 +1384,15 @@ diagnosis. Two load-bearing weaknesses: (M1) headline indexer lift within noise,
       tested) + scripts/run_phase12_multiseed.sh (≥3 seeds, both lattice sources)
       + 03_sample.py gained --seed and --per-sample-json (per-structure flag dump).
 
+**Multi-seed run LAUNCHED 2026-06-14** on vast.ai (70.21.1.69:16012, RTX 5090).
+Env bootstrapped (torch cu128, test cache rebuilt 0 fails), v21 ckpt transferred.
+Pipeline smoke-validated (per-sample dump confirmed on indexer path, n=24).
+`run_phase12_multiseed.sh` pid 1533 → /root/phase12.log; learned+indexer × seeds
+0/1/2, n=1000. Note: invalid-lattice structs are `continue`'d (matches Table 2
+methodology) so McNemar pairs on the common evaluable set. Fold pooled CIs +
+McNemar p into §5.2/Table 2 when done.
+
 **Outstanding for user (GPU / external):**
-- Run `bash scripts/run_phase12_multiseed.sh <v21_ckpt> 1000 "0 1 2"` on Vast.ai
-  → paired McNemar resolves whether the indexer lift is real. Fold into §5.2.
 - Optional: PXRDnet n=50–100 to test the all-correct hypothesis (§6).
 - Optional: M4 preprocessing sensitivity re-scoring.
 - Zenodo mint + repo public (C3); paper.tex regen from paper.md before camera-ready.
