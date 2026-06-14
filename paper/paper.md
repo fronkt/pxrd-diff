@@ -3,15 +3,13 @@
 **Frank Cai**
 `frankyc11223@gmail.com`
 
-
-**Track:** Methods / Negative results
-**Word budget:** ~4,500 words main text + appendix
+*Manuscript type: Article — methodological study with reproduction and negative results.*
 
 ---
 
 ## Abstract
 
-Inverting a 1D powder X-ray diffraction (PXRD) pattern to a 3D crystal structure remains open, and recent generative approaches report numbers under mutually incompatible protocols with failure modes seldom catalogued. We present **PXRD-Diff**, a 3.7 M-parameter conditional diffusion model on the CDVAE MP-20 split, and reproduce DiffractGPT [^DiffractGPT] and PXRDnet [^PXRDnet] through the *same* `pymatgen.StructureMatcher` harness. Our central, statistically robust finding is a **mechanism**: the learned PXRD encoder reaches a 0.007 auxiliary lattice-regression loss in isolation, but the denoiser cannot extract absolute d-spacings well enough to predict the lattice from scratch. A perturbation study locates a sharp sensitivity knee at ~0.5 Å cell error, and a true-lattice oracle lifts match from **1.6 % to 5.6 %** at n = 1000 — a gap whose 95 % Wilson confidence intervals ([1.0, 2.6] vs [4.3, 7.2]) do not overlap, so it is real. Replacing the learned lattice head with a classical Q-space autoindexer (de-Wolff dichotomy) raises no-true-lattice match from 1.0 % to 1.6 %; we report this lift honestly as **directional but not significant on aggregate** (unpaired two-proportion test p = 0.24), with the *per-crystal-system* breakdown — high-symmetry systems lift, low-symmetry do not — as the actual evidence that it works where its indexing MAE sits below the 0.5 Å knee. Reproduced baselines on our harness: **DiffractGPT 18.9 %** match (15.9 % all-correct) at n = 1000, **PXRDnet sinc100 30.0 %** match (5.0 % all-correct) at n = 20. PXRD-Diff is 12–19× behind on raw match rate. We note a striking *candidate* discrepancy — DiffractGPT recovers far more space groups (all-correct) than PXRDnet despite a lower match rate — but flag it as a hypothesis, not a result: at n = 20 the PXRDnet all-correct CI is [0.9, 23.6] and cannot support the comparison. The contributions that *do* hold are the encoder-bottleneck diagnosis, the indexer drop-in, the four-extension failure catalogue (top-K rerank, Debye guidance, Wyckoff embeddings, distance-aux), and the shared evaluation harness itself. Code, checkpoints, per-phase JSONs, and the differentiable Bragg simulator are released.
+Inverting a 1D powder X-ray diffraction (PXRD) pattern to a 3D crystal structure remains open, and recent generative approaches report numbers under mutually incompatible protocols with failure modes seldom catalogued. We present **PXRD-Diff**, a 3.7 M-parameter conditional diffusion model on the CDVAE MP-20 split, and reproduce DiffractGPT [^DiffractGPT] and PXRDnet [^PXRDnet] through the *same* `pymatgen.StructureMatcher` harness. Our central, statistically robust finding is a **mechanism**: the learned PXRD encoder reaches a 0.007 auxiliary lattice-regression loss in isolation, but the denoiser cannot extract absolute d-spacings well enough to predict the lattice from scratch. A perturbation study locates a sharp sensitivity knee at ~0.5 Å cell error, and a true-lattice oracle lifts match from **1.6 % to 5.6 %** at n = 1000; the 95 % Wilson confidence intervals ([1.0, 2.6] vs [4.3, 7.2]) do not overlap, so the gap is real. Replacing the learned lattice head with a classical Q-space autoindexer (de-Wolff dichotomy) raises no-true-lattice match from 1.0 % to 1.6 %. We report this lift honestly as **directional but not significant on aggregate** (unpaired two-proportion test p = 0.24); its actual evidence is the *per-crystal-system* breakdown, where high-symmetry systems lift and low-symmetry do not, exactly where the indexing MAE sits below the 0.5 Å knee. Reproduced baselines on our harness: **DiffractGPT 18.9 %** match (15.9 % all-correct) at n = 1000, **PXRDnet sinc100 30.0 %** match (5.0 % all-correct) at n = 20. PXRD-Diff is 12–19× behind on raw match rate. We note a striking *candidate* discrepancy, in which DiffractGPT recovers far more space groups (all-correct) than PXRDnet despite a lower match rate, but flag it as a hypothesis rather than a result: at n = 20 the PXRDnet all-correct CI is [0.9, 23.6] and cannot support the comparison. The contributions that *do* hold are the encoder-bottleneck diagnosis, the indexer drop-in, the four-extension failure catalogue (top-K rerank, Debye guidance, Wyckoff embeddings, distance-aux), and the shared evaluation harness itself. Code, checkpoints, per-phase JSONs, and the differentiable Bragg simulator are released.
 
 **Keywords:** powder X-ray diffraction; crystal-structure prediction; denoising diffusion; classical autoindexing; differentiable physics; ablation study; negative results
 
@@ -49,58 +47,78 @@ We build a small reproducible conditional diffusion model — **PXRD-Diff** — 
 
 ## 3. Method
 
-### 3.1 Problem
+### 3.1 Problem formulation
 
-Crystal $\mathcal{C} = (\mathbf{F}, \mathbf{Z}, \mathbf{L})$: fractional coords $\mathbf{F} \in [0,1)^{N \times 3}$, atomic numbers $\mathbf{Z}$, lattice $(a,b,c,\alpha,\beta,\gamma)$. Pattern $\mathbf{p}(\mathcal{C}) \in \mathbb{R}^{4251}$ on a Cu Kα 5–90° / 0.02° grid, max-normalised. Given $(\mathbf{p}, \mathbf{Z})$ we sample $(\mathbf{F}, \mathbf{L}) \sim p(\cdot | \mathbf{p}, \mathbf{Z})$. Known composition is a simplification consistent with prior work.
+Let $\mathcal{C} = (\mathbf{F}, \mathbf{Z}, \mathbf{L})$ denote a crystal structure with fractional coordinates $\mathbf{F} \in [0,1)^{N \times 3}$, atomic numbers $\mathbf{Z} \in \{1,\ldots,100\}^N$, and a $3 \times 3$ lattice matrix $\mathbf{L}$ parametrised by $(a,b,c,\alpha,\beta,\gamma) \in \mathbb{R}^6$. Let $\mathbf{p}(\mathcal{C}) \in \mathbb{R}^{4251}$ be the simulated Cu Kα PXRD pattern on a fixed 2θ grid from 5° to 90° at 0.02° resolution, normalised to maximum intensity 1.
 
-### 3.2 Architecture
+We are given $\mathbf{p}$ and $\mathbf{Z}$ at test time, and we wish to sample $(\mathbf{F}, \mathbf{L}) \sim p(\,\cdot\, | \mathbf{p}, \mathbf{Z})$. Note that the composition $\mathbf{Z}$ being known is a meaningful simplification — in practice one usually knows the chemistry from synthesis — but it is consistent with prior work on the same task.
 
-Three trained components: PXRD encoder, denoiser, auxiliary lattice head.
+### 3.2 Architecture overview
 
-**PXRD encoder.** A 1D ResNet, four blocks ($64\to128\to256\to256$, stride-2, GroupNorm, SiLU), exposing a pooled global vector $\mathbf{g} \in \mathbb{R}^{256}$ and a multi-resolution feature map $\mathbf{F}_{\text{pxrd}}$ (1×1-projected block outputs concatenated along the spatial axis). *Multi-resolution is critical*: an early run (`gpu_v4`) conditioned only on $\mathbf{g}$ via additive broadcast and never moved off the 3.0 random coord-loss baseline, despite the aux head reaching 0.007 — `AdaptiveAvgPool1d(1)` collapsed all spectral structure before it reached the denoiser.
+PXRD-Diff has three trained components: a PXRD encoder, a denoiser, and a small auxiliary lattice head used only during training.
 
-**Denoiser.** A periodic-distance message-passing net, $L=3$, $d_\text{model}=256$. Atom embeddings $\mathbf{h}_i^{(0)} = \text{Emb}(\mathbf{Z}_i) + W_\text{coord}\mathbf{F}_i^{(t)}$ alternate (i) RBF message passing on min-image periodic distances with FiLM timestep conditioning and (ii) cross-attention from atoms to $\mathbf{F}_{\text{pxrd}}$. Two heads predict per-atom $\boldsymbol{\epsilon}_F$ and lattice $\boldsymbol{\epsilon}_L \in \mathbb{R}^6$. The lattice head is an MLP on $[\bar{\mathbf{h}};\, \mathbf{g};\, W_\text{lat}\boldsymbol{\ell}^{(t)};\, \mathbf{t}_\text{cond}]$ — note the explicit projection of the noisy lattice itself (see §3.4).
+**PXRD encoder.** A 1D ResNet of four blocks (channels $64 \to 128 \to 256 \to 256$, stride-2 downsampling, GroupNorm, SiLU) ingesting the standardised pattern. We expose two outputs: a global pooled vector $\mathbf{g} \in \mathbb{R}^{256}$ and a multi-resolution feature map $\mathbf{F}_{\text{pxrd}} \in \mathbb{R}^{L \times 256}$ obtained by 1×1-projecting each block output to $d_\text{model}$ and concatenating along the spatial axis. *The multi-resolution map is critical.* In an early run (referred to as `gpu_v4` in our logs) we conditioned the denoiser on $\mathbf{g}$ only via additive broadcast, and the coordinate loss never moved off the random baseline of 3.0 — the auxiliary head told us the encoder was learning useful features (its loss dropped from 0.99 to 0.007), but the `AdaptiveAvgPool1d(1)` collapse destroyed all spectral structure before it could reach the denoiser.
 
-**Auxiliary head.** A diagnostic MLP predicting $(a,b,c,\alpha,\beta,\gamma)$ from $\mathbf{g}$ alone, MSE-trained; its loss does not flow back into the denoiser.
+**Denoiser.** A periodic-distance message-passing network with $L = 3$ layers and $d_\text{model} = 256$. Atom embeddings $\mathbf{h}_i^{(0)} = \text{Emb}(\mathbf{Z}_i) + W_\text{coord}\mathbf{F}_i^{(t)}$ are updated by alternating (i) message passing over RBF-encoded periodic Cartesian distances under minimum-image convention, with timestep FiLM conditioning, and (ii) cross-attention from atoms (queries) to multi-resolution PXRD features (keys/values). Two output heads predict per-atom coordinate noise $\boldsymbol{\epsilon}_F \in \mathbb{R}^{N \times 3}$ and lattice noise $\boldsymbol{\epsilon}_L \in \mathbb{R}^6$. The lattice head is a small MLP applied to $[\,\bar{\mathbf{h}}\,;\, \mathbf{g}\,;\, W_\text{lat}\boldsymbol{\ell}^{(t)}\,;\, \mathbf{t}_\text{cond}\,]$ — that is, the pooled atom features, the global PXRD embedding, **a projection of the noisy lattice itself**, and the timestep encoding (see §3.4).
+
+**Auxiliary head.** A single-hidden-layer MLP that predicts $(a,b,c,\alpha,\beta,\gamma)$ from $\mathbf{g}$ alone, trained with an MSE loss against the (normalised) ground-truth lattice. Its purpose is purely diagnostic — to expose whether the encoder is learning any lattice-relevant representation — and its loss does not flow back into the denoiser.
 
 ### 3.3 Differentiable Bragg structure-factor loss
 
-We implement the structure factor $F(hkl) = \sum_j f_j(s) \exp(-B_\text{iso} s^2) \exp[2\pi i (hx_j+ky_j+lz_j)]$ in PyTorch, with four-Gaussian form factors from `pymatgen.ATOMIC_SCATTERING_PARAMS`, $B_\text{iso} = 0.5$ Å², $s = \sin\theta/\lambda$. Intensity $|F|^2$ × Lorentz-polarisation. We enumerate $|h|,|k|,|l| \le 5$ (1330 reflections), place each on a 2θ grid via Bragg's law, and broadcast Gaussians of FWHM 0.1° onto a 256-bin coarse grid; fully batch-vectorised.
+The core physics-informed contribution. We implement, in PyTorch,
+$$
+F(hkl) = \sum_j f_j(s) \exp\!\left(-B_{\text{iso}} s^2\right) \exp\!\left[2\pi i\,(h x_j + k y_j + l z_j)\right],
+$$
+where $f_j(s) = \sum_{k=1}^4 a_k \exp(-b_k s^2)$ is the four-Gaussian atomic form factor (coefficients pulled directly from `pymatgen.analysis.diffraction.xrd.ATOMIC_SCATTERING_PARAMS`), $s = \sin\theta/\lambda$, and $B_{\text{iso}} = 0.5$ Å² is a uniform isotropic temperature factor. The intensity at each reflection is $|F(hkl)|^2$ multiplied by the standard Lorentz-polarisation correction. We enumerate all $(h,k,l)$ with $|h|,|k|,|l| \le 5$ (1330 reflections after excluding the origin), place each on the 2θ grid via Bragg's law, and broadcast each reflection as a Gaussian peak with FWHM 0.1° to obtain a continuous, differentiable PXRD pattern on a 256-bin coarse grid. The whole module is a single `nn.Module`, fully vectorised over the batch dimension.
 
-**Validation.** Pearson vs `pymatgen.XRDCalculator` on 50 random MP-20 test structures: mean 0.962, std 0.027, min 0.896, max 0.998; 50/50 > 0.7 and gradients through $F$ verified non-zero.
+**Validation.** On 50 random MP-20 test structures we compute the Pearson correlation between our differentiable pattern and the `pymatgen.XRDCalculator` reference: mean 0.962, std 0.027, min 0.896, max 0.998. All 50/50 correlations exceed 0.7 and we verified non-zero gradients through the structure factor with respect to fractional coordinates.
 
 ![**Figure 1. Differentiable-simulator validation.** Distribution of Pearson correlation between the PyTorch DiffPXRD module and `pymatgen.XRDCalculator` over 50 random MP-20 test structures (mean 0.962). All 50 exceed 0.7; the lower tail is dominated by layered structures with strong texture in the reference.](fig3_diffpxrd_validation.pdf){#fig:validation}
 
-**As a loss.** Recover $\hat{\mathbf{F}}$ (see §3.4), simulate $\hat{\mathbf{p}} = \text{DiffPXRD}(\hat{\mathbf{F}}, \mathbf{Z}, \mathbf{L}_\text{true})$, take $\mathcal{L}_\text{Debye} = 1 - \rho(\hat{\mathbf{p}}, \mathbf{p})$. We use the true lattice here because the simulator is more sensitive to lattice than coordinate error early in training, and disentangling is more stable.
+**As a loss.** During training we recover an estimate $\hat{\mathbf{F}}$ of the clean coordinates from the model output (see §3.4), simulate $\hat{\mathbf{p}} = \text{DiffPXRD}(\hat{\mathbf{F}}, \mathbf{Z}, \mathbf{L}_\text{true})$, and compare with the input pattern via a Pearson-correlation loss $\mathcal{L}_\text{Debye} = 1 - \rho(\hat{\mathbf{p}}, \mathbf{p})$. We use the true lattice for this auxiliary loss because the differentiable simulator is more sensitive to lattice errors than to coordinate errors at the early stages of training, and disentangling the two signals proved more stable.
 
 ### 3.4 Training objective
 
-VP-SDE with cosine schedule [^NicholDhariwal] for both channels. Coords are diffused on $\mathbb{T}^3$ with periodic-difference loss; lattices are diffused in $\mathbb{R}^6$ after train-set standardisation. The full loss (run `gpu_v13`) is
+We use a VP-SDE with cosine schedule [^NicholDhariwal] for both channels:
 $$
-\mathcal{L} = \mathcal{L}_\text{coord} + 0.1\,\mathcal{L}_\text{lat} + 0.5\,\mathcal{L}_\text{aux} + 1.0\,\mathcal{L}_\text{Debye}.
+\bar{\alpha}(t) = \cos^2\!\left(\frac{\pi}{2} \cdot \frac{t + s}{1 + s}\right),\quad s = 0.008,\quad t \in [0,1].
 $$
+Coordinates are diffused on the flat torus $\mathbb{T}^3$ by wrapping the noisy sample to $[0,1)^3$; the loss is computed on the periodic difference $(\hat{\mathbf{F}} - \mathbf{F} + 0.5) \bmod 1 - 0.5$. Lattice parameters are diffused in $\mathbb{R}^6$ after standardisation by the train-set mean and standard deviation.
 
-**Two load-bearing parameterisation choices** (both found by ablation):
+The full training objective (best configuration, run `gpu_v13`) is
+$$
+\mathcal{L} = \mathcal{L}_\text{coord} + \lambda_\text{lat}\,\mathcal{L}_\text{lat} + \lambda_\text{aux}\,\mathcal{L}_\text{aux} + \lambda_\text{Debye}\,\mathcal{L}_\text{Debye},
+$$
+with $\lambda_\text{lat} = 0.1$, $\lambda_\text{aux} = 0.5$, $\lambda_\text{Debye} = 1.0$.
 
-*x₀-residual prediction.* Heads predict a residual added to the noisy input to give the clean estimate, $\hat{\mathbf{F}}^{(0)} = \mathbf{F}^{(t)} + \text{Head}(\mathbf{h})$. Heads initialised near zero make the model start as identity — a correct fixed point at $t \approx 1$. ε-prediction has to learn the full transform from random init and never recovered. 3.5× lift in the headline (§5.2).
+**Two non-trivial parameterisation choices.** Both are essential and were arrived at by ablation, not foresight.
 
-*Lattice-head input.* The head reads the noisy lattice $\boldsymbol{\ell}^{(t)}$ explicitly. Without this it can only predict the unconditional mean, and its loss stays pinned at 1.0 forever; with it, loss drops to 0.02–0.06. A textbook denoising bug that produced a plausible-looking run for days before we noticed.
+*x₀-residual prediction.* Rather than asking the model to predict noise $\boldsymbol{\epsilon}$, the heads predict a **residual** that is added to the noisy input to obtain the clean estimate:
+$$
+\hat{\mathbf{F}}^{(0)} = \mathbf{F}^{(t)} + \text{Coord-Head}(\mathbf{h}),\quad
+\hat{\boldsymbol{\ell}}^{(0)} = \boldsymbol{\ell}^{(t)} + \text{Lat-Head}(\cdot).
+$$
+Because the heads are MLPs initialised to output near-zero, this means the model starts as the identity transform — at $t \approx 1$ (near pure noise) the model outputs the noisy input as its $\hat{\mathbf{F}}^{(0)}$ estimate, which is wrong but at least bounded; ε-prediction with the same architecture had to learn the entire transform from random initialisation and never recovered. This single change accounts for a 3.5× lift in the headline metric (see §5.2).
 
-§5.3 reports two extensions that failed: a **Wyckoff-site embedding** (added to atom features) and an auxiliary **distance-matrix loss**.
+*Lattice-head input.* The lattice head reads the noisy lattice $\boldsymbol{\ell}^{(t)}$ as an explicit input feature. Without this — i.e. if the head only sees the (clean) lattice that is also passed to the denoiser as the geometry context — the head can only ever predict the unconditional mean noise, $\mathbb{E}[\boldsymbol{\epsilon}] = 0$, and its loss stays pinned at the random baseline of 1.0 forever. With this fix, the lattice loss drops to 0.02–0.06 on stable runs.
+
+We also experimented with two extensions that did not pan out (§5.4): a **Wyckoff-site embedding** added to atom features, and an auxiliary **distance-matrix loss** in which a pairwise MLP predicts ground-truth periodic distances between atoms. Both are documented in the released code behind the `--use-wyckoff` and `--dist-weight` flags.
 
 ### 3.5 Classical indexing as a drop-in for the learned lattice head
 
-The lattice head is the *only* path encoding absolute d-spacings — every 2θ peak position is set by the lattice via Bragg's law. §5.5 shows the encoder + denoiser learns *relative* d-spacings (predicted-vs-target Pearson 0.43, vs 0.97 target-vs-ground-truth) but not the absolute scale. Classical Q-space autoindexing has solved this sub-problem since the 1970s in CPU milliseconds.
+The lattice head described in §3.2 is the *only* path by which the model encodes absolute d-spacings: every Bragg reflection 2θ position is set by the lattice through Bragg's law, so the lattice parameters are the absolute reference frame against which all peak positions in the input pattern must be interpreted. As §5.5 shows, the encoder + denoiser learns *relative* d-spacing structure (Pearson 0.43 between predicted and target patterns at evaluation time, vs 0.97 between target and ground truth) but not the absolute scale. Classical autoindexing — extracting peak positions, mapping them to Q-space (Q = 4π sinθ/λ), and fitting a unit cell by enumeration of (h,k,l) → Q²(h,k,l) — has solved this sub-problem since the 1970s and runs on a CPU in milliseconds per pattern.
 
-We implement a from-scratch Q-space autoindexer taking (i) the same simulated pattern, (ii) the known crystal system (Bravais code, a sampling-time hyperparameter), returning $(a,b,c,\alpha,\beta,\gamma)$. Peak picking is a 1D local-max filter with an intensity floor; the candidate Q-vector is least-squares fit to the de-Wolff dichotomy form for each Bravais lattice. At sampling time the indexer's lattice substitutes the lattice channel at $t=T$ and DDIM runs only on coordinates.
+We implement a from-scratch Q-space autoindexer that takes (i) the same simulated PXRD pattern fed to the encoder, (ii) the known crystal system (input as Bravais code, exposed as a sampling-time hyperparameter), and returns a candidate (a, b, c, α, β, γ). Peak picking uses a 1D local-maximum filter with a relative-intensity floor; the candidate Q-vector is fit by least squares to the de-Wolff dichotomy parameter form for each Bravais lattice. At sampling time we run the indexer first, substitute its output for the lattice channel of the diffusion sampler, and run DDIM only on the coordinate channel.
 
-**Per-system accuracy (n = 1000).** Overall: 48.8 % strict cell match, 1.45 Å mean length MAE. Hex 77.9 % / 0.53 Å; ortho 59.8 % / 0.96 Å; trig 43.3 % / 4.62 Å; mono 18.9 % / 1.76 Å; triclinic 0 %. Low-symmetry systems (≥4 free parameters) saturate the de-Wolff hypothesis cap. A GSAS-II [^GSASII] adapter for the low-symmetry path ships behind `--use-gsas` but `DoIndexPeaks` hangs on real MP-20 monoclinic/triclinic patterns inside `findBestCell` — experimental, not headline.
+**Per-system accuracy (n = 1000 MP-20 test).** Native indexer overall: 48.8 % strict cell match, 1.45 Å mean cell-length MAE. Per crystal system: hexagonal 77.9 % / 0.53 Å, orthorhombic 59.8 % / 0.96 Å, trigonal 43.3 % / 4.62 Å, monoclinic 18.9 % / 1.76 Å, triclinic 0 %. The low-symmetry blowup (monoclinic and triclinic each have ≥ 4 free cell parameters and the de-Wolff search becomes hypothesis-capped) is the dominant remaining error. We ship a GSAS-II [^GSASII] adapter (`src/pxrd_diff/indexer_gsas.py`) for the low-symmetry path behind a `--use-gsas` opt-in flag; in practice `DoIndexPeaks` hangs on real MP-20 monoclinic/triclinic patterns inside `findBestCell` and is documented experimental rather than headline.
 
-Training is unchanged; the diffusion sampler is unchanged except for the lattice-channel substitution at $t=T$.
+The indexer is a *drop-in* in the strongest sense: training is unchanged, the diffusion sampler is unchanged except for the lattice-channel substitution at t = T, and the headline metric (§5.2) reports both with and without the indexer for direct comparison.
 
 ### 3.6 Sampling
 
-DDIM [^DDIM], 50 steps, $\eta=0$, alternating updates on each channel; coords wrapped to $[0,1)$ each step. Predicted lattice de-standardised and clipped to $(a,b,c) \in [0.5,100]$ Å, $(\alpha,\beta,\gamma) \in [10°,170°]$. In the x₀-residual variant we clamp the implicit-ε denominator $\sqrt{1-\bar{\alpha}(t)}$ at 0.05 and skip the final DDIM step to avoid NaN coordinates near $t=0$.
+DDIM [^DDIM] with 50 steps and $\eta = 0$. We start from independent standard Gaussian noise on the lattice and on the (un-wrapped) coordinates, then alternate the standard DDIM update on each channel. Coordinates are wrapped to $[0,1)$ after every step. Predicted lattice parameters are de-standardised at the end and clipped to physically valid ranges $(a,b,c) \in [0.5, 100]$ Å, $(\alpha,\beta,\gamma) \in [10°, 170°]$ before being passed to `pymatgen.Lattice.from_parameters`.
+
+A subtle bug fix is worth noting. In the x₀-residual variant, recovering the implicit ε for the DDIM update requires dividing by $\sqrt{1-\bar{\alpha}(t)}$; near $t = 0$ this denominator vanishes. We clamp it to 0.05 and skip the very last DDIM step when sampling, which removed a class of structures with NaN coordinates that we initially saw.
 
 ---
 
