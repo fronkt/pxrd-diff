@@ -1341,3 +1341,54 @@ No retraining. Pure offline measurement on the MP-20 test split.
   + manual cleanup is its own task — flag for a separate session
   before camera-ready submission.
 - Crystalyze checkpoint download link still inactive — recheck monthly.
+
+## Phase 12 — Journal submission prep (target: Digital Discovery, RSC) — 2026-06-14
+
+Triggered by /academic-paper full peer-review pass. Verdict on the Phase 11
+workshop draft: **Major Revision (6.4/10), borderline Minor** against a
+full-journal bar. Strengths: shared-harness reproduction + encoder-bottleneck
+diagnosis. Two load-bearing weaknesses: (M1) headline indexer lift within noise,
+(M2) the "all-correct reversal" rests on PXRDnet n=20. Strategy chosen by user:
+**reframe now + prep multi-seed scripts (both)**.
+
+**Statistics established this session (no GPU; binomial/Wilson on existing n):**
+- learned-head 1.0% [0.5,1.8]; indexer 1.6% [1.0,2.6]; oracle 5.6% [4.3,7.2] (n=1000)
+- indexer vs learned-head: unpaired two-prop z=1.18, **p=0.24 — NOT significant**.
+  Paired McNemar needs per-structure flags (→ rerun script dumps them).
+- oracle vs indexer: CIs disjoint → **oracle gap is real/significant**. Claim stands.
+- DGpt all-correct 15.9% [13.8,18.3] vs PXRDnet all-correct 5.0% [0.9,23.6] →
+  **CIs overlap; "reversal" not statistically established** → demote to hypothesis.
+
+**Round-1 revision checklist (done 2026-06-14, NOT pushed):**
+- [x] C1 — placeholder WrenzcuckPhysML2025 replaced with Segal et al. 2025
+      (arXiv:2512.04036; now also corroborates §5.4) + Guo & Schwalbe-Koda 2026.
+      All 4 new refs (Segal, GuoSchwalbeKoda, deCIFer, Boultif) web-verified.
+- [x] C2 — paper.md footnotes ↔ references.bib synced; published PXRDnet cited
+      (Nat. Mater. 2025, 24, 1726–1734); deCIFer authors (Johansen et al., TMLR)
+      and PXRDnet authors filled; unverifiable DGpt preprint note removed.
+- [~] C3 — Data Availability now has repo URL + Zenodo DOI placeholder.
+      ACTION (user): make repo public / mint Zenodo snapshot, insert real DOI.
+- [x] M1/M2 — reframed abstract, §1, §5.2, §5.3, §6, §7, §8. Wilson CIs added to
+      Tables 2 & 3; aggregate indexer lift stated as directional+nonsignificant
+      (p=0.24); "all-correct reversal" demoted to hypothesis (overlapping CIs).
+      PENDING GPU: paired McNemar from multi-seed reruns → fold into §5.2/Table 2.
+- [x] M3 — all 5 figures now embedded (validation, ablation, indexer, three-way,
+      training-curves); duplicate Figure 2 removed; Related Work gained classical-
+      indexing + deCIFer paragraphs. PARTIAL: full Method-section restoration to
+      journal length still to do (currently 5,972 words; target ~7–9k).
+- [~] M4 — cross-preprocessor caveat added to §7. PENDING GPU: matched-vs-native
+      re-scoring sensitivity check on a structure subset.
+- [x] minors — title made descriptive. REMAINING: em-dash density pass; abstract
+      could lead with the conceptual finding.
+- [x] scripts — scripts/stats_ci.py (Wilson + 2-prop + exact McNemar; smoke-
+      tested) + scripts/run_phase12_multiseed.sh (≥3 seeds, both lattice sources)
+      + 03_sample.py gained --seed and --per-sample-json (per-structure flag dump).
+
+**Outstanding for user (GPU / external):**
+- Run `bash scripts/run_phase12_multiseed.sh <v21_ckpt> 1000 "0 1 2"` on Vast.ai
+  → paired McNemar resolves whether the indexer lift is real. Fold into §5.2.
+- Optional: PXRDnet n=50–100 to test the all-correct hypothesis (§6).
+- Optional: M4 preprocessing sensitivity re-scoring.
+- Zenodo mint + repo public (C3); paper.tex regen from paper.md before camera-ready.
+- Full Method-section expansion to journal length (M3 remainder).
+- NOT pushed — awaiting user review of the diff.

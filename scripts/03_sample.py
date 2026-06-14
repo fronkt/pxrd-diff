@@ -167,7 +167,19 @@ def main():
                          "without --noise-aug.")
     ap.add_argument("--out-json", default=None,
                     help="If set, write aggregate metrics JSON here")
+    ap.add_argument("--seed", type=int, default=42,
+                    help="RNG seed for torch/numpy (Phase 12: multi-seed CIs)")
+    ap.add_argument("--per-sample-json", default=None,
+                    help="If set, dump per-structure flags as JSONL (one row per "
+                         "material) for paired McNemar / bootstrap re-analysis")
     args = ap.parse_args()
+
+    # Seed everything so multi-seed reruns are reproducible and so a paired
+    # McNemar test across lattice sources sees the same material order/noise.
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -692,6 +704,22 @@ def main():
                   f"sg@0.1={sg_ok}  rmsd={rmsd_str}  rwp={m.rwp:.3f}  "
                   f"pearson={m.pearson:.3f}  all={'Y' if m.all_correct else 'N'}")
 
+    # Per-structure flag dump (Phase 12): enables a paired McNemar test across
+    # lattice sources and bootstrap CIs that the aggregate JSON cannot support.
+    if args.per_sample_json and metrics_list:
+        with open(args.per_sample_json, "w") as f:
+            for m in metrics_list:
+                f.write(json.dumps({
+                    "material_id": m.material_id,
+                    "seed": args.seed,
+                    "composition_ok": bool(m.composition_ok),
+                    "match": bool(not np.isnan(m.rmsd)),
+                    "sg_match@0.1": bool(m.sg_match.get(0.1, False)),
+                    "rmsd": None if np.isnan(m.rmsd) else float(m.rmsd),
+                    "all_correct": bool(m.all_correct),
+                }) + "\n")
+        print(f"Wrote per-sample flags to {args.per_sample_json}")
+
     # Aggregate
     if metrics_list:
         agg = aggregate(metrics_list)
@@ -720,6 +748,7 @@ def main():
                 "refine_lattice": args.refine_lattice,
                 "ddim_steps": args.ddim_steps,
                 "eta": args.eta,
+                "seed": args.seed,
             }
             if use_index_topk and picked_cell_ranks:
                 from collections import Counter
