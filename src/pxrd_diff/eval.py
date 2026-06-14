@@ -18,6 +18,7 @@ This combined "all-of-three" criterion is the headline metric for the paper.
 """
 from __future__ import annotations
 
+import signal
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
@@ -29,6 +30,21 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 # Tolerances at which to evaluate space group recovery.
 SG_TOLS = (0.01, 0.05, 0.1, 0.2)
 DEFAULT_RMSD_THRESHOLD = 0.1   # Angstrom; tunable in ablations.
+
+# StructureMatcher.get_rms_dist with attempt_supercell=True can hang for hours on
+# pathological predicted cells (combinatorial supercell blowup). Bound each match
+# to this many seconds; a structure that cannot be matched in bounded time is
+# treated as a non-match (NaN), consistent with the "match" semantics used here.
+STRUCTUREMATCH_TIMEOUT_S = 20
+_HAVE_ALARM = hasattr(signal, "SIGALRM")  # POSIX only; no-op on Windows
+
+
+class _MatchTimeout(Exception):
+    pass
+
+
+def _on_alarm(signum, frame):
+    raise _MatchTimeout()
 
 
 # ---------- Structure-domain metrics ------------------------------------------------
@@ -54,10 +70,17 @@ def coord_rmsd(pred: Structure, true: Structure,
     """
     matcher = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
                                primitive_cell=False, scale=True, attempt_supercell=True)
+    if _HAVE_ALARM:
+        old_handler = signal.signal(signal.SIGALRM, _on_alarm)
+        signal.alarm(STRUCTUREMATCH_TIMEOUT_S)
     try:
-        rms = matcher.get_rms_dist(pred, true)
+        rms = matcher.get_rms_dist(pred, true)   # _MatchTimeout if it overruns
     except Exception:
         return float("nan")
+    finally:
+        if _HAVE_ALARM:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
     if rms is None:
         return float("nan")
     return float(rms[0])    # (rms, max) tuple -> rms
