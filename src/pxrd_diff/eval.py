@@ -18,7 +18,7 @@ This combined "all-of-three" criterion is the headline metric for the paper.
 """
 from __future__ import annotations
 
-import signal
+import multiprocessing as _mp
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
@@ -31,20 +31,13 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 SG_TOLS = (0.01, 0.05, 0.1, 0.2)
 DEFAULT_RMSD_THRESHOLD = 0.1   # Angstrom; tunable in ablations.
 
-# StructureMatcher.get_rms_dist with attempt_supercell=True can hang for hours on
-# pathological predicted cells (combinatorial supercell blowup). Bound each match
-# to this many seconds; a structure that cannot be matched in bounded time is
-# treated as a non-match (NaN), consistent with the "match" semantics used here.
-STRUCTUREMATCH_TIMEOUT_S = 20
-_HAVE_ALARM = hasattr(signal, "SIGALRM")  # POSIX only; no-op on Windows
-
-
-class _MatchTimeout(Exception):
-    pass
-
-
-def _on_alarm(signum, frame):
-    raise _MatchTimeout()
+# spglib (SpacegroupAnalyzer) and StructureMatcher.get_rms_dist (attempt_supercell)
+# are C-extension calls that can hang for hours on pathological predicted cells.
+# A Python signal/alarm cannot interrupt a C call, so we run the structure-domain
+# comparison in a worker process and HARD-KILL it on overrun. A structure that
+# cannot be scored in bounded time is treated as a non-match (NaN rmsd, sg=miss),
+# consistent with the "match" semantics used throughout.
+STRUCTUREMATCH_TIMEOUT_S = 30
 
 
 # ---------- Structure-domain metrics ------------------------------------------------
@@ -66,24 +59,68 @@ def coord_rmsd(pred: Structure, true: Structure,
 
     Uses pymatgen's StructureMatcher with default-ish CDVAE-style tolerances. The
     matcher handles permutation/translation/rotation; what comes back is a single
-    scalar Angstrom value comparable across structures of different sizes.
+    scalar Angstrom value comparable across structures of different sizes. NOTE: in
+    the evaluation loop this is called via `structure_domain_metrics` so it runs
+    under a hard process timeout; called directly it has no timeout.
     """
     matcher = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
                                primitive_cell=False, scale=True, attempt_supercell=True)
-    if _HAVE_ALARM:
-        old_handler = signal.signal(signal.SIGALRM, _on_alarm)
-        signal.alarm(STRUCTUREMATCH_TIMEOUT_S)
     try:
-        rms = matcher.get_rms_dist(pred, true)   # _MatchTimeout if it overruns
+        rms = matcher.get_rms_dist(pred, true)
     except Exception:
         return float("nan")
-    finally:
-        if _HAVE_ALARM:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, old_handler)
     if rms is None:
         return float("nan")
     return float(rms[0])    # (rms, max) tuple -> rms
+
+
+# ---------- Hard-timeout wrapper for the C-heavy structure-domain ops ----------------
+
+def _struct_domain_worker(pred: Structure, true: Structure,
+                          sg_tols, ltol, stol, angle_tol):
+    """Run in a worker process: space-group match across tols + coord RMSD."""
+    sg = {}
+    for tol in sg_tols:
+        sg_p = space_group_number(pred, symprec=tol)
+        sg_t = space_group_number(true, symprec=tol)
+        sg[tol] = (sg_p == sg_t and sg_p > 0)
+    return sg, coord_rmsd(pred, true, ltol, stol, angle_tol)
+
+
+# A single reusable "spawn" worker (spawn, not fork: the parent holds a CUDA
+# context after sampling, and fork-after-CUDA is unsafe). Recreated after a kill.
+_POOL = None
+
+
+def _get_pool():
+    global _POOL
+    if _POOL is None:
+        _POOL = _mp.get_context("spawn").Pool(processes=1)
+    return _POOL
+
+
+def structure_domain_metrics(pred: Structure, true: Structure,
+                             sg_tols=SG_TOLS, ltol=0.2, stol=0.3, angle_tol=5.0,
+                             timeout: int = STRUCTUREMATCH_TIMEOUT_S):
+    """(sg_match dict, rmsd) computed under a hard process timeout.
+
+    On overrun the worker is terminated and recreated, and we return a clean miss
+    (all sg False, NaN rmsd) so one pathological structure cannot stall the run.
+    """
+    global _POOL
+    try:
+        res = _get_pool().apply_async(
+            _struct_domain_worker, (pred, true, sg_tols, ltol, stol, angle_tol))
+        return res.get(timeout=timeout)
+    except _mp.TimeoutError:
+        try:
+            _POOL.terminate(); _POOL.join()
+        except Exception:
+            pass
+        _POOL = None  # force a fresh worker next call
+        return ({t: False for t in sg_tols}, float("nan"))
+    except Exception:
+        return ({t: False for t in sg_tols}, float("nan"))
 
 
 # ---------- Pattern-domain metrics --------------------------------------------------
@@ -131,16 +168,13 @@ class SampleMetrics:
 def evaluate_one(material_id: str,
                  pred_struct: Structure, true_struct: Structure,
                  pred_pattern: np.ndarray, true_pattern: np.ndarray) -> SampleMetrics:
-    sg_match = {}
-    for tol in SG_TOLS:
-        sg_p = space_group_number(pred_struct, symprec=tol)
-        sg_t = space_group_number(true_struct, symprec=tol)
-        sg_match[tol] = (sg_p == sg_t and sg_p > 0)
+    # spglib + StructureMatcher run under a hard process timeout (see above).
+    sg_match, rmsd = structure_domain_metrics(pred_struct, true_struct)
     return SampleMetrics(
         material_id=material_id,
         composition_ok=composition_match(pred_struct, true_struct),
         sg_match=sg_match,
-        rmsd=coord_rmsd(pred_struct, true_struct),
+        rmsd=rmsd,
         rwp=rwp(pred_pattern, true_pattern),
         pearson=r_pearson(pred_pattern, true_pattern),
     )
