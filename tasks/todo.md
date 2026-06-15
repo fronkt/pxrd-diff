@@ -1393,11 +1393,19 @@ diagnosis. Two load-bearing weaknesses: (M1) headline indexer lift within noise,
 - Validated: learned-mode n=60 smoke completes in 223s, no hang (was infinite).
 - Box #2 (108.255.76.60:55232, RTX 5090, 128 cores): bootstrapped (torch cu128,
   cache rebuilt 0 fails), v21 ckpt transferred, repo at 73efd06.
-- `run_phase12_multiseed.sh` pid 6056 → /root/phase12.log; learned+indexer × seeds
-  0/1/2, n=1000. Watcher b0qtkdn0z waits for completion.
-- Note: invalid-lattice structs are `continue`'d (matches Table 2 methodology) so
-  McNemar pairs on the common evaluable set. Fold pooled CIs + McNemar p into
-  §5.2/Table 2 when done.
+- `run_phase12_multiseed.sh` learned+indexer × seeds 0/1/2, n=1000 — **COMPLETE**.
+
+**RESULT (folded into paper 2026-06-14):**
+- Indexer pooled 46/3000 = **1.5% [1.2, 2.0]** (reproduces published 1.6%).
+- Learned-head pooled **0/1949 = 0.0% [0.0, 0.2]** (matched nothing across 3 seeds;
+  the single-seed 1.0% in Table 2 is within run-to-run noise of zero).
+- **Paired McNemar (match): p < 1e-4** (b=27 fixed, c=0 broken) → indexer lift is
+  SIGNIFICANT. The earlier unpaired p=0.24 was just underpowered.
+- all_correct paired: p=0.13 (4 vs 0) → NOT significant (indexer fixes cell, not SG).
+- Artifacts committed: paper/phase9_results/phase12_multiseed/{learned,indexer}_s{0,1,2}.
+  {json,per_sample.jsonl,log}.
+- Paper updated: abstract, §1.3, §5.2 (+Table 2 caption + new paired-test para),
+  §7 Statistics, §8 conclusion — all now report the significant paired result.
 
 **Outstanding for user (GPU / external):**
 - Optional: PXRDnet n=50–100 to test the all-correct hypothesis (§6).

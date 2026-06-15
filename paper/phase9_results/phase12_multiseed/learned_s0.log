@@ -1,0 +1,619 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Phase 4.1: ensemble n_samples=20, eta=0.0
+Phase 4.2: Rietveld refinement steps=200, lr=0.001, refine_lattice=False
+Parsing test CIFs:   0%|          | 0/9046 [00:00<?, ?it/s]Parsing test CIFs:   0%|          | 23/9046 [00:00<00:39, 226.02it/s]Parsing test CIFs:   1%|          | 46/9046 [00:00<00:49, 180.70it/s]Parsing test CIFs:   1%|          | 70/9046 [00:00<00:47, 187.91it/s]Parsing test CIFs:   1%|          | 90/9046 [00:00<00:47, 186.66it/s]Parsing test CIFs:   1%|          | 109/9046 [00:00<00:49, 180.24it/s]Parsing test CIFs:   1%|▏         | 128/9046 [00:00<00:56, 156.74it/s]Parsing test CIFs:   2%|▏         | 148/9046 [00:00<00:54, 163.12it/s]Parsing test CIFs:   2%|▏         | 180/9046 [00:00<00:45, 195.32it/s]Parsing test CIFs:   2%|▏         | 202/9046 [00:01<00:46, 191.41it/s]Parsing test CIFs:   2%|▏         | 222/9046 [00:01<00:53, 165.88it/s]Parsing test CIFs:   3%|▎         | 240/9046 [00:01<00:59, 148.63it/s]Parsing test CIFs:   3%|▎         | 264/9046 [00:01<00:51, 169.45it/s]Parsing test CIFs:   3%|▎         | 282/9046 [00:01<00:57, 152.42it/s]Parsing test CIFs:   3%|▎         | 299/9046 [00:01<00:59, 145.89it/s]Parsing test CIFs:   3%|▎         | 315/9046 [00:01<01:00, 144.47it/s]Parsing test CIFs:   4%|▎         | 338/9046 [00:02<00:52, 165.93it/s]Parsing test CIFs:   4%|▍         | 356/9046 [00:02<00:55, 156.03it/s]Parsing test CIFs:   4%|▍         | 378/9046 [00:02<00:50, 172.25it/s]Parsing test CIFs:   4%|▍         | 400/9046 [00:02<00:46, 184.99it/s]Parsing test CIFs:   5%|▍         | 422/9046 [00:02<00:47, 181.18it/s]Parsing test CIFs:   5%|▍         | 441/9046 [00:02<00:54, 157.92it/s]Parsing test CIFs:   5%|▌         | 459/9046 [00:02<00:54, 157.60it/s]Parsing test CIFs:   5%|▌         | 476/9046 [00:02<00:53, 160.44it/s]Parsing test CIFs:   6%|▌         | 503/9046 [00:02<00:45, 189.47it/s]Parsing test CIFs:   6%|▌         | 523/9046 [00:03<00:47, 179.71it/s]Parsing test CIFs:   6%|▌         | 542/9046 [00:03<00:47, 180.89it/s]Parsing test CIFs:   6%|▌         | 562/9046 [00:03<00:45, 185.49it/s]Parsing test CIFs:   6%|▋         | 581/9046 [00:03<00:50, 166.62it/s]Parsing test CIFs:   7%|▋         | 605/9046 [00:03<00:46, 180.34it/s]Parsing test CIFs:   7%|▋         | 624/9046 [00:03<00:49, 171.35it/s]Parsing test CIFs:   7%|▋         | 647/9046 [00:03<00:47, 178.30it/s]Parsing test CIFs:   7%|▋         | 666/9046 [00:03<00:48, 174.13it/s]Parsing test CIFs:   8%|▊         | 684/9046 [00:04<00:48, 172.36it/s]Parsing test CIFs:   8%|▊         | 702/9046 [00:04<00:54, 152.47it/s]Parsing test CIFs:   8%|▊         | 718/9046 [00:04<00:56, 148.51it/s]Parsing test CIFs:   8%|▊         | 735/9046 [00:04<00:55, 149.63it/s]Parsing test CIFs:   8%|▊         | 762/9046 [00:04<00:45, 180.88it/s]Parsing test CIFs:   9%|▊         | 781/9046 [00:04<00:51, 159.08it/s]Parsing test CIFs:   9%|▉         | 799/9046 [00:04<00:51, 159.87it/s]Parsing test CIFs:   9%|▉         | 818/9046 [00:04<00:50, 162.61it/s]Parsing test CIFs:   9%|▉         | 841/9046 [00:04<00:46, 176.10it/s]Parsing test CIFs:   9%|▉         | 859/9046 [00:05<00:47, 172.66it/s]Parsing test CIFs:  10%|▉         | 877/9046 [00:05<00:48, 168.58it/s]Parsing test CIFs:  10%|▉         | 902/9046 [00:05<00:45, 177.71it/s]Parsing test CIFs:  10%|█         | 920/9046 [00:05<00:51, 157.22it/s]Parsing test CIFs:  10%|█         | 942/9046 [00:05<00:47, 171.95it/s]Parsing test CIFs:  11%|█         | 960/9046 [00:05<00:53, 152.04it/s]Parsing test CIFs:  11%|█         | 976/9046 [00:05<01:05, 122.50it/s]Parsing test CIFs:  11%|█         | 994/9046 [00:06<00:59, 134.92it/s]Parsing test CIFs:  11%|█         | 1009/9046 [00:06<01:05, 123.63it/s]Parsing test CIFs:  11%|█▏        | 1028/9046 [00:06<00:57, 138.85it/s]Parsing test CIFs:  12%|█▏        | 1053/9046 [00:06<00:48, 166.20it/s]Parsing test CIFs:  12%|█▏        | 1076/9046 [00:06<00:46, 173.16it/s]Parsing test CIFs:  12%|█▏        | 1096/9046 [00:06<00:44, 179.27it/s]Parsing test CIFs:  12%|█▏        | 1117/9046 [00:06<00:44, 179.03it/s]Parsing test CIFs:  13%|█▎        | 1136/9046 [00:06<00:44, 179.28it/s]Parsing test CIFs:  13%|█▎        | 1164/9046 [00:06<00:39, 198.66it/s]Parsing test CIFs:  13%|█▎        | 1185/9046 [00:07<00:42, 185.57it/s]Parsing test CIFs:  13%|█▎        | 1204/9046 [00:07<00:43, 182.06it/s]Parsing test CIFs:  14%|█▎        | 1229/9046 [00:07<00:39, 197.13it/s]Parsing test CIFs:  14%|█▍        | 1249/9046 [00:07<00:46, 168.73it/s]Parsing test CIFs:  14%|█▍        | 1267/9046 [00:07<00:49, 158.68it/s]Parsing test CIFs:  14%|█▍        | 1286/9046 [00:07<00:49, 156.79it/s]Parsing test CIFs:  14%|█▍        | 1303/9046 [00:07<00:49, 156.92it/s]Parsing test CIFs:  15%|█▍        | 1319/9046 [00:07<00:49, 155.68it/s]Parsing test CIFs:  15%|█▍        | 1340/9046 [00:08<00:47, 162.05it/s]Parsing test CIFs:  15%|█▌        | 1365/9046 [00:08<00:43, 175.89it/s]Parsing test CIFs:  15%|█▌        | 1383/9046 [00:08<00:46, 165.49it/s]Parsing test CIFs:  15%|█▌        | 1400/9046 [00:08<00:51, 147.49it/s]Parsing test CIFs:  16%|█▌        | 1416/9046 [00:08<00:52, 145.16it/s]Parsing test CIFs:  16%|█▌        | 1431/9046 [00:08<00:53, 142.82it/s]Parsing test CIFs:  16%|█▌        | 1455/9046 [00:08<00:45, 168.21it/s]Parsing test CIFs:  16%|█▋        | 1473/9046 [00:08<00:48, 155.81it/s]Parsing test CIFs:  17%|█▋        | 1501/9046 [00:09<00:41, 183.01it/s]Parsing test CIFs:  17%|█▋        | 1526/9046 [00:09<00:37, 199.86it/s]Parsing test CIFs:  17%|█▋        | 1547/9046 [00:09<00:41, 180.92it/s]Parsing test CIFs:  17%|█▋        | 1566/9046 [00:09<00:43, 171.00it/s]Parsing test CIFs:  18%|█▊        | 1584/9046 [00:09<00:49, 151.24it/s]Parsing test CIFs:  18%|█▊        | 1606/9046 [00:09<00:47, 157.63it/s]Parsing test CIFs:  18%|█▊        | 1624/9046 [00:09<00:45, 162.17it/s]Parsing test CIFs:  18%|█▊        | 1641/9046 [00:09<00:50, 145.40it/s]Parsing test CIFs:  18%|█▊        | 1657/9046 [00:10<00:50, 145.17it/s]Parsing test CIFs:  19%|█▊        | 1677/9046 [00:10<00:48, 152.68it/s]Parsing test CIFs:  19%|█▉        | 1700/9046 [00:10<00:42, 171.55it/s]Parsing test CIFs:  19%|█▉        | 1719/9046 [00:10<00:42, 171.45it/s]Parsing test CIFs:  19%|█▉        | 1745/9046 [00:10<00:38, 191.86it/s]Parsing test CIFs:  20%|█▉        | 1765/9046 [00:10<00:38, 189.68it/s]Parsing test CIFs:  20%|█▉        | 1785/9046 [00:10<00:44, 164.00it/s]Parsing test CIFs:  20%|█▉        | 1809/9046 [00:10<00:39, 183.00it/s]Parsing test CIFs:  20%|██        | 1829/9046 [00:10<00:39, 183.20it/s]Parsing test CIFs:  20%|██        | 1848/9046 [00:11<00:44, 162.72it/s]Parsing test CIFs:  21%|██        | 1866/9046 [00:11<00:46, 153.94it/s]Parsing test CIFs:  21%|██        | 1882/9046 [00:11<00:47, 151.42it/s]Parsing test CIFs:  21%|██        | 1898/9046 [00:11<00:47, 148.97it/s]Parsing test CIFs:  21%|██▏       | 1923/9046 [00:11<00:40, 175.34it/s]Parsing test CIFs:  21%|██▏       | 1942/9046 [00:11<00:43, 163.28it/s]Parsing test CIFs:  22%|██▏       | 1968/9046 [00:11<00:39, 181.40it/s]Parsing test CIFs:  22%|██▏       | 1989/9046 [00:11<00:38, 183.85it/s]Parsing test CIFs:  22%|██▏       | 2008/9046 [00:12<00:45, 153.38it/s]Parsing test CIFs:  22%|██▏       | 2025/9046 [00:12<00:45, 154.59it/s]Parsing test CIFs:  23%|██▎       | 2042/9046 [00:12<00:45, 155.07it/s]Parsing test CIFs:  23%|██▎       | 2066/9046 [00:12<00:40, 170.84it/s]Parsing test CIFs:  23%|██▎       | 2089/9046 [00:12<00:37, 186.35it/s]Parsing test CIFs:  23%|██▎       | 2109/9046 [00:12<00:42, 162.13it/s]Parsing test CIFs:  24%|██▎       | 2133/9046 [00:12<00:38, 181.06it/s]Parsing test CIFs:  24%|██▍       | 2153/9046 [00:12<00:39, 176.21it/s]Parsing test CIFs:  24%|██▍       | 2172/9046 [00:13<00:40, 169.94it/s]Parsing test CIFs:  24%|██▍       | 2194/9046 [00:13<00:37, 181.76it/s]Parsing test CIFs:  24%|██▍       | 2214/9046 [00:13<00:37, 182.50it/s]Parsing test CIFs:  25%|██▍       | 2233/9046 [00:13<00:38, 179.24it/s]Parsing test CIFs:  25%|██▍       | 2255/9046 [00:13<00:37, 180.07it/s]Parsing test CIFs:  25%|██▌       | 2275/9046 [00:13<00:37, 178.49it/s]Parsing test CIFs:  25%|██▌       | 2293/9046 [00:13<00:38, 177.08it/s]Parsing test CIFs:  26%|██▌       | 2311/9046 [00:13<00:38, 173.61it/s]Parsing test CIFs:  26%|██▌       | 2329/9046 [00:13<00:38, 174.53it/s]Parsing test CIFs:  26%|██▌       | 2347/9046 [00:14<00:48, 137.45it/s]Parsing test CIFs:  26%|██▌       | 2369/9046 [00:14<00:42, 155.92it/s]Parsing test CIFs:  26%|██▋       | 2386/9046 [00:14<00:43, 154.88it/s]Parsing test CIFs:  27%|██▋       | 2411/9046 [00:14<00:37, 178.93it/s]Parsing test CIFs:  27%|██▋       | 2430/9046 [00:14<00:41, 160.29it/s]Parsing test CIFs:  27%|██▋       | 2455/9046 [00:14<00:36, 182.89it/s]Parsing test CIFs:  27%|██▋       | 2477/9046 [00:14<00:34, 191.16it/s]Parsing test CIFs:  28%|██▊       | 2497/9046 [00:14<00:37, 176.59it/s]Parsing test CIFs:  28%|██▊       | 2516/9046 [00:15<00:37, 174.05it/s]Parsing test CIFs:  28%|██▊       | 2534/9046 [00:15<00:41, 158.62it/s]Parsing test CIFs:  28%|██▊       | 2557/9046 [00:15<00:36, 176.46it/s]Parsing test CIFs:  28%|██▊       | 2576/9046 [00:15<00:38, 166.75it/s]Parsing test CIFs:  29%|██▊       | 2596/9046 [00:15<00:36, 174.46it/s]Parsing test CIFs:  29%|██▉       | 2614/9046 [00:15<00:39, 161.56it/s]Parsing test CIFs:  29%|██▉       | 2631/9046 [00:15<00:41, 152.98it/s]Parsing test CIFs:  29%|██▉       | 2647/9046 [00:15<00:42, 152.01it/s]Parsing test CIFs:  30%|██▉       | 2671/9046 [00:15<00:37, 168.08it/s]Parsing test CIFs:  30%|██▉       | 2688/9046 [00:16<00:38, 164.13it/s]Parsing test CIFs:  30%|██▉       | 2705/9046 [00:16<00:42, 149.81it/s]Parsing test CIFs:  30%|███       | 2729/9046 [00:16<00:36, 172.53it/s]Parsing test CIFs:  30%|███       | 2747/9046 [00:16<00:37, 167.91it/s]Parsing test CIFs:  31%|███       | 2765/9046 [00:16<00:51, 122.74it/s]Parsing test CIFs:  31%|███       | 2780/9046 [00:16<00:49, 127.61it/s]Parsing test CIFs:  31%|███       | 2805/9046 [00:16<00:40, 152.89it/s]Parsing test CIFs:  31%|███       | 2822/9046 [00:17<00:42, 148.00it/s]Parsing test CIFs:  31%|███▏      | 2838/9046 [00:17<00:41, 148.50it/s]Parsing test CIFs:  32%|███▏      | 2855/9046 [00:17<00:40, 152.67it/s]Parsing test CIFs:  32%|███▏      | 2871/9046 [00:17<00:41, 148.51it/s]Parsing test CIFs:  32%|███▏      | 2887/9046 [00:17<00:42, 144.18it/s]Parsing test CIFs:  32%|███▏      | 2902/9046 [00:17<00:44, 137.10it/s]Parsing test CIFs:  32%|███▏      | 2924/9046 [00:17<00:38, 158.13it/s]Parsing test CIFs:  33%|███▎      | 2941/9046 [00:17<00:38, 159.63it/s]Parsing test CIFs:  33%|███▎      | 2958/9046 [00:17<00:42, 143.90it/s]Parsing test CIFs:  33%|███▎      | 2978/9046 [00:18<00:38, 158.40it/s]Parsing test CIFs:  33%|███▎      | 2998/9046 [00:18<00:37, 160.52it/s]Parsing test CIFs:  33%|███▎      | 3015/9046 [00:18<00:43, 138.94it/s]Parsing test CIFs:  33%|███▎      | 3030/9046 [00:18<00:46, 129.00it/s]Parsing test CIFs:  34%|███▎      | 3044/9046 [00:18<00:53, 112.88it/s]Parsing test CIFs:  34%|███▍      | 3056/9046 [00:18<00:54, 109.55it/s]Parsing test CIFs:  34%|███▍      | 3079/9046 [00:18<00:43, 137.51it/s]Parsing test CIFs:  34%|███▍      | 3106/9046 [00:18<00:34, 169.94it/s]Parsing test CIFs:  35%|███▍      | 3125/9046 [00:19<00:35, 164.85it/s]Parsing test CIFs:  35%|███▍      | 3143/9046 [00:19<00:35, 166.29it/s]Parsing test CIFs:  35%|███▍      | 3165/9046 [00:19<00:33, 173.92it/s]Parsing test CIFs:  35%|███▌      | 3183/9046 [00:19<00:36, 159.45it/s]Parsing test CIFs:  35%|███▌      | 3206/9046 [00:19<00:32, 177.71it/s]Parsing test CIFs:  36%|███▌      | 3225/9046 [00:19<00:37, 157.28it/s]Parsing test CIFs:  36%|███▌      | 3246/9046 [00:19<00:35, 165.16it/s]Parsing test CIFs:  36%|███▌      | 3264/9046 [00:19<00:35, 162.95it/s]Parsing test CIFs:  36%|███▋      | 3281/9046 [00:20<00:36, 158.20it/s]Parsing test CIFs:  36%|███▋      | 3298/9046 [00:20<00:40, 143.51it/s]Parsing test CIFs:  37%|███▋      | 3322/9046 [00:20<00:35, 161.67it/s]Parsing test CIFs:  37%|███▋      | 3342/9046 [00:20<00:33, 168.12it/s]Parsing test CIFs:  37%|███▋      | 3360/9046 [00:20<00:36, 157.57it/s]Parsing test CIFs:  37%|███▋      | 3382/9046 [00:20<00:32, 173.07it/s]Parsing test CIFs:  38%|███▊      | 3400/9046 [00:20<00:34, 164.48it/s]Parsing test CIFs:  38%|███▊      | 3417/9046 [00:20<00:35, 157.08it/s]Parsing test CIFs:  38%|███▊      | 3440/9046 [00:21<00:31, 176.15it/s]Parsing test CIFs:  38%|███▊      | 3460/9046 [00:21<00:30, 180.63it/s]Parsing test CIFs:  39%|███▊      | 3492/9046 [00:21<00:25, 218.88it/s]Parsing test CIFs:  39%|███▉      | 3515/9046 [00:21<00:28, 191.92it/s]Parsing test CIFs:  39%|███▉      | 3539/9046 [00:21<00:27, 203.48it/s]Parsing test CIFs:  39%|███▉      | 3569/9046 [00:21<00:24, 220.54it/s]Parsing test CIFs:  40%|███▉      | 3592/9046 [00:21<00:24, 222.78it/s]Parsing test CIFs:  40%|███▉      | 3615/9046 [00:21<00:28, 191.46it/s]Parsing test CIFs:  40%|████      | 3636/9046 [00:22<00:33, 163.15it/s]Parsing test CIFs:  41%|████      | 3669/9046 [00:22<00:27, 195.76it/s]Parsing test CIFs:  41%|████      | 3691/9046 [00:22<00:26, 200.06it/s]Parsing test CIFs:  41%|████      | 3713/9046 [00:22<00:29, 178.72it/s]Parsing test CIFs:  41%|████▏     | 3745/9046 [00:22<00:26, 201.89it/s]Parsing test CIFs:  42%|████▏     | 3767/9046 [00:22<00:26, 201.02it/s]Parsing test CIFs:  42%|████▏     | 3807/9046 [00:22<00:21, 239.18it/s]Parsing test CIFs:  42%|████▏     | 3832/9046 [00:22<00:24, 210.15it/s]Parsing test CIFs:  43%|████▎     | 3855/9046 [00:23<00:24, 213.44it/s]Parsing test CIFs:  43%|████▎     | 3877/9046 [00:23<00:27, 187.00it/s]Parsing test CIFs:  43%|████▎     | 3897/9046 [00:23<00:28, 180.33it/s]Parsing test CIFs:  43%|████▎     | 3916/9046 [00:23<00:29, 174.15it/s]Parsing test CIFs:  44%|████▎     | 3947/9046 [00:23<00:24, 207.37it/s]Parsing test CIFs:  44%|████▍     | 3969/9046 [00:23<00:31, 162.89it/s]Parsing test CIFs:  44%|████▍     | 3988/9046 [00:23<00:30, 168.60it/s]Parsing test CIFs:  44%|████▍     | 4008/9046 [00:23<00:29, 170.48it/s]Parsing test CIFs:  45%|████▍     | 4027/9046 [00:24<00:33, 148.73it/s]Parsing test CIFs:  45%|████▍     | 4044/9046 [00:24<00:33, 151.51it/s]Parsing test CIFs:  45%|████▍     | 4068/9046 [00:24<00:30, 164.98it/s]Parsing test CIFs:  45%|████▌     | 4091/9046 [00:24<00:28, 176.68it/s]Parsing test CIFs:  45%|████▌     | 4112/9046 [00:24<00:26, 183.84it/s]Parsing test CIFs:  46%|████▌     | 4132/9046 [00:24<00:27, 177.09it/s]Parsing test CIFs:  46%|████▌     | 4151/9046 [00:24<00:27, 176.46it/s]Parsing test CIFs:  46%|████▌     | 4178/9046 [00:24<00:24, 200.95it/s]Parsing test CIFs:  46%|████▋     | 4199/9046 [00:24<00:24, 200.05it/s]Parsing test CIFs:  47%|████▋     | 4221/9046 [00:25<00:24, 198.95it/s]Parsing test CIFs:  47%|████▋     | 4242/9046 [00:25<00:28, 166.56it/s]Parsing test CIFs:  47%|████▋     | 4260/9046 [00:25<00:28, 167.04it/s]Parsing test CIFs:  47%|████▋     | 4284/9046 [00:25<00:25, 184.60it/s]Parsing test CIFs:  48%|████▊     | 4309/9046 [00:25<00:24, 191.58it/s]Parsing test CIFs:  48%|████▊     | 4331/9046 [00:25<00:24, 194.90it/s]Parsing test CIFs:  48%|████▊     | 4351/9046 [00:25<00:28, 166.06it/s]Parsing test CIFs:  48%|████▊     | 4373/9046 [00:26<00:27, 172.39it/s]Parsing test CIFs:  49%|████▊     | 4391/9046 [00:26<00:27, 171.69it/s]Parsing test CIFs:  49%|████▊     | 4409/9046 [00:26<00:28, 160.55it/s]Parsing test CIFs:  49%|████▉     | 4426/9046 [00:26<00:33, 139.28it/s]Parsing test CIFs:  49%|████▉     | 4446/9046 [00:26<00:29, 153.45it/s]Parsing test CIFs:  49%|████▉     | 4465/9046 [00:26<00:29, 154.47it/s]Parsing test CIFs:  50%|████▉     | 4482/9046 [00:26<00:29, 155.50it/s]Parsing test CIFs:  50%|████▉     | 4498/9046 [00:26<00:29, 153.79it/s]Parsing test CIFs:  50%|████▉     | 4516/9046 [00:26<00:28, 160.10it/s]Parsing test CIFs:  50%|█████     | 4540/9046 [00:27<00:24, 181.12it/s]Parsing test CIFs:  50%|█████     | 4559/9046 [00:27<00:26, 166.28it/s]Parsing test CIFs:  51%|█████     | 4577/9046 [00:27<00:27, 163.06it/s]Parsing test CIFs:  51%|█████     | 4598/9046 [00:27<00:26, 171.03it/s]Parsing test CIFs:  51%|█████     | 4620/9046 [00:27<00:24, 183.74it/s]Parsing test CIFs:  51%|█████▏    | 4639/9046 [00:27<00:26, 164.22it/s]Parsing test CIFs:  52%|█████▏    | 4663/9046 [00:27<00:24, 176.40it/s]Parsing test CIFs:  52%|█████▏    | 4687/9046 [00:27<00:23, 186.31it/s]Parsing test CIFs:  52%|█████▏    | 4708/9046 [00:28<00:23, 181.67it/s]Parsing test CIFs:  52%|█████▏    | 4727/9046 [00:28<00:27, 156.69it/s]Parsing test CIFs:  52%|█████▏    | 4744/9046 [00:28<00:27, 154.28it/s]Parsing test CIFs:  53%|█████▎    | 4766/9046 [00:28<00:25, 170.66it/s]Parsing test CIFs:  53%|█████▎    | 4799/9046 [00:28<00:20, 211.69it/s]Parsing test CIFs:  53%|█████▎    | 4822/9046 [00:28<00:22, 187.15it/s]Parsing test CIFs:  54%|█████▎    | 4842/9046 [00:28<00:22, 186.78it/s]Parsing test CIFs:  54%|█████▎    | 4862/9046 [00:28<00:23, 174.61it/s]Parsing test CIFs:  54%|█████▍    | 4881/9046 [00:29<00:23, 174.99it/s]Parsing test CIFs:  54%|█████▍    | 4907/9046 [00:29<00:21, 191.88it/s]Parsing test CIFs:  55%|█████▍    | 4932/9046 [00:29<00:19, 206.87it/s]Parsing test CIFs:  55%|█████▍    | 4954/9046 [00:29<00:19, 209.24it/s]Parsing test CIFs:  55%|█████▌    | 4976/9046 [00:29<00:20, 198.98it/s]Parsing test CIFs:  55%|█████▌    | 4997/9046 [00:29<00:20, 196.62it/s]Parsing test CIFs:  55%|█████▌    | 5017/9046 [00:29<00:22, 180.93it/s]Parsing test CIFs:  56%|█████▌    | 5036/9046 [00:29<00:23, 170.56it/s]Parsing test CIFs:  56%|█████▌    | 5059/9046 [00:29<00:22, 180.99it/s]Parsing test CIFs:  56%|█████▌    | 5078/9046 [00:30<00:23, 166.07it/s]Parsing test CIFs:  56%|█████▋    | 5095/9046 [00:30<00:29, 135.31it/s]Parsing test CIFs:  57%|█████▋    | 5115/9046 [00:30<00:26, 148.25it/s]Parsing test CIFs:  57%|█████▋    | 5134/9046 [00:30<00:25, 150.99it/s]Parsing test CIFs:  57%|█████▋    | 5150/9046 [00:30<00:26, 148.48it/s]Parsing test CIFs:  57%|█████▋    | 5169/9046 [00:30<00:25, 153.17it/s]Parsing test CIFs:  57%|█████▋    | 5185/9046 [00:30<00:24, 154.74it/s]Parsing test CIFs:  58%|█████▊    | 5215/9046 [00:30<00:19, 193.77it/s]Parsing test CIFs:  58%|█████▊    | 5235/9046 [00:31<00:20, 184.61it/s]Parsing test CIFs:  58%|█████▊    | 5254/9046 [00:31<00:20, 181.13it/s]Parsing test CIFs:  58%|█████▊    | 5284/9046 [00:31<00:18, 203.75it/s]Parsing test CIFs:  59%|█████▊    | 5307/9046 [00:31<00:18, 203.10it/s]Parsing test CIFs:  59%|█████▉    | 5329/9046 [00:31<00:17, 207.24it/s]Parsing test CIFs:  59%|█████▉    | 5361/9046 [00:31<00:15, 237.86it/s]Parsing test CIFs:  60%|█████▉    | 5386/9046 [00:31<00:16, 227.04it/s]Parsing test CIFs:  60%|█████▉    | 5414/9046 [00:31<00:15, 231.23it/s]Parsing test CIFs:  60%|██████    | 5439/9046 [00:31<00:15, 229.19it/s]Parsing test CIFs:  60%|██████    | 5463/9046 [00:32<00:16, 213.59it/s]Parsing test CIFs:  61%|██████    | 5491/9046 [00:32<00:15, 223.46it/s]Parsing test CIFs:  61%|██████    | 5514/9046 [00:32<00:18, 191.50it/s]Parsing test CIFs:  61%|██████    | 5534/9046 [00:32<00:19, 184.54it/s]Parsing test CIFs:  61%|██████▏   | 5555/9046 [00:32<00:18, 190.32it/s]Parsing test CIFs:  62%|██████▏   | 5581/9046 [00:32<00:16, 207.43it/s]Parsing test CIFs:  62%|██████▏   | 5611/9046 [00:32<00:14, 231.63it/s]Parsing test CIFs:  62%|██████▏   | 5635/9046 [00:32<00:16, 207.31it/s]Parsing test CIFs:  63%|██████▎   | 5657/9046 [00:33<00:17, 192.47it/s]Parsing test CIFs:  63%|██████▎   | 5677/9046 [00:33<00:18, 177.38it/s]Parsing test CIFs:  63%|██████▎   | 5696/9046 [00:33<00:18, 178.67it/s]Parsing test CIFs:  63%|██████▎   | 5715/9046 [00:33<00:19, 174.65it/s]Parsing test CIFs:  63%|██████▎   | 5733/9046 [00:33<00:20, 162.96it/s]Parsing test CIFs:  64%|██████▎   | 5750/9046 [00:33<00:20, 162.67it/s]Parsing test CIFs:  64%|██████▍   | 5767/9046 [00:33<00:20, 159.63it/s]Parsing test CIFs:  64%|██████▍   | 5788/9046 [00:33<00:18, 172.20it/s]Parsing test CIFs:  64%|██████▍   | 5812/9046 [00:33<00:17, 182.07it/s]Parsing test CIFs:  64%|██████▍   | 5831/9046 [00:34<00:18, 177.94it/s]Parsing test CIFs:  65%|██████▍   | 5853/9046 [00:34<00:18, 177.30it/s]Parsing test CIFs:  65%|██████▌   | 5880/9046 [00:34<00:15, 201.68it/s]Parsing test CIFs:  65%|██████▌   | 5904/9046 [00:34<00:15, 204.68it/s]Parsing test CIFs:  65%|██████▌   | 5925/9046 [00:34<00:18, 169.34it/s]Parsing test CIFs:  66%|██████▌   | 5944/9046 [00:34<00:17, 174.29it/s]Parsing test CIFs:  66%|██████▌   | 5963/9046 [00:34<00:19, 161.21it/s]Parsing test CIFs:  66%|██████▌   | 5980/9046 [00:34<00:19, 153.45it/s]Parsing test CIFs:  66%|██████▋   | 6001/9046 [00:35<00:18, 163.03it/s]Parsing test CIFs:  67%|██████▋   | 6018/9046 [00:35<00:19, 155.18it/s]Parsing test CIFs:  67%|██████▋   | 6037/9046 [00:35<00:18, 163.87it/s]Parsing test CIFs:  67%|██████▋   | 6058/9046 [00:35<00:16, 175.93it/s]Parsing test CIFs:  67%|██████▋   | 6076/9046 [00:35<00:20, 145.94it/s]Parsing test CIFs:  67%|██████▋   | 6092/9046 [00:35<00:19, 148.22it/s]Parsing test CIFs:  68%|██████▊   | 6113/9046 [00:35<00:17, 163.64it/s]Parsing test CIFs:  68%|██████▊   | 6136/9046 [00:35<00:16, 180.78it/s]Parsing test CIFs:  68%|██████▊   | 6163/9046 [00:36<00:14, 193.30it/s]Parsing test CIFs:  68%|██████▊   | 6183/9046 [00:36<00:17, 166.59it/s]Parsing test CIFs:  69%|██████▊   | 6201/9046 [00:36<00:20, 140.24it/s]Parsing test CIFs:  69%|██████▊   | 6218/9046 [00:36<00:19, 146.72it/s]Parsing test CIFs:  69%|██████▉   | 6238/9046 [00:36<00:17, 158.84it/s]Parsing test CIFs:  69%|██████▉   | 6255/9046 [00:36<00:20, 137.94it/s]Parsing test CIFs:  69%|██████▉   | 6272/9046 [00:36<00:19, 142.41it/s]Parsing test CIFs:  70%|██████▉   | 6288/9046 [00:36<00:18, 145.18it/s]Parsing test CIFs:  70%|██████▉   | 6304/9046 [00:37<00:20, 130.80it/s]Parsing test CIFs:  70%|██████▉   | 6318/9046 [00:37<00:20, 130.82it/s]Parsing test CIFs:  70%|███████   | 6340/9046 [00:37<00:17, 153.41it/s]Parsing test CIFs:  70%|███████   | 6357/9046 [00:37<00:20, 131.33it/s]Parsing test CIFs:  70%|███████   | 6372/9046 [00:37<00:20, 132.45it/s]Parsing test CIFs:  71%|███████   | 6396/9046 [00:37<00:16, 159.32it/s]Parsing test CIFs:  71%|███████   | 6417/9046 [00:37<00:15, 171.94it/s]Parsing test CIFs:  71%|███████   | 6436/9046 [00:37<00:16, 159.16it/s]Parsing test CIFs:  71%|███████▏  | 6453/9046 [00:38<00:17, 147.49it/s]Parsing test CIFs:  72%|███████▏  | 6469/9046 [00:38<00:18, 140.20it/s]Parsing test CIFs:  72%|███████▏  | 6484/9046 [00:38<00:18, 140.98it/s]Parsing test CIFs:  72%|███████▏  | 6499/9046 [00:38<00:18, 135.37it/s]Parsing test CIFs:  72%|███████▏  | 6513/9046 [00:38<00:18, 133.91it/s]Parsing test CIFs:  72%|███████▏  | 6527/9046 [00:38<00:19, 129.63it/s]Parsing test CIFs:  72%|███████▏  | 6549/9046 [00:38<00:16, 148.38it/s]Parsing test CIFs:  73%|███████▎  | 6565/9046 [00:38<00:17, 145.59it/s]Parsing test CIFs:  73%|███████▎  | 6586/9046 [00:39<00:15, 154.79it/s]Parsing test CIFs:  73%|███████▎  | 6605/9046 [00:39<00:14, 164.00it/s]Parsing test CIFs:  73%|███████▎  | 6622/9046 [00:39<00:15, 153.32it/s]Parsing test CIFs:  73%|███████▎  | 6638/9046 [00:39<00:19, 124.20it/s]Parsing test CIFs:  74%|███████▎  | 6655/9046 [00:39<00:17, 134.29it/s]Parsing test CIFs:  74%|███████▍  | 6677/9046 [00:39<00:16, 147.72it/s]Parsing test CIFs:  74%|███████▍  | 6693/9046 [00:39<00:16, 141.76it/s]Parsing test CIFs:  74%|███████▍  | 6708/9046 [00:39<00:17, 134.30it/s]Parsing test CIFs:  74%|███████▍  | 6730/9046 [00:40<00:14, 155.07it/s]Parsing test CIFs:  75%|███████▍  | 6747/9046 [00:40<00:15, 144.89it/s]Parsing test CIFs:  75%|███████▍  | 6774/9046 [00:40<00:13, 173.08it/s]Parsing test CIFs:  75%|███████▌  | 6793/9046 [00:40<00:12, 177.37it/s]Parsing test CIFs:  75%|███████▌  | 6812/9046 [00:40<00:14, 156.22it/s]Parsing test CIFs:  76%|███████▌  | 6832/9046 [00:40<00:13, 164.04it/s]Parsing test CIFs:  76%|███████▌  | 6850/9046 [00:40<00:13, 167.99it/s]Parsing test CIFs:  76%|███████▌  | 6870/9046 [00:40<00:12, 175.51it/s]Parsing test CIFs:  76%|███████▌  | 6888/9046 [00:40<00:14, 148.82it/s]Parsing test CIFs:  76%|███████▋  | 6907/9046 [00:41<00:13, 155.06it/s]/venv/main/lib/python3.12/functools.py:998: UserWarning: No Pauling electronegativity for Ar. Setting to NaN. This has no physical meaning, and is mainly done to avoid errors caused by the code expecting a float.
+  val = self.func(instance)
+Parsing test CIFs:  77%|███████▋  | 6932/9046 [00:41<00:11, 178.64it/s]Parsing test CIFs:  77%|███████▋  | 6957/9046 [00:41<00:10, 197.03it/s]Parsing test CIFs:  77%|███████▋  | 6978/9046 [00:41<00:12, 161.23it/s]Parsing test CIFs:  77%|███████▋  | 6996/9046 [00:41<00:13, 157.48it/s]Parsing test CIFs:  78%|███████▊  | 7013/9046 [00:41<00:13, 151.65it/s]Parsing test CIFs:  78%|███████▊  | 7029/9046 [00:41<00:14, 134.60it/s]Parsing test CIFs:  78%|███████▊  | 7055/9046 [00:41<00:12, 164.02it/s]Parsing test CIFs:  78%|███████▊  | 7078/9046 [00:42<00:11, 169.74it/s]Parsing test CIFs:  78%|███████▊  | 7096/9046 [00:42<00:14, 135.92it/s]Parsing test CIFs:  79%|███████▊  | 7119/9046 [00:42<00:12, 154.75it/s]Parsing test CIFs:  79%|███████▉  | 7137/9046 [00:42<00:13, 145.52it/s]Parsing test CIFs:  79%|███████▉  | 7160/9046 [00:42<00:11, 164.93it/s]Parsing test CIFs:  79%|███████▉  | 7178/9046 [00:42<00:11, 164.91it/s]Parsing test CIFs:  80%|███████▉  | 7196/9046 [00:42<00:11, 156.71it/s]Parsing test CIFs:  80%|███████▉  | 7220/9046 [00:43<00:10, 172.95it/s]Parsing test CIFs:  80%|████████  | 7238/9046 [00:43<00:10, 165.06it/s]Parsing test CIFs:  80%|████████  | 7259/9046 [00:43<00:10, 176.10it/s]Parsing test CIFs:  80%|████████  | 7279/9046 [00:43<00:09, 182.50it/s]Parsing test CIFs:  81%|████████  | 7298/9046 [00:43<00:09, 180.38it/s]Parsing test CIFs:  81%|████████  | 7317/9046 [00:43<00:10, 166.96it/s]Parsing test CIFs:  81%|████████  | 7344/9046 [00:43<00:09, 185.77it/s]Parsing test CIFs:  82%|████████▏ | 7374/9046 [00:43<00:08, 205.73it/s]Parsing test CIFs:  82%|████████▏ | 7395/9046 [00:43<00:08, 203.85it/s]Parsing test CIFs:  82%|████████▏ | 7416/9046 [00:44<00:08, 188.11it/s]Parsing test CIFs:  82%|████████▏ | 7438/9046 [00:44<00:08, 196.04it/s]Parsing test CIFs:  82%|████████▏ | 7458/9046 [00:44<00:09, 170.53it/s]Parsing test CIFs:  83%|████████▎ | 7476/9046 [00:44<00:09, 157.22it/s]Parsing test CIFs:  83%|████████▎ | 7493/9046 [00:44<00:10, 154.75it/s]Parsing test CIFs:  83%|████████▎ | 7517/9046 [00:44<00:09, 166.61it/s]Parsing test CIFs:  83%|████████▎ | 7534/9046 [00:44<00:09, 156.07it/s]Parsing test CIFs:  83%|████████▎ | 7550/9046 [00:44<00:09, 155.42it/s]Parsing test CIFs:  84%|████████▎ | 7566/9046 [00:45<00:09, 148.52it/s]Parsing test CIFs:  84%|████████▍ | 7587/9046 [00:45<00:08, 164.06it/s]Parsing test CIFs:  84%|████████▍ | 7620/9046 [00:45<00:06, 209.23it/s]Parsing test CIFs:  85%|████████▍ | 7644/9046 [00:45<00:06, 216.11it/s]Parsing test CIFs:  85%|████████▍ | 7667/9046 [00:45<00:06, 204.26it/s]Parsing test CIFs:  85%|████████▍ | 7688/9046 [00:45<00:07, 183.23it/s]Parsing test CIFs:  85%|████████▌ | 7707/9046 [00:45<00:07, 169.09it/s]Parsing test CIFs:  85%|████████▌ | 7734/9046 [00:45<00:06, 188.72it/s]Parsing test CIFs:  86%|████████▌ | 7761/9046 [00:46<00:06, 200.23it/s]Parsing test CIFs:  86%|████████▌ | 7783/9046 [00:46<00:06, 201.96it/s]Parsing test CIFs:  86%|████████▋ | 7807/9046 [00:46<00:05, 211.29it/s]Parsing test CIFs:  87%|████████▋ | 7829/9046 [00:46<00:06, 178.28it/s]Parsing test CIFs:  87%|████████▋ | 7848/9046 [00:46<00:06, 171.41it/s]Parsing test CIFs:  87%|████████▋ | 7866/9046 [00:46<00:07, 159.33it/s]Parsing test CIFs:  87%|████████▋ | 7901/9046 [00:46<00:05, 201.14it/s]Parsing test CIFs:  88%|████████▊ | 7922/9046 [00:46<00:05, 192.36it/s]Parsing test CIFs:  88%|████████▊ | 7942/9046 [00:47<00:06, 176.73it/s]Parsing test CIFs:  88%|████████▊ | 7961/9046 [00:47<00:07, 144.32it/s]Parsing test CIFs:  88%|████████▊ | 7977/9046 [00:47<00:08, 131.41it/s]Parsing test CIFs:  88%|████████▊ | 7992/9046 [00:47<00:08, 118.76it/s]Parsing test CIFs:  89%|████████▊ | 8006/9046 [00:47<00:08, 117.87it/s]Parsing test CIFs:  89%|████████▉ | 8029/9046 [00:47<00:07, 143.15it/s]Parsing test CIFs:  89%|████████▉ | 8054/9046 [00:47<00:05, 168.57it/s]Parsing test CIFs:  89%|████████▉ | 8076/9046 [00:47<00:05, 179.30it/s]Parsing test CIFs:  89%|████████▉ | 8095/9046 [00:48<00:06, 157.58it/s]Parsing test CIFs:  90%|████████▉ | 8112/9046 [00:48<00:06, 153.68it/s]Parsing test CIFs:  90%|████████▉ | 8129/9046 [00:48<00:06, 142.65it/s]Parsing test CIFs:  90%|█████████ | 8145/9046 [00:48<00:06, 143.10it/s]Parsing test CIFs:  90%|█████████ | 8160/9046 [00:48<00:06, 135.02it/s]Parsing test CIFs:  90%|█████████ | 8182/9046 [00:48<00:05, 155.85it/s]Parsing test CIFs:  91%|█████████ | 8199/9046 [00:48<00:05, 148.85it/s]Parsing test CIFs:  91%|█████████ | 8215/9046 [00:49<00:06, 124.90it/s]Parsing test CIFs:  91%|█████████ | 8229/9046 [00:49<00:06, 122.62it/s]Parsing test CIFs:  91%|█████████ | 8244/9046 [00:49<00:06, 125.34it/s]Parsing test CIFs:  91%|█████████▏| 8259/9046 [00:49<00:06, 126.46it/s]Parsing test CIFs:  92%|█████████▏| 8282/9046 [00:49<00:05, 152.23it/s]Parsing test CIFs:  92%|█████████▏| 8298/9046 [00:49<00:04, 151.68it/s]Parsing test CIFs:  92%|█████████▏| 8321/9046 [00:49<00:04, 172.83it/s]Parsing test CIFs:  92%|█████████▏| 8340/9046 [00:49<00:03, 177.07it/s]Parsing test CIFs:  92%|█████████▏| 8359/9046 [00:49<00:04, 165.10it/s]Parsing test CIFs:  93%|█████████▎| 8376/9046 [00:50<00:04, 156.73it/s]Parsing test CIFs:  93%|█████████▎| 8393/9046 [00:50<00:04, 152.17it/s]Parsing test CIFs:  93%|█████████▎| 8414/9046 [00:50<00:03, 165.64it/s]Parsing test CIFs:  93%|█████████▎| 8438/9046 [00:50<00:03, 181.51it/s]Parsing test CIFs:  94%|█████████▎| 8461/9046 [00:50<00:03, 194.09it/s]Parsing test CIFs:  94%|█████████▍| 8481/9046 [00:50<00:03, 167.45it/s]Parsing test CIFs:  94%|█████████▍| 8499/9046 [00:50<00:03, 167.87it/s]Parsing test CIFs:  94%|█████████▍| 8527/9046 [00:50<00:02, 188.71it/s]Parsing test CIFs:  94%|█████████▍| 8547/9046 [00:51<00:03, 158.49it/s]Parsing test CIFs:  95%|█████████▍| 8567/9046 [00:51<00:02, 168.15it/s]Parsing test CIFs:  95%|█████████▍| 8589/9046 [00:51<00:02, 180.64it/s]Parsing test CIFs:  95%|█████████▌| 8608/9046 [00:51<00:03, 138.60it/s]Parsing test CIFs:  95%|█████████▌| 8628/9046 [00:51<00:02, 147.24it/s]Parsing test CIFs:  96%|█████████▌| 8655/9046 [00:51<00:02, 172.39it/s]Parsing test CIFs:  96%|█████████▌| 8674/9046 [00:51<00:02, 175.69it/s]Parsing test CIFs:  96%|█████████▌| 8693/9046 [00:51<00:02, 169.89it/s]Parsing test CIFs:  96%|█████████▋| 8714/9046 [00:52<00:01, 179.42it/s]Parsing test CIFs:  97%|█████████▋| 8733/9046 [00:52<00:01, 177.47it/s]Parsing test CIFs:  97%|█████████▋| 8752/9046 [00:52<00:01, 164.62it/s]Parsing test CIFs:  97%|█████████▋| 8772/9046 [00:52<00:01, 168.43it/s]Parsing test CIFs:  97%|█████████▋| 8790/9046 [00:52<00:01, 161.40it/s]Parsing test CIFs:  97%|█████████▋| 8807/9046 [00:52<00:01, 143.32it/s]Parsing test CIFs:  98%|█████████▊| 8822/9046 [00:52<00:01, 142.87it/s]Parsing test CIFs:  98%|█████████▊| 8837/9046 [00:52<00:01, 135.49it/s]Parsing test CIFs:  98%|█████████▊| 8860/9046 [00:52<00:01, 159.62it/s]Parsing test CIFs:  98%|█████████▊| 8880/9046 [00:53<00:00, 169.67it/s]Parsing test CIFs:  98%|█████████▊| 8898/9046 [00:53<00:00, 159.69it/s]Parsing test CIFs:  99%|█████████▊| 8923/9046 [00:53<00:00, 182.29it/s]/venv/main/lib/python3.12/functools.py:998: UserWarning: No Pauling electronegativity for He. Setting to NaN. This has no physical meaning, and is mainly done to avoid errors caused by the code expecting a float.
+  val = self.func(instance)
+Parsing test CIFs:  99%|█████████▉| 8942/9046 [00:53<00:00, 172.45it/s]Parsing test CIFs:  99%|█████████▉| 8960/9046 [00:53<00:00, 143.52it/s]Parsing test CIFs:  99%|█████████▉| 8976/9046 [00:53<00:00, 130.30it/s]Parsing test CIFs: 100%|█████████▉| 9001/9046 [00:53<00:00, 150.13it/s]Parsing test CIFs: 100%|█████████▉| 9021/9046 [00:54<00:00, 154.92it/s]Parsing test CIFs: 100%|█████████▉| 9038/9046 [00:54<00:00, 149.02it/s]                                                                       Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.260  b=1.135  c=1.552  α=13.79  β=12.68  γ=20.23
+Aux-head lattice validity: 998/1000 (99.8%)
+Ensemble: 1000 patterns x 20 candidates in chunks of 32 (32 chunks)
+Refinement: 200 Adam steps @ lr=0.001, refine_lattice=False
+  chunk 3/32 done (sample=17.0s  select=1.2s  refine=2.4s)
+  chunk 6/32 done (sample=33.6s  select=2.3s  refine=3.9s)
+  chunk 9/32 done (sample=50.3s  select=3.4s  refine=5.3s)
+  chunk 12/32 done (sample=67.0s  select=4.5s  refine=6.9s)
+  chunk 15/32 done (sample=83.7s  select=5.6s  refine=8.4s)
+  chunk 18/32 done (sample=100.4s  select=6.7s  refine=9.9s)
+  chunk 21/32 done (sample=117.1s  select=7.8s  refine=11.5s)
+  chunk 24/32 done (sample=133.8s  select=9.0s  refine=12.9s)
+  chunk 27/32 done (sample=150.5s  select=10.1s  refine=14.3s)
+  chunk 30/32 done (sample=167.2s  select=11.2s  refine=15.8s)
+  chunk 32/32 done (sample=174.2s  select=11.7s  refine=16.7s)
+Total: sample=174.2s  select=11.7s  refine=16.7s
+Selected-candidate pearson: mean=0.097 median=0.040
+Refinement loss avg first->last: 0.9032 -> 0.6431
+  [mp-10009] invalid lattice: [13.199999809265137, 7.300000190734863, 5.599999904632568, 59.20000076293945, 220.8000030517578, 81.0999984741211]
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.361  pearson=0.054  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=27.055  pearson=0.008  all=N
+  [mp-1220884] invalid lattice: [-2.9000000953674316, 5.599999904632568, 19.200000762939453, 211.6999969482422, 90.0999984741211, 60.900001525878906]
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.000  pearson=0.000  all=N
+  [mp-1002572] invalid lattice: [12.600000381469727, -1.2999999523162842, 8.699999809265137, 57.599998474121094, -2.0, 116.4000015258789]
+  [mp-626680] invalid lattice: [9.699999809265137, -1.899999976158142, -3.299999952316284, 133.10000610351562, 39.79999923706055, 49.900001525878906]
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.696  pearson=0.376  all=N
+  [mp-1219335] invalid lattice: [4.900000095367432, 3.4000000953674316, 0.20000000298023224, 61.70000076293945, 118.0, 89.0999984741211]
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=8.554  pearson=0.019  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.939  pearson=0.008  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.000  pearson=0.000  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.951  pearson=0.212  all=N
+  [mp-1215627] invalid lattice: [2.200000047683716, 8.300000190734863, -0.6000000238418579, 92.30000305175781, 121.80000305175781, 21.100000381469727]
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.080  pearson=0.022  all=N
+  [mp-1516449] invalid lattice: [5.599999904632568, 6.699999809265137, -2.5, 65.9000015258789, 107.80000305175781, 117.0]
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.076  pearson=0.010  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=20.464  pearson=0.053  all=N
+  [mp-849335] invalid lattice: [0.10000000149011612, 8.199999809265137, 7.099999904632568, 56.099998474121094, 132.39999389648438, 140.0]
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.989  pearson=0.102  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=31.092  pearson=0.064  all=N
+  [mp-2452] invalid lattice: [9.199999809265137, 4.599999904632568, 6.400000095367432, -32.900001525878906, 58.099998474121094, 14.100000381469727]
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.000  pearson=0.000  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=1.511  pearson=0.088  all=N
+  [mp-1218090] invalid lattice: [7.5, 15.399999618530273, -1.5, 111.0999984741211, 107.19999694824219, 30.600000381469727]
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=19.820  pearson=0.045  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.481  pearson=0.001  all=N
+  [mp-1222864] invalid lattice: [5.300000190734863, 9.199999809265137, -2.4000000953674316, 190.39999389648438, 207.60000610351562, 156.3000030517578]
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.518  pearson=0.031  all=N
+  [mp-1225753] invalid lattice: [6.900000095367432, 10.399999618530273, -0.800000011920929, 70.19999694824219, 151.1999969482422, 118.5999984741211]
+  [mp-3833] invalid lattice: [1.100000023841858, 9.399999618530273, -8.0, 217.89999389648438, 102.19999694824219, 102.69999694824219]
+  [mp-1187801] invalid lattice: [-0.10000000149011612, 3.799999952316284, 11.899999618530273, 63.29999923706055, 93.4000015258789, 129.6999969482422]
+  [mp-9029] invalid lattice: [-2.799999952316284, 5.199999809265137, 2.9000000953674316, 109.30000305175781, 115.5, 106.0]
+  [mp-16965] invalid lattice: [13.699999809265137, 9.399999618530273, 11.899999618530273, 66.5, 109.69999694824219, 201.10000610351562]
+  [mp-867114] invalid lattice: [0.30000001192092896, 7.0, 7.900000095367432, 32.099998474121094, 35.599998474121094, 40.900001525878906]
+  [mp-1212903] invalid lattice: [5.599999904632568, 4.800000190734863, -0.8999999761581421, 132.39999389648438, 85.0999984741211, 119.80000305175781]
+  [mp-505312] invalid lattice: [-1.399999976158142, 11.899999618530273, 15.600000381469727, 105.80000305175781, 13.699999809265137, 122.19999694824219]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1187511] invalid lattice: [11.899999618530273, -1.0, 10.199999809265137, 55.0, 58.900001525878906, -5.5]
+  [mp-1111218] invalid lattice: [1.399999976158142, 8.699999809265137, 10.600000381469727, 56.599998474121094, 205.3000030517578, 108.19999694824219]
+  [mp-978949] invalid lattice: [8.0, -0.800000011920929, -4.300000190734863, 69.4000015258789, 129.10000610351562, 89.69999694824219]
+  [mp-567510] invalid lattice: [9.600000381469727, 4.300000190734863, 6.0, 27.5, 63.20000076293945, 0.30000001192092896]
+  [mp-1212739] invalid lattice: [-2.0999999046325684, -3.4000000953674316, 0.800000011920929, 140.3000030517578, 71.5, 141.60000610351562]
+  [mp-9632] invalid lattice: [1.7999999523162842, 5.300000190734863, 22.799999237060547, 178.8000030517578, 103.30000305175781, 19.100000381469727]
+  [mp-1223856] invalid lattice: [3.5, 10.300000190734863, 4.800000190734863, 143.3000030517578, 83.5999984741211, 180.1999969482422]
+  [mp-1025222] invalid lattice: [10.199999809265137, 11.399999618530273, 1.7999999523162842, 192.10000610351562, 54.599998474121094, 10.0]
+  [mp-1077536] invalid lattice: [6.900000095367432, 2.200000047683716, -3.200000047683716, 50.70000076293945, 59.900001525878906, 14.600000381469727]
+  [mp-1215208] invalid lattice: [8.5, 8.100000381469727, 9.199999809265137, 32.29999923706055, 188.3000030517578, 124.5999984741211]
+  [mp-1236924] invalid lattice: [9.199999809265137, -2.700000047683716, -2.299999952316284, 88.69999694824219, 124.0, 118.5]
+  [mp-1224485] invalid lattice: [2.799999952316284, 3.5, -20.200000762939453, 81.5, 97.9000015258789, 47.79999923706055]
+  [mp-976876] invalid lattice: [10.699999809265137, 7.099999904632568, 3.9000000953674316, 118.80000305175781, 137.39999389648438, 224.3000030517578]
+  [mp-1220149] invalid lattice: [9.0, 5.300000190734863, 0.10000000149011612, 92.0, 49.0, 66.30000305175781]
+  [mp-983062] invalid lattice: [5.900000095367432, 9.899999618530273, -5.900000095367432, 114.19999694824219, 128.89999389648438, 16.0]
+  [mp-19755] invalid lattice: [8.199999809265137, 5.599999904632568, 3.5999999046325684, 4.5, 48.900001525878906, 46.900001525878906]
+  [mp-1025044] invalid lattice: [5.699999809265137, 5.800000190734863, 21.100000381469727, 85.19999694824219, 51.79999923706055, 179.3000030517578]
+  [mp-1025578] invalid lattice: [7.699999809265137, 7.900000095367432, -7.0, 148.1999969482422, 77.5999984741211, 126.80000305175781]
+  [mp-1220259] invalid lattice: [1.2000000476837158, 4.800000190734863, 10.699999809265137, 198.0, 114.19999694824219, 50.70000076293945]
+  [mp-1183582] invalid lattice: [2.9000000953674316, -0.10000000149011612, 13.100000381469727, 144.1999969482422, 62.70000076293945, 80.9000015258789]
+  [mp-1102836] invalid lattice: [7.599999904632568, -1.100000023841858, 6.599999904632568, 72.30000305175781, 71.30000305175781, 18.700000762939453]
+  [mp-7751] invalid lattice: [9.399999618530273, 7.199999809265137, -5.400000095367432, 38.5, 108.0999984741211, 130.60000610351562]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mvc-3998] invalid lattice: [7.400000095367432, 11.5, 1.5, -19.0, 76.0999984741211, 83.80000305175781]
+  [mp-13018] invalid lattice: [7.199999809265137, 7.5, -7.400000095367432, 71.30000305175781, 105.9000015258789, 23.100000381469727]
+  [mp-862548] invalid lattice: [7.599999904632568, 11.300000190734863, -8.300000190734863, 97.69999694824219, 99.5999984741211, 116.19999694824219]
+  [mp-1207090] invalid lattice: [-3.4000000953674316, 10.399999618530273, -2.5999999046325684, 86.80000305175781, 79.0, 134.6999969482422]
+  [mp-1187314] invalid lattice: [2.9000000953674316, 8.100000381469727, -2.0999999046325684, 61.79999923706055, 86.5999984741211, 135.3000030517578]
+  [mp-1094982] invalid lattice: [1.899999976158142, 11.5, 6.900000095367432, -33.20000076293945, 46.0, 61.5]
+  [mp-1206373] invalid lattice: [1.7999999523162842, 10.899999618530273, 9.199999809265137, 176.60000610351562, 80.80000305175781, 100.9000015258789]
+  [mp-1103481] invalid lattice: [7.699999809265137, 9.600000381469727, -7.199999809265137, 140.89999389648438, 138.3000030517578, 205.6999969482422]
+  [mp-5381] invalid lattice: [10.0, 2.9000000953674316, 7.199999809265137, 86.0, 192.3000030517578, 88.0999984741211]
+  [mp-1225220] invalid lattice: [6.300000190734863, 5.599999904632568, -3.700000047683716, 127.19999694824219, 104.5, 47.5]
+  [mp-494] invalid lattice: [9.699999809265137, -0.20000000298023224, -0.5, 23.700000762939453, 148.89999389648438, 193.1999969482422]
+  [mp-1112445] invalid lattice: [5.400000095367432, 4.599999904632568, 9.300000190734863, -31.899999618530273, 92.30000305175781, 191.89999389648438]
+  [mp-21383] invalid lattice: [0.4000000059604645, 10.600000381469727, 12.199999809265137, 123.0, 150.5, 195.3000030517578]
+  [mp-30673] invalid lattice: [5.0, 6.099999904632568, 8.199999809265137, 174.6999969482422, 82.0, 83.5999984741211]
+  [mp-18821] invalid lattice: [7.800000190734863, 12.5, -7.099999904632568, 89.4000015258789, 123.0999984741211, 111.0999984741211]
+  [mp-1106337] invalid lattice: [3.5999999046325684, 2.0999999046325684, -0.30000001192092896, 115.5, 84.30000305175781, 140.1999969482422]
+  [mp-1111671] invalid lattice: [4.5, 6.0, 13.600000381469727, 173.5, 104.69999694824219, 79.9000015258789]
+  [mp-1224999] invalid lattice: [-0.0, 7.199999809265137, 11.300000190734863, 94.69999694824219, 92.5, 118.0]
+  [mp-29658] invalid lattice: [-3.5999999046325684, 5.900000095367432, 4.599999904632568, 112.9000015258789, 71.80000305175781, 121.9000015258789]
+  [mp-1189857] invalid lattice: [9.5, 9.100000381469727, -8.699999809265137, 32.599998474121094, 97.0999984741211, 45.400001525878906]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1102310] invalid lattice: [8.800000190734863, 7.400000095367432, 5.900000095367432, 116.80000305175781, 32.099998474121094, 170.6999969482422]
+  [mp-1219140] invalid lattice: [4.5, 11.100000381469727, -0.8999999761581421, 63.5, 105.0999984741211, 104.80000305175781]
+  [mp-1520763] invalid lattice: [9.5, 4.599999904632568, -1.100000023841858, 138.89999389648438, 59.5, 110.30000305175781]
+  [mp-11778] invalid lattice: [7.300000190734863, 5.199999809265137, -0.4000000059604645, 114.9000015258789, 102.19999694824219, 99.0]
+  [mp-1190131] invalid lattice: [3.9000000953674316, 6.5, 8.199999809265137, 122.19999694824219, 176.6999969482422, 135.60000610351562]
+  [mp-753048] invalid lattice: [5.0, 6.0, -3.5999999046325684, 75.19999694824219, 118.69999694824219, 132.10000610351562]
+  [mp-3077] invalid lattice: [1.2000000476837158, 4.400000095367432, 4.5, 155.1999969482422, 104.4000015258789, 178.6999969482422]
+  [mp-23164] invalid lattice: [0.800000011920929, 8.800000190734863, -5.699999809265137, 108.69999694824219, 90.0999984741211, 77.69999694824219]
+  [mp-567628] invalid lattice: [6.199999809265137, 6.699999809265137, -3.4000000953674316, 86.0999984741211, 120.9000015258789, 38.79999923706055]
+  [mp-2066] invalid lattice: [6.699999809265137, 5.699999809265137, 7.699999809265137, 72.30000305175781, -8.0, 49.20000076293945]
+  [mp-2698] invalid lattice: [7.099999904632568, 5.099999904632568, 9.600000381469727, 42.0, 47.70000076293945, -6.900000095367432]
+  [mp-1186185] invalid lattice: [2.0999999046325684, -1.100000023841858, 4.199999809265137, 111.0999984741211, 103.5, 26.899999618530273]
+  [mp-1210574] invalid lattice: [-0.20000000298023224, 1.600000023841858, 20.100000381469727, 31.700000762939453, 77.0999984741211, 90.0999984741211]
+  [mp-1217683] invalid lattice: [1.2999999523162842, 1.600000023841858, -1.2999999523162842, 192.8000030517578, 100.4000015258789, 74.0999984741211]
+  [mp-865766] invalid lattice: [1.899999976158142, -2.0, 6.199999809265137, 123.0, 64.30000305175781, 9.699999809265137]
+  [mp-976843] invalid lattice: [4.199999809265137, 3.5, 5.400000095367432, 67.5, 143.39999389648438, -0.0]
+  [mp-1095465] invalid lattice: [7.900000095367432, 5.5, -2.4000000953674316, 82.4000015258789, 40.70000076293945, 90.4000015258789]
+  [mp-1112542] invalid lattice: [5.199999809265137, 3.4000000953674316, -7.599999904632568, 59.599998474121094, 122.0999984741211, 56.400001525878906]
+  [mp-1190038] invalid lattice: [4.599999904632568, 7.099999904632568, 7.800000190734863, 91.9000015258789, 42.20000076293945, 8.300000190734863]
+  [mp-22759] invalid lattice: [-3.5, 9.399999618530273, 21.200000762939453, 61.900001525878906, 73.4000015258789, 191.8000030517578]
+  [mp-1187965] invalid lattice: [5.199999809265137, 10.399999618530273, -6.900000095367432, 92.0, 105.5999984741211, 142.6999969482422]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-861886] invalid lattice: [8.300000190734863, -0.30000001192092896, 6.300000190734863, 86.0999984741211, 5.099999904632568, 151.1999969482422]
+  [mp-1147739] invalid lattice: [15.699999809265137, 4.800000190734863, -6.300000190734863, 156.6999969482422, 121.69999694824219, 80.4000015258789]
+  [mp-35876] invalid lattice: [7.699999809265137, 8.5, -5.599999904632568, 70.0999984741211, 98.0, 128.3000030517578]
+  [mp-1286297] invalid lattice: [-2.5, 6.0, 5.900000095367432, 129.60000610351562, 101.4000015258789, 104.19999694824219]
+  [mp-1023488] invalid lattice: [-0.6000000238418579, 2.5999999046325684, 12.699999809265137, 62.400001525878906, 56.099998474121094, 24.5]
+  [mp-1184509] invalid lattice: [5.599999904632568, 5.199999809265137, -1.399999976158142, 83.4000015258789, 50.0, 118.30000305175781]
+  [mp-29110] invalid lattice: [3.9000000953674316, 0.699999988079071, 6.599999904632568, 174.60000610351562, 53.599998474121094, 26.700000762939453]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1186142] invalid lattice: [8.800000190734863, 3.700000047683716, 6.800000190734863, 126.30000305175781, 120.4000015258789, 6.400000095367432]
+  [mp-2697] invalid lattice: [9.300000190734863, 0.5, -7.099999904632568, 76.69999694824219, 65.9000015258789, 65.19999694824219]
+  [mp-21005] invalid lattice: [9.300000190734863, -1.5, 5.800000190734863, 99.4000015258789, 77.4000015258789, 137.8000030517578]
+  [mp-977444] invalid lattice: [2.0, 4.900000095367432, 9.399999618530273, 170.5, 91.69999694824219, 85.9000015258789]
+  [mp-11873] invalid lattice: [1.7999999523162842, 3.299999952316284, -4.400000095367432, 107.4000015258789, 50.5, 127.5]
+  [mp-753007] invalid lattice: [4.199999809265137, 3.799999952316284, 1.0, 87.5, 3.200000047683716, 126.69999694824219]
+  [mp-21076] invalid lattice: [4.599999904632568, 9.100000381469727, -4.699999809265137, 121.0, 81.9000015258789, 53.599998474121094]
+  [mp-862730] invalid lattice: [4.800000190734863, 8.899999618530273, 7.099999904632568, 79.4000015258789, 91.69999694824219, 189.8000030517578]
+  [mp-570377] invalid lattice: [1.100000023841858, 1.2000000476837158, 11.800000190734863, 94.0999984741211, 78.19999694824219, -117.5]
+  [mp-504909] invalid lattice: [11.5, 16.299999237060547, 0.20000000298023224, 92.80000305175781, 43.900001525878906, 100.4000015258789]
+  [mp-567219] invalid lattice: [0.8999999761581421, 4.400000095367432, 7.5, 109.5999984741211, 91.19999694824219, -5.599999904632568]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-989637] invalid lattice: [4.599999904632568, 6.300000190734863, 5.599999904632568, 185.5, 48.400001525878906, 70.5999984741211]
+  [mp-1186560] invalid lattice: [5.900000095367432, 6.400000095367432, 14.199999809265137, 122.5, -85.5999984741211, -44.5]
+  [mp-1227571] invalid lattice: [6.300000190734863, 0.0, 0.20000000298023224, 131.5, 103.80000305175781, 33.099998474121094]
+  [mp-20514] invalid lattice: [0.699999988079071, 11.100000381469727, -0.10000000149011612, 75.69999694824219, 65.19999694824219, 59.79999923706055]
+  [mp-24124] invalid lattice: [1.7000000476837158, 3.9000000953674316, -6.900000095367432, 139.89999389648438, 24.600000381469727, 135.5]
+  [mp-1183643] invalid lattice: [1.0, 7.699999809265137, 20.399999618530273, -1.100000023841858, 151.8000030517578, 9.199999809265137]
+  [mp-504727] invalid lattice: [3.799999952316284, -0.6000000238418579, 12.800000190734863, -0.800000011920929, 21.299999237060547, 98.0]
+  [mp-862863] invalid lattice: [12.5, 2.200000047683716, 8.699999809265137, -15.899999618530273, 105.0, 109.4000015258789]
+  [mp-11350] invalid lattice: [7.900000095367432, 8.100000381469727, -0.800000011920929, 72.19999694824219, 78.30000305175781, 112.0]
+  [mp-730] invalid lattice: [2.5, 3.5999999046325684, -4.800000190734863, 38.5, 88.4000015258789, 86.5999984741211]
+  [mp-1008734] invalid lattice: [3.799999952316284, 8.800000190734863, -7.099999904632568, 32.0, 112.19999694824219, 135.8000030517578]
+  [mp-1215246] invalid lattice: [9.0, 1.600000023841858, -3.4000000953674316, 141.5, 74.80000305175781, 98.5]
+  [mp-1227052] invalid lattice: [-4.199999809265137, 9.600000381469727, 8.600000381469727, 198.10000610351562, 70.19999694824219, 138.39999389648438]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-3627] invalid lattice: [7.900000095367432, -0.4000000059604645, 2.0999999046325684, 123.80000305175781, 58.20000076293945, 91.9000015258789]
+  [mp-760381] invalid lattice: [4.0, 6.400000095367432, -2.5999999046325684, 100.19999694824219, 68.30000305175781, 118.9000015258789]
+  [mp-1178367] invalid lattice: [15.899999618530273, 7.800000190734863, 12.300000190734863, 160.10000610351562, 47.29999923706055, -62.900001525878906]
+  [mp-1104139] invalid lattice: [3.9000000953674316, 11.800000190734863, 10.600000381469727, 134.60000610351562, 142.0, -37.70000076293945]
+  [mp-864620] invalid lattice: [11.800000190734863, 9.0, -0.6000000238418579, 105.0999984741211, 103.9000015258789, 92.80000305175781]
+  [mp-1205874] invalid lattice: [6.199999809265137, 3.700000047683716, -3.299999952316284, 97.80000305175781, 75.5, 98.0]
+  [mp-1106355] invalid lattice: [5.199999809265137, 10.600000381469727, -4.699999809265137, 77.5, 152.39999389648438, 116.5]
+  [mp-753387] invalid lattice: [0.30000001192092896, 11.0, 10.5, 42.400001525878906, 95.9000015258789, 73.0]
+  [mp-1215234] invalid lattice: [7.199999809265137, 7.099999904632568, -1.7999999523162842, 58.099998474121094, 60.0, 97.19999694824219]
+  [mp-1146] invalid lattice: [12.800000190734863, 10.399999618530273, -2.0999999046325684, 112.0999984741211, 128.39999389648438, 80.0]
+  [mp-752545] invalid lattice: [3.5999999046325684, 7.699999809265137, -0.6000000238418579, 152.60000610351562, 47.5, 99.80000305175781]
+  [mp-1219063] invalid lattice: [5.800000190734863, 10.699999809265137, -1.100000023841858, 158.39999389648438, 130.6999969482422, 37.5]
+  [mp-11750] invalid lattice: [0.30000001192092896, 2.5, 4.599999904632568, 55.400001525878906, 127.0, 97.30000305175781]
+  [mp-1206438] invalid lattice: [4.599999904632568, 4.800000190734863, 21.600000381469727, 60.70000076293945, 70.30000305175781, -3.299999952316284]
+  [mp-866200] invalid lattice: [6.099999904632568, -1.899999976158142, 15.300000190734863, 123.0999984741211, 36.900001525878906, 101.5999984741211]
+  [mp-1222710] invalid lattice: [2.299999952316284, 6.0, 11.699999809265137, 65.69999694824219, -4.300000190734863, 69.0999984741211]
+  [mp-1223223] invalid lattice: [-2.9000000953674316, 6.199999809265137, 4.599999904632568, 105.80000305175781, 75.0, 16.299999237060547]
+  [mp-3465] invalid lattice: [-3.700000047683716, 5.599999904632568, 6.400000095367432, 104.5, 65.80000305175781, 100.4000015258789]
+  [mp-625700] invalid lattice: [0.5, -0.800000011920929, 8.0, 23.899999618530273, 80.9000015258789, 86.0]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1102211] invalid lattice: [10.5, 6.699999809265137, -8.899999618530273, 46.29999923706055, 33.400001525878906, 65.5]
+  [mp-865583] invalid lattice: [-1.899999976158142, 7.300000190734863, 19.100000381469727, -0.20000000298023224, 46.70000076293945, 70.5]
+  [mp-1221777] invalid lattice: [5.900000095367432, 6.099999904632568, 10.800000190734863, 110.69999694824219, 1.2999999523162842, 80.19999694824219]
+  [mp-27915] invalid lattice: [9.100000381469727, 11.399999618530273, -13.399999618530273, 93.5, -6.300000190734863, 92.30000305175781]
+  [mp-1208843] invalid lattice: [-0.6000000238418579, 2.200000047683716, 9.300000190734863, 121.5999984741211, -32.599998474121094, 112.80000305175781]
+  [mp-1228454] invalid lattice: [10.300000190734863, 13.5, -5.199999809265137, 150.60000610351562, 113.4000015258789, 99.0]
+  [mp-1086] invalid lattice: [6.0, -1.7999999523162842, 7.5, 63.5, 71.9000015258789, 63.400001525878906]
+  [mp-568337] invalid lattice: [-2.700000047683716, 11.100000381469727, 11.600000381469727, 63.099998474121094, 72.5999984741211, 65.0999984741211]
+  [mp-1189016] invalid lattice: [-0.20000000298023224, 5.0, 3.0, 88.4000015258789, 82.0999984741211, 56.0]
+  [mp-11615] invalid lattice: [-1.2000000476837158, 11.0, 11.399999618530273, 79.69999694824219, -18.700000762939453, 96.5]
+  [mp-13271] invalid lattice: [1.5, 3.4000000953674316, -0.699999988079071, 90.30000305175781, 109.9000015258789, 73.4000015258789]
+  [mp-10388] invalid lattice: [3.299999952316284, 7.800000190734863, -1.2999999523162842, 76.19999694824219, 121.4000015258789, 149.8000030517578]
+  [mp-1226194] invalid lattice: [5.5, 4.400000095367432, -4.0, 76.0999984741211, 112.0, 63.20000076293945]
+  [mp-1187917] invalid lattice: [4.400000095367432, 7.599999904632568, 5.300000190734863, -43.29999923706055, 108.19999694824219, 26.0]
+  [mp-975958] invalid lattice: [-0.6000000238418579, 3.700000047683716, 11.899999618530273, 88.30000305175781, 115.19999694824219, 94.80000305175781]
+  [mp-1188851] invalid lattice: [13.699999809265137, 3.9000000953674316, -1.399999976158142, 60.400001525878906, 162.1999969482422, 102.5]
+  [mp-1226630] invalid lattice: [8.300000190734863, 10.399999618530273, -5.300000190734863, 116.19999694824219, 24.799999237060547, 131.60000610351562]
+  [mp-1215591] invalid lattice: [10.5, -3.700000047683716, 10.699999809265137, 118.5, 47.099998474121094, 144.10000610351562]
+  [mp-1226769] invalid lattice: [11.399999618530273, 6.099999904632568, 17.100000381469727, 57.79999923706055, 125.5999984741211, -40.5]
+  [mp-1104436] invalid lattice: [2.4000000953674316, 0.30000001192092896, -0.800000011920929, 28.200000762939453, 150.10000610351562, 138.39999389648438]
+  [mp-562809] invalid lattice: [2.5999999046325684, 12.800000190734863, -4.400000095367432, 115.0999984741211, 96.4000015258789, 33.5]
+  [mp-19000] invalid lattice: [0.20000000298023224, 3.200000047683716, 6.699999809265137, 149.89999389648438, 138.8000030517578, 62.0]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1222693] invalid lattice: [4.300000190734863, 8.0, -1.7000000476837158, 69.19999694824219, 75.0, 96.30000305175781]
+  [mp-17424] invalid lattice: [6.0, 12.399999618530273, 21.600000381469727, 92.19999694824219, 54.79999923706055, -32.5]
+  [mp-636805] invalid lattice: [6.199999809265137, 6.300000190734863, -2.299999952316284, 85.9000015258789, 124.0999984741211, 95.69999694824219]
+  [mp-1059528] invalid lattice: [5.199999809265137, -0.699999988079071, 10.199999809265137, 83.5, 100.9000015258789, 94.4000015258789]
+  [mp-1080654] invalid lattice: [10.199999809265137, 7.300000190734863, -0.10000000149011612, 97.5999984741211, 55.29999923706055, 44.599998474121094]
+  [mp-754694] invalid lattice: [10.100000381469727, 8.899999618530273, -2.299999952316284, 99.80000305175781, 85.5, 96.69999694824219]
+  [mp-1227198] invalid lattice: [0.8999999761581421, 4.699999809265137, -9.0, 77.0, 115.80000305175781, 121.5999984741211]
+  [mp-29652] invalid lattice: [8.0, 7.300000190734863, -5.599999904632568, 59.70000076293945, 136.39999389648438, 120.19999694824219]
+  [mp-865236] invalid lattice: [8.600000381469727, 3.5, 16.600000381469727, 207.6999969482422, 35.599998474121094, 166.89999389648438]
+  [mp-1181515] invalid lattice: [9.199999809265137, -3.9000000953674316, 9.600000381469727, 39.29999923706055, 153.8000030517578, 123.5]
+  [mp-5878] invalid lattice: [6.199999809265137, 1.7999999523162842, -0.800000011920929, 148.5, 128.5, 112.30000305175781]
+  [mp-1206945] invalid lattice: [7.900000095367432, 9.300000190734863, 14.600000381469727, 63.0, -9.300000190734863, 64.5]
+  [mp-24095] invalid lattice: [1.600000023841858, 0.8999999761581421, -8.100000381469727, 113.30000305175781, 21.0, 173.0]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-582389] invalid lattice: [-0.10000000149011612, 10.0, 6.099999904632568, 88.69999694824219, 63.29999923706055, 64.80000305175781]
+  [mp-1225358] invalid lattice: [6.099999904632568, 4.099999904632568, 8.199999809265137, 62.70000076293945, 98.69999694824219, 176.89999389648438]
+  [mp-1189757] invalid lattice: [3.5999999046325684, 6.599999904632568, -0.30000001192092896, 59.900001525878906, 69.30000305175781, 18.0]
+  [mp-29297] invalid lattice: [0.20000000298023224, 10.699999809265137, 6.900000095367432, 25.299999237060547, 64.30000305175781, 84.4000015258789]
+  [mp-864912] invalid lattice: [1.100000023841858, 4.800000190734863, -9.100000381469727, 74.0, 157.3000030517578, 100.4000015258789]
+  [mp-867275] invalid lattice: [3.9000000953674316, 5.5, 0.4000000059604645, 102.0999984741211, 35.099998474121094, 84.9000015258789]
+  [mp-1228015] invalid lattice: [5.599999904632568, -2.799999952316284, 5.800000190734863, 112.80000305175781, 85.9000015258789, 69.5]
+  [mp-983428] invalid lattice: [2.5999999046325684, 8.399999618530273, -10.300000190734863, 40.5, 125.19999694824219, 96.69999694824219]
+  [mp-1225649] invalid lattice: [5.099999904632568, 6.099999904632568, 19.700000762939453, 160.6999969482422, 13.699999809265137, 1.399999976158142]
+  [mp-1095234] invalid lattice: [0.30000001192092896, 6.599999904632568, 10.800000190734863, -21.899999618530273, 55.0, 75.30000305175781]
+  [mp-1189323] invalid lattice: [7.199999809265137, 4.800000190734863, -3.700000047683716, 68.30000305175781, 102.4000015258789, -3.5]
+  [mp-19966] invalid lattice: [-1.600000023841858, 5.800000190734863, 10.399999618530273, 72.4000015258789, 129.60000610351562, 108.5]
+  [mp-556296] invalid lattice: [-0.20000000298023224, 1.899999976158142, 1.7000000476837158, 123.80000305175781, 112.30000305175781, 81.9000015258789]
+  [mp-12382] invalid lattice: [4.0, 4.599999904632568, 7.099999904632568, 82.69999694824219, 57.0, 1.7999999523162842]
+  [mp-972069] invalid lattice: [8.600000381469727, 8.399999618530273, 12.300000190734863, 106.30000305175781, 8.600000381469727, 108.5999984741211]
+  [mp-561048] invalid lattice: [3.0999999046325684, 4.300000190734863, -8.0, 93.5999984741211, 71.0999984741211, 129.60000610351562]
+  [mp-17895] invalid lattice: [-0.8999999761581421, 8.300000190734863, 6.5, 139.0, 60.400001525878906, 23.200000762939453]
+  [mp-22648] invalid lattice: [8.0, 1.2000000476837158, 5.0, 100.5, -24.299999237060547, -14.100000381469727]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1207748] invalid lattice: [5.400000095367432, 3.200000047683716, 7.5, 31.0, 101.69999694824219, -36.900001525878906]
+  [mvc-13672] invalid lattice: [6.5, 6.199999809265137, 11.899999618530273, 212.0, 82.69999694824219, 111.80000305175781]
+  [mp-1222486] invalid lattice: [0.4000000059604645, 8.300000190734863, 5.5, 98.0, 103.69999694824219, 61.599998474121094]
+  [mp-642736] invalid lattice: [4.900000095367432, 7.099999904632568, -6.599999904632568, 69.5, 102.0, 39.5]
+  [mp-625054] invalid lattice: [3.799999952316284, -3.0999999046325684, 12.5, 164.6999969482422, 59.20000076293945, 109.80000305175781]
+  [mp-1024957] invalid lattice: [6.400000095367432, 8.600000381469727, -1.899999976158142, 38.70000076293945, 190.5, -0.4000000059604645]
+  [mp-30943] invalid lattice: [6.199999809265137, 1.399999976158142, 11.399999618530273, 70.0, 55.29999923706055, 186.10000610351562]
+  [mp-27637] invalid lattice: [-1.7000000476837158, 7.900000095367432, -1.100000023841858, 42.79999923706055, 99.0999984741211, 62.099998474121094]
+  [mp-1101256] invalid lattice: [8.0, -3.0, 9.699999809265137, 83.80000305175781, 91.69999694824219, 87.30000305175781]
+  [mp-22994] invalid lattice: [-1.2000000476837158, 4.699999809265137, 3.200000047683716, 77.80000305175781, 48.900001525878906, 52.599998474121094]
+  [mp-1220140] invalid lattice: [9.0, -1.5, 18.100000381469727, 132.1999969482422, 98.5999984741211, 114.30000305175781]
+  [mp-983444] invalid lattice: [9.0, 4.400000095367432, 1.899999976158142, -31.0, 62.29999923706055, 62.900001525878906]
+  [mp-865558] invalid lattice: [11.100000381469727, 3.200000047683716, -0.699999988079071, 116.9000015258789, 56.599998474121094, 135.5]
+  [mp-559563] invalid lattice: [8.100000381469727, 9.699999809265137, -4.800000190734863, 56.599998474121094, 21.799999237060547, 41.29999923706055]
+  [mp-643387] invalid lattice: [-0.4000000059604645, 6.400000095367432, 4.199999809265137, 58.70000076293945, 81.9000015258789, 52.099998474121094]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-31183] invalid lattice: [4.699999809265137, 5.300000190734863, -2.0999999046325684, 63.20000076293945, 62.900001525878906, 167.60000610351562]
+  [mp-755007] invalid lattice: [11.800000190734863, -2.200000047683716, 15.199999809265137, 130.1999969482422, 106.0999984741211, 36.20000076293945]
+  [mp-971738] invalid lattice: [10.699999809265137, -5.199999809265137, -4.900000095367432, 73.30000305175781, 58.599998474121094, 58.900001525878906]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-754549] invalid lattice: [4.599999904632568, 5.099999904632568, -4.5, 178.0, 106.19999694824219, 58.599998474121094]
+  [mp-975784] invalid lattice: [-0.8999999761581421, 10.800000190734863, 5.0, 80.69999694824219, 35.900001525878906, 105.5999984741211]
+  [mp-765701] invalid lattice: [2.4000000953674316, 14.0, 6.699999809265137, 105.5999984741211, 67.80000305175781, -30.0]
+  [mp-7814] invalid lattice: [6.0, 11.5, 1.399999976158142, -47.5, 38.400001525878906, 62.099998474121094]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1720] invalid lattice: [9.199999809265137, 5.699999809265137, 5.599999904632568, 91.9000015258789, 174.5, 73.5]
+  [mp-754475] invalid lattice: [3.200000047683716, 3.200000047683716, -3.0, 21.399999618530273, 69.5, 78.9000015258789]
+  [mp-1208643] invalid lattice: [6.699999809265137, 0.20000000298023224, 6.5, 73.0999984741211, 56.79999923706055, 118.19999694824219]
+  [mp-15704] invalid lattice: [2.5, 8.399999618530273, -3.0999999046325684, 114.30000305175781, 86.69999694824219, 141.3000030517578]
+  [mp-38975] invalid lattice: [9.100000381469727, 4.300000190734863, -1.2999999523162842, 144.6999969482422, 20.399999618530273, 73.19999694824219]
+  [mp-1079347] invalid lattice: [8.800000190734863, -0.8999999761581421, 5.199999809265137, 72.9000015258789, 80.5, -0.8999999761581421]
+  [mp-1002114] invalid lattice: [8.600000381469727, -0.5, 6.599999904632568, 179.0, 70.0, -26.399999618530273]
+  [mp-1232342] invalid lattice: [2.200000047683716, 11.899999618530273, -3.0999999046325684, 116.0, 113.5999984741211, 110.69999694824219]
+  [mp-545622] invalid lattice: [5.900000095367432, 7.199999809265137, 4.699999809265137, 87.0, 216.5, 58.400001525878906]
+  [mp-1220277] invalid lattice: [5.099999904632568, 4.900000095367432, -6.599999904632568, 69.5, 95.5999984741211, 95.4000015258789]
+  [mp-982667] invalid lattice: [1.2000000476837158, 7.5, 12.100000381469727, 104.5999984741211, 29.5, -63.79999923706055]
+  [mp-1114373] invalid lattice: [1.5, 6.900000095367432, -4.199999809265137, 55.79999923706055, 121.30000305175781, 123.69999694824219]
+  [mp-1114541] invalid lattice: [-4.199999809265137, 7.900000095367432, -4.0, 73.30000305175781, 47.70000076293945, 98.19999694824219]
+  [mp-1025824] invalid lattice: [5.699999809265137, 11.300000190734863, 27.5, 73.19999694824219, 74.69999694824219, -13.699999809265137]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-574189] invalid lattice: [12.699999809265137, 2.9000000953674316, -5.599999904632568, 98.4000015258789, 108.5, 37.0]
+  [mp-20961] invalid lattice: [6.699999809265137, 3.0999999046325684, 4.300000190734863, 178.0, 7.300000190734863, 97.80000305175781]
+  [mp-1100766] invalid lattice: [-0.699999988079071, 1.899999976158142, 9.100000381469727, 128.8000030517578, 74.80000305175781, 166.8000030517578]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-4668] invalid lattice: [5.699999809265137, -1.2000000476837158, 3.5, 83.30000305175781, 86.5, 80.9000015258789]
+  [mp-23703] invalid lattice: [5.099999904632568, -2.4000000953674316, 3.0, 52.900001525878906, 65.30000305175781, 91.5999984741211]
+  [mp-1225319] invalid lattice: [5.800000190734863, 3.5, 6.5, 86.69999694824219, 143.89999389648438, -24.200000762939453]
+  [mp-1523149] invalid lattice: [-4.400000095367432, 12.899999618530273, 10.699999809265137, 123.0999984741211, 68.5999984741211, 162.10000610351562]
+  [mp-763291] invalid lattice: [10.899999618530273, 0.0, 16.100000381469727, 27.700000762939453, 71.0, 63.5]
+  [mp-20601] invalid lattice: [6.800000190734863, 15.5, -6.900000095367432, 62.79999923706055, 98.19999694824219, 68.5]
+  [mp-1184832] invalid lattice: [4.199999809265137, 6.099999904632568, -0.5, -9.800000190734863, 127.30000305175781, 61.79999923706055]
+  [mp-1102412] invalid lattice: [11.300000190734863, 6.800000190734863, -4.5, 58.0, 18.899999618530273, 64.19999694824219]
+  [mp-997158] invalid lattice: [12.5, 8.199999809265137, 0.20000000298023224, 94.80000305175781, 97.0999984741211, 179.3000030517578]
+  [mp-1183118] invalid lattice: [2.200000047683716, 1.7999999523162842, -1.5, 12.5, 97.19999694824219, 160.0]
+  [mp-1220518] invalid lattice: [-0.30000001192092896, 11.800000190734863, 18.399999618530273, 88.0999984741211, 77.69999694824219, 53.5]
+  [mp-1215662] invalid lattice: [-2.200000047683716, 11.800000190734863, 2.5999999046325684, 105.4000015258789, 46.5, 121.30000305175781]
+  [mp-16258] invalid lattice: [5.099999904632568, 11.199999809265137, -4.900000095367432, 100.5, 129.5, 68.19999694824219]
+  [mp-1272379] invalid lattice: [3.4000000953674316, 2.4000000953674316, -0.20000000298023224, 82.5, 85.0, 111.9000015258789]
+  [mp-1225979] invalid lattice: [8.899999618530273, 8.5, 0.4000000059604645, 67.9000015258789, 53.400001525878906, 16.100000381469727]
+  [mp-1078140] invalid lattice: [10.199999809265137, 3.0, -6.099999904632568, 105.80000305175781, 80.4000015258789, 136.6999969482422]
+  [mp-567621] invalid lattice: [2.4000000953674316, 8.699999809265137, 2.4000000953674316, 79.19999694824219, 107.80000305175781, 171.8000030517578]
+  [mp-1106389] invalid lattice: [5.0, 7.800000190734863, 26.600000381469727, 131.39999389648438, -18.399999618530273, 148.5]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-642690] invalid lattice: [10.0, 4.5, -6.599999904632568, 89.0, 75.0999984741211, 129.6999969482422]
+  [mp-975570] invalid lattice: [10.399999618530273, 6.199999809265137, 15.899999618530273, 105.9000015258789, 204.89999389648438, 73.30000305175781]
+  [mp-865622] invalid lattice: [3.299999952316284, 5.800000190734863, 3.0, 89.69999694824219, 112.4000015258789, 196.60000610351562]
+  [mp-20947] invalid lattice: [8.399999618530273, 7.5, -5.400000095367432, 70.80000305175781, 47.79999923706055, 95.19999694824219]
+  [mp-992] invalid lattice: [4.5, 9.600000381469727, 0.20000000298023224, 104.5999984741211, 97.9000015258789, 139.89999389648438]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1210264] invalid lattice: [6.0, 4.300000190734863, -14.0, 69.19999694824219, 49.400001525878906, 46.400001525878906]
+  [mp-1067235] invalid lattice: [2.5999999046325684, 6.0, -2.700000047683716, 59.5, 67.5, 126.80000305175781]
+  [mp-567594] invalid lattice: [7.099999904632568, -5.900000095367432, 2.9000000953674316, 96.19999694824219, 108.0, 50.5]
+  [mp-1950] invalid lattice: [0.10000000149011612, 7.5, 9.100000381469727, 10.899999618530273, -3.299999952316284, -5.300000190734863]
+  [mp-866029] invalid lattice: [0.800000011920929, 3.799999952316284, -6.599999904632568, 139.6999969482422, 85.4000015258789, 57.79999923706055]
+  [mp-676562] invalid lattice: [7.199999809265137, 7.300000190734863, 2.799999952316284, 34.0, 6.699999809265137, 127.5]
+  [mp-769263] invalid lattice: [4.900000095367432, 6.5, -1.7999999523162842, 19.200000762939453, 104.19999694824219, 64.5]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-753978] invalid lattice: [12.699999809265137, 6.300000190734863, 0.30000001192092896, 129.89999389648438, 150.8000030517578, 71.0]
+  [mp-1104102] invalid lattice: [3.700000047683716, 8.699999809265137, -4.199999809265137, 53.900001525878906, 123.5999984741211, 91.19999694824219]
+  [mp-567994] invalid lattice: [-2.9000000953674316, 11.699999809265137, 11.600000381469727, 157.60000610351562, 79.69999694824219, 88.4000015258789]
+  [mp-1227539] invalid lattice: [7.099999904632568, 7.099999904632568, 13.800000190734863, 26.200000762939453, 172.3000030517578, -2.4000000953674316]
+  [mp-862817] invalid lattice: [3.200000047683716, 4.199999809265137, 15.600000381469727, 47.79999923706055, -36.099998474121094, 58.400001525878906]
+  [mp-760490] invalid lattice: [4.599999904632568, 7.300000190734863, 9.899999618530273, 93.80000305175781, 2.5999999046325684, 103.80000305175781]
+  [mp-1189438] invalid lattice: [8.300000190734863, 8.800000190734863, 21.899999618530273, 26.200000762939453, -12.399999618530273, 50.0]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1106099] invalid lattice: [10.399999618530273, 6.0, -2.0999999046325684, 139.60000610351562, 117.69999694824219, 56.599998474121094]
+  [mp-1075902] invalid lattice: [5.300000190734863, 5.599999904632568, 10.0, -1.2999999523162842, 185.39999389648438, 7.199999809265137]
+  [mp-1025363] invalid lattice: [1.2000000476837158, 0.20000000298023224, 1.7999999523162842, 100.69999694824219, 87.0, 30.100000381469727]
+  [mp-1077589] invalid lattice: [-0.4000000059604645, 6.699999809265137, 17.600000381469727, 66.80000305175781, 19.0, 84.69999694824219]
+  [mp-865904] invalid lattice: [7.199999809265137, 6.900000095367432, -2.799999952316284, 48.900001525878906, 86.4000015258789, 69.9000015258789]
+  [mp-1078235] invalid lattice: [5.599999904632568, 4.900000095367432, 1.899999976158142, 157.0, 118.80000305175781, 184.3000030517578]
+  [mp-22343] invalid lattice: [14.199999809265137, 3.299999952316284, -2.5, 99.9000015258789, 56.29999923706055, 77.30000305175781]
+  [mp-25576] invalid lattice: [8.600000381469727, -0.4000000059604645, 6.0, 36.70000076293945, -37.599998474121094, 54.0]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1218758] invalid lattice: [3.5, 4.300000190734863, -2.299999952316284, 92.5999984741211, 57.79999923706055, 132.3000030517578]
+  [mp-6964] invalid lattice: [9.699999809265137, -0.699999988079071, -9.0, 94.80000305175781, 97.19999694824219, 7.5]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-558536] invalid lattice: [-0.8999999761581421, 7.400000095367432, 7.900000095367432, 142.3000030517578, 129.89999389648438, 39.900001525878906]
+  [mp-24336] invalid lattice: [5.800000190734863, 0.0, 4.199999809265137, 86.4000015258789, 63.79999923706055, 56.900001525878906]
+  [mp-16565] invalid lattice: [6.400000095367432, 12.0, -3.799999952316284, -12.100000381469727, 38.70000076293945, 61.79999923706055]
+  [mp-1030119] invalid lattice: [-0.20000000298023224, 3.0, 4.199999809265137, 107.19999694824219, 93.0999984741211, 85.80000305175781]
+  [mp-655448] invalid lattice: [6.900000095367432, 10.899999618530273, 7.199999809265137, 222.3000030517578, 119.69999694824219, 93.5]
+  [mp-19802] invalid lattice: [1.899999976158142, 5.699999809265137, -0.30000001192092896, 67.30000305175781, 103.4000015258789, 146.60000610351562]
+  [mp-554769] invalid lattice: [10.300000190734863, 8.699999809265137, -4.800000190734863, 56.5, 128.6999969482422, 121.80000305175781]
+  [mp-966800] invalid lattice: [10.699999809265137, 7.599999904632568, 4.800000190734863, 41.20000076293945, 188.3000030517578, 67.4000015258789]
+  [mp-558387] invalid lattice: [4.300000190734863, 0.10000000149011612, 8.699999809265137, 94.80000305175781, 47.099998474121094, 129.8000030517578]
+  [mp-1103261] invalid lattice: [-1.2999999523162842, 8.100000381469727, 5.900000095367432, 75.5, 51.29999923706055, 55.20000076293945]
+  [mp-996960] invalid lattice: [11.300000190734863, 11.699999809265137, -0.30000001192092896, 25.299999237060547, 11.800000190734863, 33.599998474121094]
+  [mp-756542] invalid lattice: [10.699999809265137, 2.5999999046325684, -3.9000000953674316, 87.5, 115.80000305175781, 113.80000305175781]
+  [mp-36526] invalid lattice: [5.199999809265137, 11.0, 9.5, 102.69999694824219, -0.4000000059604645, 92.30000305175781]
+  [mp-1185748] invalid lattice: [7.599999904632568, 0.10000000149011612, 5.300000190734863, 77.9000015258789, 74.80000305175781, 19.0]
+  [mp-5577] invalid lattice: [5.300000190734863, 10.600000381469727, -10.300000190734863, 39.70000076293945, 4.599999904632568, 162.89999389648438]
+  [mp-5063] invalid lattice: [6.400000095367432, 7.300000190734863, -2.4000000953674316, 133.6999969482422, 52.5, 132.8000030517578]
+  [mp-1220165] invalid lattice: [0.20000000298023224, 8.899999618530273, 3.799999952316284, 121.4000015258789, 118.5, 93.69999694824219]
+  [mp-1187560] invalid lattice: [10.899999618530273, 12.800000190734863, 0.800000011920929, 119.30000305175781, 96.9000015258789, -9.300000190734863]
+  [mp-1205523] invalid lattice: [1.7999999523162842, 11.199999809265137, -3.5999999046325684, 46.099998474121094, 109.80000305175781, 116.19999694824219]
+  [mp-12985] invalid lattice: [4.300000190734863, 7.400000095367432, 18.299999237060547, 57.70000076293945, 2.5, 133.8000030517578]
+  [mp-32750] invalid lattice: [-0.10000000149011612, 5.900000095367432, 15.5, 99.19999694824219, 109.80000305175781, 31.5]
+  [mp-22671] invalid lattice: [6.900000095367432, 7.0, -0.30000001192092896, 143.3000030517578, 127.5999984741211, 52.29999923706055]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1105213] invalid lattice: [15.399999618530273, 0.5, 7.300000190734863, 42.900001525878906, 9.5, 48.900001525878906]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1185615] invalid lattice: [6.5, -0.5, 10.600000381469727, -2.0999999046325684, 46.79999923706055, 118.30000305175781]
+  [mp-9400] invalid lattice: [5.5, 4.599999904632568, 17.600000381469727, 141.6999969482422, 75.0, 211.8000030517578]
+  [mp-29483] invalid lattice: [-3.700000047683716, 2.799999952316284, 7.800000190734863, 130.60000610351562, 125.5, 66.4000015258789]
+  [mp-24589] invalid lattice: [4.699999809265137, 7.900000095367432, -3.299999952316284, 125.5999984741211, 139.3000030517578, 89.19999694824219]
+  [mp-1114474] invalid lattice: [-0.4000000059604645, 5.699999809265137, 7.099999904632568, 70.9000015258789, 115.9000015258789, 134.89999389648438]
+  [mp-29678] invalid lattice: [4.199999809265137, 8.100000381469727, 4.800000190734863, 174.0, 103.80000305175781, 72.69999694824219]
+  [mp-1103280] invalid lattice: [7.300000190734863, 5.699999809265137, 0.10000000149011612, 91.9000015258789, 79.9000015258789, 143.39999389648438]
+  [mp-1185769] invalid lattice: [8.199999809265137, 7.0, 7.400000095367432, -27.700000762939453, 65.19999694824219, 74.30000305175781]
+  [mp-23061] invalid lattice: [10.199999809265137, 2.5, -1.7000000476837158, 112.69999694824219, 127.30000305175781, 116.80000305175781]
+  [mp-1189707] invalid lattice: [3.5, 1.899999976158142, -2.0, 121.9000015258789, 65.9000015258789, 178.8000030517578]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-5443] invalid lattice: [4.699999809265137, 4.400000095367432, -9.899999618530273, 34.29999923706055, 103.80000305175781, 159.8000030517578]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1227630] invalid lattice: [-0.0, 3.0999999046325684, 7.300000190734863, 140.5, 77.0999984741211, 115.9000015258789]
+  [mp-1214655] invalid lattice: [2.5999999046325684, 3.700000047683716, -1.7000000476837158, 109.19999694824219, 120.19999694824219, 33.0]
+  [mp-770405] invalid lattice: [7.099999904632568, 9.800000190734863, -4.199999809265137, 63.79999923706055, 89.69999694824219, 57.70000076293945]
+  [mp-30435] invalid lattice: [7.800000190734863, 11.800000190734863, -1.399999976158142, 24.600000381469727, 100.19999694824219, 124.5999984741211]
+  [mp-8580] invalid lattice: [2.700000047683716, 11.0, -6.599999904632568, 69.19999694824219, 47.0, 91.9000015258789]
+  [mp-27041] invalid lattice: [8.100000381469727, -0.20000000298023224, 10.300000190734863, 159.60000610351562, 81.80000305175781, 92.0999984741211]
+  [mp-1187958] invalid lattice: [4.199999809265137, 2.5, -5.699999809265137, 123.0999984741211, 100.19999694824219, 97.80000305175781]
+  [mp-976272] invalid lattice: [-0.10000000149011612, -4.800000190734863, 13.5, 44.0, 105.0, 152.3000030517578]
+  [mp-919] invalid lattice: [9.300000190734863, 6.199999809265137, 5.099999904632568, 106.80000305175781, -63.599998474121094, 74.19999694824219]
+  [mp-1185749] invalid lattice: [10.100000381469727, 0.5, 7.900000095367432, 206.89999389648438, 103.9000015258789, 75.9000015258789]
+  [mp-541772] invalid lattice: [0.4000000059604645, 6.099999904632568, 7.099999904632568, 96.5999984741211, 99.69999694824219, 63.0]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-20554] invalid lattice: [3.9000000953674316, 8.199999809265137, 13.399999618530273, 150.8000030517578, 113.0, 209.6999969482422]
+  [mp-1226158] invalid lattice: [7.300000190734863, 13.300000190734863, -0.6000000238418579, 76.9000015258789, 96.30000305175781, 119.30000305175781]
+  [mp-1094589] invalid lattice: [8.199999809265137, 7.400000095367432, 15.5, 102.4000015258789, 38.20000076293945, -12.600000381469727]
+  [mp-974690] invalid lattice: [5.400000095367432, 7.699999809265137, -10.199999809265137, 64.9000015258789, 36.29999923706055, 30.399999618530273]
+  [mp-571350] invalid lattice: [6.199999809265137, 6.199999809265137, -2.799999952316284, 70.5, 91.5999984741211, 40.5]
+  [mp-567818] invalid lattice: [11.100000381469727, 8.399999618530273, -1.2999999523162842, 146.39999389648438, 136.60000610351562, 163.0]
+  [mp-1215168] invalid lattice: [5.599999904632568, 8.800000190734863, 10.100000381469727, 75.4000015258789, 73.9000015258789, 1.600000023841858]
+  [mp-1186902] invalid lattice: [2.5999999046325684, 10.800000190734863, -1.2000000476837158, 132.39999389648438, 84.80000305175781, 97.80000305175781]
+  [mp-23318] invalid lattice: [-2.0999999046325684, 6.0, 2.799999952316284, 70.5, 54.20000076293945, 63.599998474121094]
+  [mp-429] invalid lattice: [5.800000190734863, 3.299999952316284, -0.4000000059604645, 100.69999694824219, 70.9000015258789, 95.0999984741211]
+  [mp-2296] invalid lattice: [7.400000095367432, 9.0, 2.299999952316284, 1.2000000476837158, 71.4000015258789, 46.79999923706055]
+  [mp-1215953] invalid lattice: [10.699999809265137, 11.199999809265137, -3.0999999046325684, 46.400001525878906, 72.19999694824219, 115.5999984741211]
+  [mp-1114567] invalid lattice: [5.400000095367432, 8.0, 10.100000381469727, 81.9000015258789, 93.69999694824219, 200.60000610351562]
+  [mp-1009834] invalid lattice: [7.599999904632568, 2.299999952316284, 23.299999237060547, 108.19999694824219, 135.10000610351562, 223.89999389648438]
+  [mp-1217341] invalid lattice: [4.0, 6.400000095367432, -8.5, 44.5, 89.9000015258789, 88.69999694824219]
+  [mp-1215182] invalid lattice: [10.800000190734863, -3.0, -10.5, 92.5999984741211, 127.0999984741211, 70.30000305175781]
+  [mp-1179917] invalid lattice: [0.20000000298023224, 4.900000095367432, 10.300000190734863, 68.69999694824219, 103.9000015258789, 43.79999923706055]
+  [mp-1185371] invalid lattice: [10.5, 3.0, 2.9000000953674316, -13.699999809265137, 161.6999969482422, 29.799999237060547]
+  [mp-865321] invalid lattice: [3.9000000953674316, 9.899999618530273, -0.5, 121.69999694824219, 97.19999694824219, 102.0]
+/venv/main/lib/python3.12/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-1186954] invalid lattice: [8.300000190734863, 8.399999618530273, 5.699999809265137, 38.099998474121094, 5.199999809265137, 213.10000610351562]
+  [mp-1214116] invalid lattice: [8.0, 7.599999904632568, 11.300000190734863, 187.5, 83.0999984741211, 92.0999984741211]
+  [mp-1185980] invalid lattice: [7.199999809265137, 6.400000095367432, 6.0, -19.399999618530273, 117.4000015258789, 49.29999923706055]
+  [mp-1183086] invalid lattice: [5.0, 5.800000190734863, 5.900000095367432, 53.79999923706055, 67.5, -3.0]
+  [mp-1213174] invalid lattice: [6.599999904632568, -1.100000023841858, 14.399999618530273, 89.4000015258789, 74.30000305175781, 120.9000015258789]
+  [mp-27608] invalid lattice: [10.100000381469727, 7.900000095367432, -0.6000000238418579, 79.0, 81.5, 43.29999923706055]
+  [mp-1220484] invalid lattice: [-1.7000000476837158, 10.5, -0.20000000298023224, 63.599998474121094, 66.80000305175781, 24.700000762939453]
+  [mp-9319] invalid lattice: [3.0, 6.0, 6.699999809265137, 136.3000030517578, 32.400001525878906, 171.8000030517578]
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+ ** On entry to DLASCL parameter number  5 had an illegal value
+ ** On entry to DLASCL parameter number  4 had an illegal value
+  [mp-2658] invalid lattice: [-4.0, 10.300000190734863, 11.0, 36.70000076293945, 118.80000305175781, 166.5]
+  [mp-1070137] invalid lattice: [11.800000190734863, 4.199999809265137, -0.30000001192092896, 109.69999694824219, 158.0, 205.89999389648438]
+  [mp-866104] invalid lattice: [8.100000381469727, 7.400000095367432, -3.5, 93.30000305175781, 100.5, 162.3000030517578]
+Wrote per-sample flags to paper/phase9_results/phase12_multiseed/learned_s0.per_sample.jsonl
+/root/pxrd-diff/src/pxrd_diff/eval.py:192: RuntimeWarning: Mean of empty slice
+  "rmsd_mean": float(np.nanmean(rmsd)),
+/root/pxrd-diff/src/pxrd_diff/eval.py:193: RuntimeWarning: All-NaN slice encountered
+  "rmsd_median": float(np.nanmedian(rmsd)),
+
+--- Aggregate Metrics ---
+                               n: 654
+          composition_match_rate: 1.0000
+                       rmsd_mean: nan
+                     rmsd_median: nan
+   match_rate (StructureMatcher): 0.0000
+                        rwp_mean: 13.8129
+                    pearson_mean: 0.1044
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0168
+                   sg_match@0.05: 0.0153
+                    sg_match@0.1: 0.0122
+                    sg_match@0.2: 0.0107
+
+Wrote aggregate metrics to paper/phase9_results/phase12_multiseed/learned_s0.json
