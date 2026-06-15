@@ -6,6 +6,12 @@ Outputs (all 300 dpi PNG + matched PDF):
   fig3_diffpxrd_validation.{png,pdf}  -- Pearson histogram         (Phase 4)
   fig4_indexer_bench.{png,pdf}        -- per-system indexer benchmark (Phase 9 reframe)
   fig5_threeway_headline.{png,pdf}    -- ours vs DGpt vs PXRDnet headline bars
+
+Layout principles (2026-06 restructure):
+  * every value label gets explicit headroom so nothing clips
+  * shared legends use loc="outside ..." so they reserve their own band
+  * multi-line tick labels replace colliding below-axis annotations
+  * light y-grids sit behind the bars; spines trimmed
 """
 from __future__ import annotations
 
@@ -15,16 +21,30 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.patches import Patch
+from matplotlib.ticker import MaxNLocator
 
 ROOT = Path(__file__).parent
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
     "font.size": 9,
+    "axes.titlesize": 9.5,
+    "axes.titleweight": "bold",
+    "axes.labelsize": 9,
     "axes.spines.top": False,
     "axes.spines.right": False,
     "axes.linewidth": 0.8,
+    "axes.axisbelow": True,
     "xtick.major.width": 0.8,
     "ytick.major.width": 0.8,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "legend.fontsize": 7.5,
+    "legend.frameon": False,
+    "grid.color": "#B0B0B0",
+    "grid.linewidth": 0.5,
+    "grid.alpha": 0.30,
+    "figure.dpi": 150,
     "savefig.bbox": "tight",
     "savefig.dpi": 300,
 })
@@ -34,6 +54,34 @@ CB = {  # Wong colorblind-safe palette
     "yellow": "#F0E442", "red": "#D55E00", "purple": "#CC79A7",
     "skyblue": "#56B4E9", "black": "#000000",
 }
+GRID_KW = dict(axis="y", linestyle="-")
+LABEL_GREY = "#555555"
+
+
+def _ygrid(ax):
+    ax.grid(**GRID_KW)
+    ax.set_axisbelow(True)
+
+
+def _headroom(ax, vals, frac=0.20, bottom=0.0):
+    """Expand the y-limit so value labels above the tallest bar never clip."""
+    top = max(vals) if len(vals) else 1.0
+    ax.set_ylim(bottom, top * (1.0 + frac))
+
+
+def _bar_labels(ax, xs, vals, fmt="{:.2f}", dy=None, fontsize=7, color="#222222"):
+    span = ax.get_ylim()[1] - ax.get_ylim()[0]
+    dy = dy if dy is not None else span * 0.015
+    for x, v in zip(xs, vals):
+        ax.text(x, v + dy, fmt.format(v), ha="center", va="bottom",
+                fontsize=fontsize, color=color)
+
+
+def _save(fig, stem):
+    for ext in ("png", "pdf"):
+        fig.savefig(ROOT / f"{stem}.{ext}")
+    plt.close(fig)
+    print(f"wrote {stem}.{{png,pdf}}")
 
 
 def fig1_ablation():
@@ -42,44 +90,40 @@ def fig1_ablation():
     pearson = [0.359, 0.365, 0.434, 0.367, 0.392, 0.368]
     rmsd = [0.17, 0.15, 0.22, 0.14, 0.21, 0.22]
 
-    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.6), constrained_layout=True)
+    fig, axes = plt.subplots(1, 3, figsize=(7.4, 3.0), constrained_layout=True)
     x = np.arange(len(runs))
     colors = [CB["skyblue"]] * 2 + [CB["green"]] + [CB["red"]] * 1 + [CB["orange"]] * 2
+    best_idx = 2  # v13
 
-    for ax, vals, ylabel, title in [
-        (axes[0], match, "Match rate (%)", "(a) StructureMatcher"),
-        (axes[1], pearson, "Pearson correlation", "(b) PXRD Pearson"),
-        (axes[2], rmsd, "RMSD (Å) — matched only", "(c) Coord RMSD"),
-    ]:
-        bars = ax.bar(x, vals, color=colors, edgecolor=CB["black"], linewidth=0.6)
-        v13_idx = 2
-        bars[v13_idx].set_edgecolor(CB["green"])
-        bars[v13_idx].set_linewidth(1.8)
-        ax.set_xticks(x)
-        ax.set_xticklabels(runs, fontsize=8.5)
-        ax.set_ylabel(ylabel, fontsize=9)
-        ax.set_title(title, fontsize=9, loc="left")
-        for i, v in enumerate(vals):
-            ax.text(i, v, f"{v:.2f}", ha="center", va="bottom", fontsize=7)
-        ax.margins(y=0.18)
-        ax.tick_params(axis='both', labelsize=8)
-
-    # Single shared legend below
-    from matplotlib.patches import Patch
-    legend_handles = [
-        Patch(facecolor=CB["skyblue"], edgecolor="k", lw=0.6, label="ε prediction"),
-        Patch(facecolor=CB["green"], edgecolor="k", lw=1.8, label="x₀-residual (best)"),
-        Patch(facecolor=CB["red"], edgecolor="k", lw=0.6, label="x₀ + Wyckoff + dist"),
-        Patch(facecolor=CB["orange"], edgecolor="k", lw=0.6, label="x₀ + one extension"),
+    panels = [
+        (axes[0], match, "Match rate (%)", "(a) StructureMatcher", "{:.2f}"),
+        (axes[1], pearson, "Pearson correlation", "(b) PXRD Pearson", "{:.3f}"),
+        (axes[2], rmsd, "Coord RMSD (Å)", "(c) Coord RMSD · matched", "{:.2f}"),
     ]
-    fig.legend(handles=legend_handles, loc="lower center", ncol=4,
-               bbox_to_anchor=(0.5, -0.05), frameon=False, fontsize=7.5)
+    for ax, vals, ylabel, title, fmt in panels:
+        bars = ax.bar(x, vals, color=colors, edgecolor="white", linewidth=0.8, zorder=3)
+        # outline the best (x0-residual) run so it reads at a glance
+        bars[best_idx].set_edgecolor(CB["black"])
+        bars[best_idx].set_linewidth(1.6)
+        ax.set_xticks(x)
+        ax.set_xticklabels(runs)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title, loc="left")
+        _ygrid(ax)
+        _headroom(ax, vals, frac=0.22)
+        _bar_labels(ax, x, vals, fmt=fmt)
+
+    legend_handles = [
+        Patch(facecolor=CB["skyblue"], edgecolor="white", label="ε prediction"),
+        Patch(facecolor=CB["green"], edgecolor=CB["black"], lw=1.6, label="x₀-residual (best)"),
+        Patch(facecolor=CB["red"], edgecolor="white", label="x₀ + Wyckoff + dist"),
+        Patch(facecolor=CB["orange"], edgecolor="white", label="x₀ + one extension"),
+    ]
+    fig.legend(handles=legend_handles, loc="outside lower center", ncol=4,
+               handlelength=1.2, columnspacing=1.6, borderaxespad=0.2)
     fig.suptitle("Ablation on MP-20 test (n=1000, true lattice, coord-only)",
-                 fontsize=10, y=1.04)
-    for ext in ("png", "pdf"):
-        fig.savefig(ROOT / f"fig1_ablation.{ext}")
-    plt.close(fig)
-    print("wrote fig1_ablation.{png,pdf}")
+                 fontsize=10.5, fontweight="bold")
+    _save(fig, "fig1_ablation")
 
 
 def parse_curves(path: Path) -> dict[str, dict[str, list[float]]]:
@@ -107,56 +151,73 @@ def parse_curves(path: Path) -> dict[str, dict[str, list[float]]]:
     return runs
 
 
-def smooth(y, k=5):
+def smooth(y, k=9):
+    """Centred moving average with edge shrink (no convolution wrap artefacts)."""
     y = np.asarray(y, dtype=float)
-    if len(y) < k:
+    n = len(y)
+    if n < 3:
         return y
-    kernel = np.ones(k) / k
-    return np.convolve(y, kernel, mode="same")
+    k = min(k, n if n % 2 else n - 1)
+    half = k // 2
+    out = np.empty(n)
+    for i in range(n):
+        lo, hi = max(0, i - half), min(n, i + half + 1)
+        out[i] = y[lo:hi].mean()
+    return out
 
 
 def fig2_training_curves():
     runs = parse_curves(ROOT / "training_curves.txt")
 
-    fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.4), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.9), constrained_layout=True)
 
     color_map = {"gpu_v14": CB["red"], "gpu_v15": CB["orange"], "gpu_v16": CB["green"]}
-    label_map = {"gpu_v14": "v14 (+Wyck +dist)", "gpu_v15": "v15 (+Wyck)",
-                 "gpu_v16": "v16 (+dist) — clean lat"}
+    label_map = {"gpu_v14": "v14  (+Wyck +dist)", "gpu_v15": "v15  (+Wyck)",
+                 "gpu_v16": "v16  (+dist) · clean lat"}
+    order = ["gpu_v14", "gpu_v15", "gpu_v16"]
+
+    handles, labels = [], []
+
+    def draw(ax, col):
+        for name in order:
+            d = runs[name]
+            step = np.asarray(d["step"])
+            raw = np.asarray(d[col])
+            ax.plot(step, raw, color=color_map[name], lw=0.6, alpha=0.18, zorder=2)
+            line, = ax.plot(step, smooth(raw, 11), color=color_map[name],
+                            label=label_map[name], lw=1.7, zorder=3)
+            if ax is axes[0]:
+                handles.append(line)
+                labels.append(label_map[name])
+        ax.set_xlabel("Training step")
+        ax.set_xlim(0, 100000)
+        ax.xaxis.set_major_locator(MaxNLocator(5))
+        ax.grid(linestyle="-")
+        ax.set_axisbelow(True)
 
     # (a) Lattice loss
     ax = axes[0]
-    for name, d in runs.items():
-        ax.plot(d["step"], smooth(d["lat"], 5), color=color_map[name],
-                label=label_map[name], lw=1.2)
-    ax.set_xlabel("Training step")
+    draw(ax, "lat")
     ax.set_ylabel("Lattice loss")
-    ax.set_title("(a) Lattice prediction", fontsize=9, loc="left")
-    ax.set_xlim(0, 100000)
-    ax.set_ylim(0, 1.0)
-    ax.legend(fontsize=7, frameon=False, loc="upper right")
-    ax.axhline(1.0, color="gray", lw=0.5, ls="--", alpha=0.5)
-    ax.text(95000, 0.97, "random baseline", fontsize=6, color="gray",
-            ha="right", va="bottom")
+    ax.set_title("(a) Lattice prediction", loc="left")
+    ax.set_ylim(0, 1.08)
+    ax.axhline(1.0, color="gray", lw=0.8, ls="--", alpha=0.7, zorder=1)
+    ax.text(1500, 0.985, "random baseline", fontsize=7, color="gray",
+            ha="left", va="top")
 
     # (b) Coord loss
     ax = axes[1]
-    for name, d in runs.items():
-        ax.plot(d["step"], smooth(d["coord"], 5), color=color_map[name],
-                label=label_map[name], lw=1.2)
-    ax.set_xlabel("Training step")
+    draw(ax, "coord")
     ax.set_ylabel("Coordinate loss")
-    ax.set_title("(b) Coordinate prediction", fontsize=9, loc="left")
-    ax.set_xlim(0, 100000)
+    ax.set_title("(b) Coordinate prediction", loc="left")
     ax.set_ylim(0.06, 0.10)
-    ax.legend(fontsize=7, frameon=False, loc="upper right")
 
+    # one shared legend below — keeps it off the busy curves
+    fig.legend(handles, labels, loc="outside lower center", ncol=3,
+               handlelength=1.6, columnspacing=2.0, borderaxespad=0.2)
     fig.suptitle("Wyckoff embedding destabilises lattice prediction",
-                 fontsize=10, y=1.05)
-    for ext in ("png", "pdf"):
-        fig.savefig(ROOT / f"fig2_training_curves.{ext}")
-    plt.close(fig)
-    print("wrote fig2_training_curves.{png,pdf}")
+                 fontsize=10.5, fontweight="bold")
+    _save(fig, "fig2_training_curves")
 
 
 def fig3_diffpxrd_validation():
@@ -169,21 +230,26 @@ def fig3_diffpxrd_validation():
            "0.9883,0.9709,0.9575,0.9858,0.9057")
     samples = np.array([float(x) for x in raw.split(",")])
 
-    fig, ax = plt.subplots(figsize=(4.0, 2.6), constrained_layout=True)
-    ax.hist(samples, bins=15, color=CB["blue"], edgecolor=CB["black"], lw=0.6)
-    ax.axvline(samples.mean(), color=CB["red"], lw=1.2, ls="-",
+    fig, ax = plt.subplots(figsize=(4.4, 2.8), constrained_layout=True)
+    bins = np.linspace(0.88, 1.00, 13)
+    ax.hist(samples, bins=bins, color=CB["blue"], edgecolor="white", lw=0.7, zorder=3)
+    ax.axvline(samples.mean(), color=CB["red"], lw=1.6, ls="-", zorder=4,
                label=f"mean = {samples.mean():.3f}")
-    ax.axvline(0.7, color="gray", lw=0.8, ls="--",
-               label="acceptance threshold (0.7)")
     ax.set_xlabel("Pearson correlation vs pymatgen.XRDCalculator")
-    ax.set_ylabel("Count (n=50 structures)")
-    ax.set_title("DiffPXRD vs reference simulator", fontsize=10, loc="left")
-    ax.legend(fontsize=7, frameon=False, loc="upper left")
-    ax.set_xlim(0.65, 1.02)
-    for ext in ("png", "pdf"):
-        fig.savefig(ROOT / f"fig3_diffpxrd_validation.{ext}")
-    plt.close(fig)
-    print("wrote fig3_diffpxrd_validation.{png,pdf}")
+    ax.set_ylabel("Count (n = 50 structures)")
+    ax.set_title("DiffPXRD vs reference simulator", loc="left")
+    ax.set_xlim(0.875, 1.005)
+    ax.grid(linestyle="-")
+    ax.set_axisbelow(True)
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+    # All 50 samples sit far above the 0.7 acceptance gate — state it instead of
+    # wasting a third of the axis on empty space down to 0.7.
+    ax.text(0.882, ax.get_ylim()[1] * 0.92,
+            f"all 50 structures ≥ {samples.min():.2f}\n(acceptance threshold = 0.70)",
+            fontsize=7, color=LABEL_GREY, ha="left", va="top")
+    ax.legend(loc="upper left", bbox_to_anchor=(0.0, 0.78))
+    _save(fig, "fig3_diffpxrd_validation")
 
 
 def fig4_indexer_bench():
@@ -195,65 +261,73 @@ def fig4_indexer_bench():
     ps = d["per_system"]
     order = ["cubic", "tetragonal", "hexagonal", "trigonal",
              "orthorhombic", "monoclinic", "triclinic"]
-    labels = [s.capitalize() for s in order]
+    abbr = ["Cubic", "Tetrag.", "Hexag.", "Trigon.", "Orthor.", "Monocl.", "Tricl."]
     ns = [ps[s]["n"] for s in order]
     strict = [ps[s]["strict_pct"] for s in order]
     consist = [ps[s]["consistent_pct"] for s in order]
     lenmae = [ps[s]["len_mae"] for s in order]
-    # triclinic len_mae is NaN — substitute with 0 for plotting and annotate
-    lenmae_plot = [(v if v == v else 0.0) for v in lenmae]
+    lenmae_plot = [(v if v == v else 0.0) for v in lenmae]  # NaN (triclinic) -> 0
     overall = d["overall"]
+    # two-line tick labels carry the per-system n inline, no below-axis collisions
+    ticklabels = [f"{a}\nn={n}" for a, n in zip(abbr, ns)]
 
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.9), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.3), constrained_layout=True)
     x = np.arange(len(order))
     width = 0.4
 
     # (a) strict / consistent match rate
     ax = axes[0]
-    ax.bar(x - width / 2, strict, width, color=CB["blue"], edgecolor=CB["black"],
-           linewidth=0.6, label="Strict")
-    ax.bar(x + width / 2, consist, width, color=CB["skyblue"], edgecolor=CB["black"],
-           linewidth=0.6, label="Consistent")
-    ax.axhline(overall["overall_strict_pct"], color=CB["red"], lw=0.8, ls="--",
-               label=f"overall strict {overall['overall_strict_pct']:.1f}%")
+    ax.bar(x - width / 2, strict, width, color=CB["blue"], edgecolor="white",
+           linewidth=0.6, label="Strict", zorder=3)
+    ax.bar(x + width / 2, consist, width, color=CB["skyblue"], edgecolor="white",
+           linewidth=0.6, label="Consistent", zorder=3)
+    ax.axhline(overall["overall_strict_pct"], color=CB["red"], lw=1.0, ls="--", zorder=2,
+               label=f"overall strict = {overall['overall_strict_pct']:.1f}%")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=7.5, rotation=25, ha="right")
-    ax.set_ylabel("Indexing accuracy (%)", fontsize=9)
-    ax.set_title("(a) Per-system match rate", fontsize=9, loc="left")
+    ax.set_xticklabels(ticklabels, fontsize=7)
+    ax.set_ylabel("Indexing accuracy (%)")
+    ax.set_title("(a) Per-system match rate", loc="left")
     ax.set_ylim(0, 100)
-    ax.legend(fontsize=6.5, frameon=False, loc="upper right")
-    for i, (v, n) in enumerate(zip(strict, ns)):
-        ax.text(i - width / 2, v + 1.5, f"{v:.0f}", ha="center", fontsize=6.5)
-        ax.text(i, -8, f"n={n}", ha="center", fontsize=6, color="gray")
+    _ygrid(ax)
+    ax.legend(loc="upper right", borderaxespad=0.3)
+    for i, v in enumerate(strict):
+        ax.text(i - width / 2, v + 1.8, f"{v:.0f}", ha="center", fontsize=6.5,
+                color="#222222")
 
     # (b) lattice-length MAE (Å)
     ax = axes[1]
     bar_colors = [CB["green"] if v <= 1.0 else CB["orange"] if v <= 2.0 else CB["red"]
                   for v in lenmae_plot]
-    bars = ax.bar(x, lenmae_plot, color=bar_colors, edgecolor=CB["black"], linewidth=0.6)
-    ax.axhline(overall["v20_learned_head_len_mae"], color=CB["black"], lw=0.8, ls=":",
-               label=f"v20 learned head ({overall['v20_learned_head_len_mae']:.2f} Å)")
-    ax.axhline(overall["overall_len_mae"], color=CB["red"], lw=0.8, ls="--",
-               label=f"overall ({overall['overall_len_mae']:.2f} Å)")
+    ax.bar(x, lenmae_plot, color=bar_colors, edgecolor="white", linewidth=0.6, zorder=3)
+    ax.axhline(overall["v20_learned_head_len_mae"], color=CB["black"], lw=1.0, ls=":",
+               zorder=2, label=f"v20 learned head = {overall['v20_learned_head_len_mae']:.2f} Å")
+    ax.axhline(overall["overall_len_mae"], color=CB["red"], lw=1.0, ls="--", zorder=2,
+               label=f"overall = {overall['overall_len_mae']:.2f} Å")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=7.5, rotation=25, ha="right")
-    ax.set_ylabel("Lattice-length MAE (Å)", fontsize=9)
-    ax.set_title("(b) Per-system lattice error", fontsize=9, loc="left")
-    ax.set_ylim(0, 5.2)
-    ax.legend(fontsize=6.5, frameon=False, loc="upper left")
+    ax.set_xticklabels(ticklabels, fontsize=7)
+    ax.set_ylabel("Lattice-length MAE (Å)")
+    ax.set_title("(b) Per-system lattice error", loc="left")
+    ax.set_ylim(0, 5.6)  # headroom for the tall trigonal bar + its value label
+    _ygrid(ax)
     for i, v in enumerate(lenmae):
         if v != v:
-            ax.text(i, 0.2, "n/a", ha="center", fontsize=7, color="gray")
+            ax.text(i, 0.12, "n/a", ha="center", va="bottom", fontsize=7, color="gray")
         else:
-            ax.text(i, v + 0.1, f"{v:.2f}", ha="center", fontsize=6.5)
+            ax.text(i, v + 0.08, f"{v:.2f}", ha="center", va="bottom", fontsize=6.5,
+                    color="#222222")
 
-    fig.suptitle(
-        "Classical Q-space indexer: wins on high-symmetry, fails on low-symmetry",
-        fontsize=10, y=1.04)
-    for ext in ("png", "pdf"):
-        fig.savefig(ROOT / f"fig4_indexer_bench.{ext}")
-    plt.close(fig)
-    print("wrote fig4_indexer_bench.{png,pdf}")
+    # colour key for the MAE quality bands
+    band_handles = [
+        Patch(facecolor=CB["green"], label="≤ 1 Å"),
+        Patch(facecolor=CB["orange"], label="1–2 Å"),
+        Patch(facecolor=CB["red"], label="> 2 Å"),
+    ]
+    ax.legend(handles=ax.get_legend_handles_labels()[0] + band_handles,
+              loc="upper left", borderaxespad=0.3, ncol=1)
+
+    fig.suptitle("Classical Q-space indexer: wins on high-symmetry, fails on low-symmetry",
+                 fontsize=10.5, fontweight="bold")
+    _save(fig, "fig4_indexer_bench")
 
 
 def fig5_threeway_headline():
@@ -271,42 +345,45 @@ def fig5_threeway_headline():
     dgpt = load("baseline_diffractgpt_n1000.json")
     pxnt = load("baseline_pxrdnet_sinc100_n20.json")
 
+    # (display label, n-string, data, colour)
     systems = [
-        ("PXRD-Diff\n(ours, n=1000)", ours, CB["blue"]),
-        ("DiffractGPT\n(n=1000)",     dgpt, CB["orange"]),
-        ("PXRDnet\n(n=20)",           pxnt, CB["green"]),
+        ("PXRD-Diff\n(ours)", "n = 1000", ours, CB["blue"]),
+        ("DiffractGPT",       "n = 1000", dgpt, CB["orange"]),
+        ("PXRDnet",           "n = 20",   pxnt, CB["green"]),
     ]
+    labels = [s[0] for s in systems]
+    nstr = [s[1] for s in systems]
+    colors = [s[3] for s in systems]
 
     metrics = [
-        ("Match rate (%)",        "match_rate (StructureMatcher)", True),
-        ("All-correct (%)",       "headline_all_correct",          True),
-        ("Pearson (pred vs true)","pearson_mean",                  False),
+        ("Match rate (%)",         "(a) Match rate",  "match_rate (StructureMatcher)", True),
+        ("All-correct (%)",        "(b) All-correct", "headline_all_correct",          True),
+        ("Pearson (pred vs true)", "(c) Pearson",     "pearson_mean",                  False),
     ]
 
-    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.6), constrained_layout=True)
+    fig, axes = plt.subplots(1, 3, figsize=(7.4, 3.0), constrained_layout=True)
     x = np.arange(len(systems))
 
-    for ax, (ylabel, key, pct) in zip(axes, metrics):
-        vals = [s[1][key] * (100 if pct else 1) for s in systems]
-        colors = [s[2] for s in systems]
-        ax.bar(x, vals, color=colors, edgecolor=CB["black"], linewidth=0.6)
+    for ax, (ylabel, title, key, pct) in zip(axes, metrics):
+        vals = [s[2][key] * (100 if pct else 1) for s in systems]
+        ax.bar(x, vals, color=colors, edgecolor="white", linewidth=0.8,
+               width=0.66, zorder=3)
         ax.set_xticks(x)
-        ax.set_xticklabels([s[0] for s in systems], fontsize=7.5)
-        ax.set_ylabel(ylabel, fontsize=9)
-        ax.set_title(ylabel.split("(")[0].strip(), fontsize=9, loc="left")
-        for i, v in enumerate(vals):
-            fmt = f"{v:.1f}" if pct else f"{v:.2f}"
-            ax.text(i, v, fmt, ha="center", va="bottom", fontsize=7.5)
-        ax.margins(y=0.20)
-        ax.tick_params(axis="y", labelsize=8)
+        ax.set_xticklabels(labels, fontsize=8)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title, loc="left")
+        _ygrid(ax)
+        _headroom(ax, vals, frac=0.22)
+        _bar_labels(ax, x, vals, fmt=("{:.1f}" if pct else "{:.2f}"), fontsize=8)
+        # sample-size row, parked just under the axis, clear of the tick labels
+        for xi, n in zip(x, nstr):
+            ax.annotate(n, xy=(xi, 0), xytext=(0, -26), textcoords="offset points",
+                        ha="center", va="top", fontsize=6.5, color=LABEL_GREY,
+                        annotation_clip=False)
 
-    fig.suptitle(
-        "Open generative baselines on the same MP-20 evaluation harness",
-        fontsize=10, y=1.05)
-    for ext in ("png", "pdf"):
-        fig.savefig(ROOT / f"fig5_threeway_headline.{ext}")
-    plt.close(fig)
-    print("wrote fig5_threeway_headline.{png,pdf}")
+    fig.suptitle("Open generative baselines on the same MP-20 evaluation harness",
+                 fontsize=10.5, fontweight="bold")
+    _save(fig, "fig5_threeway_headline")
 
 
 if __name__ == "__main__":
