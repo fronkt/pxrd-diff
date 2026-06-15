@@ -1384,13 +1384,20 @@ diagnosis. Two load-bearing weaknesses: (M1) headline indexer lift within noise,
       tested) + scripts/run_phase12_multiseed.sh (≥3 seeds, both lattice sources)
       + 03_sample.py gained --seed and --per-sample-json (per-structure flag dump).
 
-**Multi-seed run LAUNCHED 2026-06-14** on vast.ai (70.21.1.69:16012, RTX 5090).
-Env bootstrapped (torch cu128, test cache rebuilt 0 fails), v21 ckpt transferred.
-Pipeline smoke-validated (per-sample dump confirmed on indexer path, n=24).
-`run_phase12_multiseed.sh` pid 1533 → /root/phase12.log; learned+indexer × seeds
-0/1/2, n=1000. Note: invalid-lattice structs are `continue`'d (matches Table 2
-methodology) so McNemar pairs on the common evaluable set. Fold pooled CIs +
-McNemar p into §5.2/Table 2 when done.
+**Multi-seed run — eval hang found + fixed, rerunning on box #2.**
+- First box (70.21.1.69) hung: `StructureMatcher`/spglib (C calls) stall for hours
+  on pathological predicted cells; only 4/1000 done in 2.5h, GPU idle. Box died.
+- Fix v1 (SIGALRM, commit e2b9775) did NOT work — a Python signal can't interrupt
+  a C call. Fix v2 (commit 73efd06): run structure-domain eval in a spawn worker
+  process, hard-kill on 30s overrun → NaN/miss. `eval.structure_domain_metrics`.
+- Validated: learned-mode n=60 smoke completes in 223s, no hang (was infinite).
+- Box #2 (108.255.76.60:55232, RTX 5090, 128 cores): bootstrapped (torch cu128,
+  cache rebuilt 0 fails), v21 ckpt transferred, repo at 73efd06.
+- `run_phase12_multiseed.sh` pid 6056 → /root/phase12.log; learned+indexer × seeds
+  0/1/2, n=1000. Watcher b0qtkdn0z waits for completion.
+- Note: invalid-lattice structs are `continue`'d (matches Table 2 methodology) so
+  McNemar pairs on the common evaluable set. Fold pooled CIs + McNemar p into
+  §5.2/Table 2 when done.
 
 **Outstanding for user (GPU / external):**
 - Optional: PXRDnet n=50–100 to test the all-correct hypothesis (§6).
