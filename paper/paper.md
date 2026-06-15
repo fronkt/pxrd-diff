@@ -201,7 +201,7 @@ Four interventions failed at n ≥ 200; one paragraph each.
 
 **Top-K Debye rerank (Phase 9.1.4).** Top-5 indexer candidates reranked by Debye loss: match 1.6 % → 1.0 %, all-correct 0.1 % → 0.0 % at n = 1 000. The indexer surfaces more wrong cells faster than rerank can filter.
 
-**Debye-gradient guidance during DDIM (Phase 9.2).** Coordinate-channel guidance term $-g \cdot \nabla_\mathcal{C} \mathcal{L}_\text{Debye}$, sweep $g \in \{0,0.5,1,2,5\}$ on n = 200: flat 1.0–2.5 % within noise, all-correct 0 % throughout. Sampling-time Debye gradient is too noisy to steer the trajectory — consistent with Segal et al. [^Segal2025], who show the powder-XRD similarity loss landscape is too non-convex for direct gradient descent.
+**Debye-gradient guidance during DDIM (Phase 9.2).** Coordinate-channel guidance term $-g \cdot \nabla_{\mathcal{C}} \mathcal{L}_\text{Debye}$, sweep $g \in \{0,0.5,1,2,5\}$ on n = 200: flat 1.0–2.5 % within noise, all-correct 0 % throughout. Sampling-time Debye gradient is too noisy to steer the trajectory — consistent with Segal et al. [^Segal2025], who show the powder-XRD similarity loss landscape is too non-convex for direct gradient descent.
 
 **Wyckoff-site embeddings (v15, n = 1 000).** `spglib`-computed, `nn.Embedding(27, 256)` added to atom features. The embedding learns (5 404/6 912 entries non-zero) but match drops 2.5 % → 2.1 % and destabilises lattice prediction (lat loss ~0.6 vs ~0.02; Figure 5). We suspect inflated atom-feature norm shifts the lattice-pool input distribution.
 

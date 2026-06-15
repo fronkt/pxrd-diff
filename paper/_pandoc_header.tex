@@ -1,0 +1,45 @@
+% Header injected for pandoc+tectonic (XeTeX) builds of paper.md.
+% Maps the non-ASCII characters used in prose to font-independent LaTeX
+% commands so they render via Latin Modron + math mode (no special font /
+% fontconfig needed). Loaded after the main preamble, so these win.
+\usepackage{newunicodechar}
+
+% --- punctuation / letters ---
+\newunicodechar{—}{\textemdash}
+\newunicodechar{–}{\textendash}
+\newunicodechar{§}{\S}
+\newunicodechar{Å}{\AA{}}
+\newunicodechar{°}{\textdegree}
+\newunicodechar{±}{\ensuremath{\pm}}
+\newunicodechar{×}{\ensuremath{\times}}
+\newunicodechar{á}{\'a}
+\newunicodechar{ó}{\'o}
+\newunicodechar{ü}{\"u}
+\newunicodechar{ë}{\"e}
+\newunicodechar{Ø}{\O{}}
+
+% --- arrows / relations / operators ---
+\newunicodechar{→}{\ensuremath{\rightarrow}}
+\newunicodechar{≥}{\ensuremath{\geq}}
+\newunicodechar{≤}{\ensuremath{\leq}}
+\newunicodechar{≈}{\ensuremath{\approx}}
+\newunicodechar{∂}{\ensuremath{\partial}}
+\newunicodechar{∧}{\ensuremath{\wedge}}
+\newunicodechar{∈}{\ensuremath{\in}}
+
+% --- Greek (text-mode occurrences) ---
+\newunicodechar{α}{\ensuremath{\alpha}}
+\newunicodechar{β}{\ensuremath{\beta}}
+\newunicodechar{γ}{\ensuremath{\gamma}}
+\newunicodechar{ε}{\ensuremath{\varepsilon}}
+\newunicodechar{θ}{\ensuremath{\theta}}
+\newunicodechar{λ}{\ensuremath{\lambda}}
+\newunicodechar{π}{\ensuremath{\pi}}
+\newunicodechar{Δ}{\ensuremath{\Delta}}
+
+% --- sub/superscripts ---
+\newunicodechar{₀}{\ensuremath{_0}}
+\newunicodechar{₁}{\ensuremath{_1}}
+\newunicodechar{²}{\ensuremath{^2}}
+\newunicodechar{⁴}{\ensuremath{^4}}
+\newunicodechar{⁻}{\ensuremath{^-}}
