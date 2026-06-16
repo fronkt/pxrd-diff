@@ -1491,3 +1491,22 @@ refs, balanced document). NOT compile-checked (no LaTeX engine on box) and NOT R
 - Method-section expansion to journal length (~6k → 7–9k words; M3 remainder).
 - Optional: checkpoint-step sweep to definitively firm the ε/x₀ demotion.
 - em-dash density pass.
+
+### Phase 13 follow-up 2 — compile + checkpoint sweep (2026-06-16)
+
+**paper.tex now COMPILES (done; commits a11990c, 577c3b6).** Installed tectonic 0.15 on the
+box; paper.md -> paper.tex -> paper.pdf builds clean. Added two unicode mappings to
+_pandoc_header.tex (much-greater -> \gg, superscript-8 -> ^8) and a reproducible
+paper/build.sh (pandoc + tectonic; refs are footnotes so no bibtex step). Committed PDF now
+matches the current manuscript. Supersedes the earlier "NOT compile-checked" note.
+
+**RSC class + footnote->bibtex: DEFERRED to camera-ready (user-confirmed plan).** Do it as one
+focused pass AFTER the Method-section expansion. Digital Discovery accepts flexible
+initial-submission formats and does final typesetting, so reflowing before the content is
+final means doing it twice. The real journal-prep work is converting paper.md's pandoc
+footnote-citations to numbered cite-commands against the existing references.bib.
+
+**Checkpoint-step sweep RUNNING** (settles the eps/x0 demotion): sweep_driver.sh retrains v11
+(eps) + v13_l1 (x0) at seeds 0,1 saving every 20k, evals each ckpt at the ablation protocol
+-> results/ckpt_sweep/. Question: does x0 ever reach the original single-seed 2.5% at any
+checkpoint? Result pending; fold verdict into section 7.
