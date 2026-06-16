@@ -46,6 +46,10 @@ def collate(batch: list[dict]) -> dict:
 def train(args: argparse.Namespace) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
+    import numpy as _np, random as _random
+    _random.seed(args.seed); _np.random.seed(args.seed)
+    torch.manual_seed(args.seed); torch.cuda.manual_seed_all(args.seed)
+    print(f"Seed: {args.seed}")
 
     print("Loading dataset...")
     ds = CrystalPXRDDataset(
@@ -381,6 +385,8 @@ def main():
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--save-every", type=int, default=500)
     ap.add_argument("--run-name", default="smoke")
+    ap.add_argument("--seed", type=int, default=42,
+                    help="RNG seed (torch+numpy+cuda) for reproducible runs")
     train(ap.parse_args())
 
 

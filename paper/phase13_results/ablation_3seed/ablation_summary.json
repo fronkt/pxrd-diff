@@ -1,0 +1,120 @@
+{
+  "v11_eps_lam1": {
+    "match_rate": {
+      "mean": 0.011,
+      "std": 0.0,
+      "seeds": [
+        0.011,
+        0.011,
+        0.011
+      ]
+    },
+    "all_correct": {
+      "mean": 0.002,
+      "std": 0.0,
+      "seeds": [
+        0.002,
+        0.002,
+        0.002
+      ]
+    },
+    "rwp": {
+      "mean": 7.10709,
+      "std": 0.00774,
+      "seeds": [
+        7.10978,
+        7.11493,
+        7.09656
+      ]
+    },
+    "pearson": {
+      "mean": 0.35941,
+      "std": 0.00031,
+      "seeds": [
+        0.35979,
+        0.35902,
+        0.35943
+      ]
+    }
+  },
+  "v13_l1_x0_lam1": {
+    "match_rate": {
+      "mean": 0.01267,
+      "std": 0.0017,
+      "seeds": [
+        0.011,
+        0.012,
+        0.015
+      ]
+    },
+    "all_correct": {
+      "mean": 0.002,
+      "std": 0.0,
+      "seeds": [
+        0.002,
+        0.002,
+        0.002
+      ]
+    },
+    "rwp": {
+      "mean": 7.21137,
+      "std": 0.23421,
+      "seeds": [
+        7.11521,
+        6.98495,
+        7.53395
+      ]
+    },
+    "pearson": {
+      "mean": 0.39215,
+      "std": 0.02273,
+      "seeds": [
+        0.37183,
+        0.38074,
+        0.42388
+      ]
+    }
+  },
+  "v13_l0_x0_lam0": {
+    "match_rate": {
+      "mean": 0.01233,
+      "std": 0.00125,
+      "seeds": [
+        0.014,
+        0.012,
+        0.011
+      ]
+    },
+    "all_correct": {
+      "mean": 0.002,
+      "std": 0.0,
+      "seeds": [
+        0.002,
+        0.002,
+        0.002
+      ]
+    },
+    "rwp": {
+      "mean": 7.27603,
+      "std": 0.18038,
+      "seeds": [
+        7.5311,
+        7.14627,
+        7.15071
+      ]
+    },
+    "pearson": {
+      "mean": 0.38942,
+      "std": 0.02399,
+      "seeds": [
+        0.42327,
+        0.37047,
+        0.37453
+      ]
+    }
+  },
+  "_meta": {
+    "eval": "true-lattice, n=1000, n_samples=1, refine_steps=0, ddim=50, eval-seed=42",
+    "note": "prediction-target x ablation; 3 training seeds each; variants statistically indistinguishable"
+  }
+}

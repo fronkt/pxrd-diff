@@ -1413,3 +1413,42 @@ diagnosis. Two load-bearing weaknesses: (M1) headline indexer lift within noise,
 - Zenodo mint + repo public (C3); paper.tex regen from paper.md before camera-ready.
 - Full Method-section expansion to journal length (M3 remainder).
 - NOT pushed — awaiting user review of the diff.
+
+
+## Phase 13 — prediction-target ablation + oracle firm-up + deCIFer baseline + indexer robustness — 2026-06-16
+
+Batch run on vast.ai RTX 5090 (32-core) box, autonomous 3-stage chain
+(`matrix_driver.sh` → `finalize.sh` → `finalize2.sh`). Artifacts committed under
+`paper/phase13_results/{ablation_3seed,oracle_3seed,baselines,index_robustness,provenance}`
++ README. Code: `scripts/02_train.py` gained `--seed` (torch/numpy/cuda) for reproducible
+runs; `scripts/09b_index_robustness.py` added (indexer displacement/zero-shift sweep).
+
+**1. Prediction-target ablation (3-seed, true-lattice, n=1000, 1 sample, no refine) — NEGATIVE.**
+- v11 (ε, λ=1): match 0.0110±0.0000, all_correct 0.0020, pearson 0.359
+- v13_l1 (x₀, λ=1): match 0.0127±0.0017, all_correct 0.0020, pearson 0.392
+- v13_l0 (x₀, λ=0): match 0.0123±0.0012, all_correct 0.0020, pearson 0.389
+- → variants statistically indistinguishable; ε-vs-x₀ target and Debye-guidance weight
+  do NOT affect structure recovery. Clean negative ablation for the Method section.
+
+**2. Oracle 3-seed firm-up (v21, true-lattice, n=1000, 20 samples, refine 200).**
+- match_rate **0.0450 ± 0.0033** (seeds 0.041/0.049/0.045); all_correct 0.0060±0.0008;
+  rwp 5.595±0.057; pearson 0.644±0.002.
+- → firms BELOW the single-seed 5.6% headline (56/1000 was a high draw → 3-seed 45/1000).
+  Oracle gap stands and is now tighter. Mirrors the learned-head 1.0%→0% multi-seed drift.
+  ACTION: update paper Table/§ that cites 5.6% oracle → 4.5% [4.1,4.9] 3-seed.
+
+**3. deCIFer external baseline (n=298, re-scored through our harness).**
+- deCIFer_v1 (Johansen et al. 2025, arXiv:2502.02189), XRD+composition:
+  match **0.738**, all_correct **0.695**, rwp 6.63, pearson 0.551, sg_match@0.1 0.836.
+- → external upper-reference. Three-way: deCIFer 74% ≫ our oracle 4.5% ≫ no-true-lattice
+  ~1.2%. Confirms coordinate-decoding/encoder (not lattice alone) is the deep bottleneck.
+
+**4. Classical-indexer robustness (n=300, 287 indexed) — addresses M4 caveat.**
+- base strict 50.7% / len_MAE 1.237; disp0.10 35.3%/1.624; disp0.20 25.0%/1.839;
+  zshift0.05 43.7%/1.403; zshift0.10 35.7%/1.596; zshift0.20 26.0%/1.842.
+- v20 learned-head len_MAE fixed 1.37. → indexer beats learned head ONLY on clean
+  patterns; under ≥0.10° displacement/zero-shift it degrades past it. Its advantage is
+  contingent on well-calibrated input — fold into §7 input-asymmetry / M4 discussion.
+
+**Box:** vast.ai 108.240.82.27:45348, RTX 5090, kept running per user. All raw artifacts
+also backed up locally at `C:\Users\frank\pxrd-box-backup\pxrd_box_final_20260616.tgz`.

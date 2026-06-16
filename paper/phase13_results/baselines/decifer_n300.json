@@ -1,0 +1,23 @@
+{
+  "n": 298,
+  "composition_match_rate": 0.9765100671140939,
+  "rmsd_mean": 0.02205795697413297,
+  "rmsd_median": 0.008754092241466213,
+  "match_rate (StructureMatcher)": 0.738255033557047,
+  "rwp_mean": 6.629470436166138,
+  "pearson_mean": 0.5505378118406781,
+  "headline_all_correct": 0.6946308724832215,
+  "sg_match@0.01": 0.825503355704698,
+  "sg_match@0.05": 0.8355704697986577,
+  "sg_match@0.1": 0.8355704697986577,
+  "sg_match@0.2": 0.825503355704698,
+  "n_files": 300,
+  "parse_fail": 2,
+  "miss": 0,
+  "config": {
+    "model": "deCIFer_v1 (Johansen et al. 2025, arXiv:2502.02189)",
+    "ckpt": "decifer_v1_ckpt.pt",
+    "cond": "XRD + composition",
+    "scoring": "pxrd_diff.eval StructureMatcher ltol0.2 stol0.3 angle_tol5"
+  }
+}

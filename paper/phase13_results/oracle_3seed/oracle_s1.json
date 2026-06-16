@@ -1,0 +1,33 @@
+{
+  "n": 1000,
+  "composition_match_rate": 1.0,
+  "rmsd_mean": 0.1262468412450887,
+  "rmsd_median": 0.0918443128697557,
+  "match_rate (StructureMatcher)": 0.049,
+  "rwp_mean": 5.624955613296157,
+  "pearson_mean": 0.6415980284627786,
+  "headline_all_correct": 0.006,
+  "sg_match@0.01": 0.022,
+  "sg_match@0.05": 0.021,
+  "sg_match@0.1": 0.02,
+  "sg_match@0.2": 0.02,
+  "config": {
+    "ckpt": "runs/gpu_v21_p9/ckpt_final.pt",
+    "n": 1000,
+    "true_lattice": true,
+    "lat_from_aux": false,
+    "lat_from_index": null,
+    "lat_from_index_topk": null,
+    "samples_per_cell": 4,
+    "sg_constrain_lat": false,
+    "noise_aug_eval": false,
+    "n_samples": 20,
+    "ensemble_eta": 0.0,
+    "refine_steps": 200,
+    "refine_lr": 0.001,
+    "refine_lattice": false,
+    "ddim_steps": 50,
+    "eta": 0.0,
+    "seed": 1
+  }
+}

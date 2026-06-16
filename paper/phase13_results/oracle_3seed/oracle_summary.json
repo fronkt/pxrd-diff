@@ -1,0 +1,43 @@
+{
+  "match_rate": {
+    "mean": 0.045,
+    "std": 0.00327,
+    "seeds": [
+      0.041,
+      0.049,
+      0.045
+    ]
+  },
+  "all_correct": {
+    "mean": 0.006,
+    "std": 0.00082,
+    "seeds": [
+      0.007,
+      0.006,
+      0.005
+    ]
+  },
+  "rwp": {
+    "mean": 5.59522,
+    "std": 0.05665,
+    "seeds": [
+      5.64478,
+      5.62496,
+      5.51592
+    ]
+  },
+  "pearson": {
+    "mean": 0.64372,
+    "std": 0.00205,
+    "seeds": [
+      0.64649,
+      0.6416,
+      0.64308
+    ]
+  },
+  "_meta": {
+    "ckpt": "runs/gpu_v21_p9/ckpt_final.pt",
+    "eval": "true-lattice, n=1000, n_samples=20, refine_steps=200, refine_lr=1e-3, ddim=50",
+    "note": "3-seed firm-up of single-seed 5.6% oracle; match_rate firms to 4.5%"
+  }
+}
