@@ -1452,3 +1452,42 @@ runs; `scripts/09b_index_robustness.py` added (indexer displacement/zero-shift s
 
 **Box:** vast.ai 108.240.82.27:45348, RTX 5090, kept running per user. All raw artifacts
 also backed up locally at `C:\Users\frank\pxrd-box-backup\pxrd_box_final_20260616.tgz`.
+
+### Phase 13 follow-up — paper integration (2026-06-16)
+
+Folded the Phase-13 box results into paper.md + regenerated paper.tex.
+
+**Oracle firm-up (committed c985663):** single-seed 5.6 % → three-seed **4.5 % [3.8, 5.3]**
+(135/3000 pooled) across abstract, §1, §5.1, §5.2, §6, §7, §8, v21 table row. Table 2
+kept as the labelled single-seed snapshot (5.6); the 4.5 % firm-up lives in §5.2 prose.
+Also updated §7 indexer-realism bullet with the zero-shift/displacement robustness result
+(the paper had said this check "was not done" — now it is).
+
+**(a) ε/x₀ parity — RESOLVED, claim demoted.** Confirmed full config parity: `--predict-x0`
+IS the paper's "x₀-residual" (train-loop comment: "Residual: pred_c is correction from
+noisy_coords toward x0"); the lattice-input fix is always-on (no flag), so the matrix
+isolates only ε-vs-x₀; eval protocol matches (true-lattice, n=1000, n_samples=1, refine=0).
+ε reproduces (paper v11 0.90 % vs my 1.10 %) but x₀ does NOT (paper v13 2.51 % vs my
+1.27 %±0.17, ~7σ). The single-seed 3.5× "load-bearing" lift does not replicate at 3 seeds →
+**demoted to a single-seed artifact** in §3.4/§5.1, Fig 2 caption, §7, §8. Table 1's
+single-seed values left intact (they ARE the measured data). Residual caveat folded into §7:
+original v13 used ckpt_079500 (79.5k) vs my ckpt_final (100k); a checkpoint-step sweep would
+settle the last ambiguity (matrix saved only final, so can't check intermediates post-hoc).
+
+**(b) deCIFer folded in.** Added to abstract (both spots), Related Work §, §5.3 Table 3
+(**73.8 % [68.6, 78.5] match / 69.5 % [64.0, 74.4] all-correct**, n=298, sg@0.1 83.6 %,
+rmsd_med 0.009), and §8. Reframes §5.3 ranking to deCIFer ≫ PXRDnet > DGpt > PXRD-Diff
+(~46× gap); deCIFer's all-correct≈match supports the CIF-token-encodes-symmetry hypothesis.
+
+**(c) paper.tex regenerated.** Was an entirely STALE workshop-era hand-written file (317 lines,
+pre-reframe content). Regenerated via `pandoc 3.1.3 paper/paper.md -H paper/_pandoc_header.tex
+-s --shift-heading-level-by=-1 -V geometry:margin=1in -V documentclass=article -V fontsize=11pt
+-o paper/paper.tex` → current 1487-line render (\title, 5 longtables, 5 figures, 27 footnote
+refs, balanced document). NOT compile-checked (no LaTeX engine on box) and NOT RSC-templated.
+
+**Still open before submission:**
+- RSC (Digital Discovery) template wrap + a real xelatex/tectonic compile of paper.tex.
+- Mint Zenodo DOI + make repo public (Data Availability placeholder — C3).
+- Method-section expansion to journal length (~6k → 7–9k words; M3 remainder).
+- Optional: checkpoint-step sweep to definitively firm the ε/x₀ demotion.
+- em-dash density pass.
