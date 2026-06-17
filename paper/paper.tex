@@ -552,8 +552,11 @@ means the model starts as the identity transform --- at \(t \approx 1\)
 (near pure noise) the model outputs the noisy input as its
 \(\hat{\mathbf{F}}^{(0)}\) estimate, which is wrong but at least
 bounded; ε-prediction with the same architecture had to learn the entire
-transform from random initialisation and never recovered. This single
-change accounts for a 3.5× lift in the headline metric (see §5.2).
+transform from random initialisation and never recovered. At single seed
+this change appeared to lift the headline match metric 3.5×; a
+multi-seed checkpoint sweep (§7) shows that match-rate lift does not
+replicate, but the parameterisation does reproducibly improve the
+pattern-Pearson (≈ 0.36 → 0.40, see §5.1).
 
 \emph{Lattice-head input.} The lattice head reads the noisy lattice
 \(\boldsymbol{\ell}^{(t)}\) as an explicit input feature. Without this
@@ -749,9 +752,10 @@ v16 & x₀-residual & 1 & -- & 0.01 & 1.80 & 0.368 & 0.22 \\
 \caption{\textbf{Figure 2. Phase 4 architectural ablation.} Match rate
 (a) and pattern Pearson (b) for the seven coordinate-only runs of Table
 1 on MP-20 test (n = 1000, true lattice substituted). The ε →
-x₀-residual switch (v11 → v13) is the largest single-seed lift but did
-not replicate at three seeds (§7); adding Wyckoff embeddings or a
-distance-matrix loss regresses below it.}\label{fig:ablation}
+x₀-residual switch (v11 → v13) shows the largest single-seed match lift
+(panel a), but that match lift does not replicate across seeds --- only
+the pattern-Pearson gain (panel b) does (§7); adding Wyckoff embeddings
+or a distance-matrix loss regresses below it.}\label{fig:ablation}
 }
 \end{figure}
 
@@ -760,16 +764,20 @@ loss from 1.0 (pinned at the prior variance for 100 k steps) to
 \textasciitilde0.02 once \(W_\text{lat}\boldsymbol{\ell}^{(t)}\) enters
 the head input. A second, apparent lift did \textbf{not} survive
 replication: switching from \textbf{ε to x₀-residual} at fixed Debye λ =
-1 (v11 → v13) lifted single-seed match 0.9 \% → 2.5 \%, but a three-seed
-re-run on the identical 100 k recipe found ε and x₀-residual
-statistically indistinguishable (1.1 \% vs 1.3 \%; §7), so the 3.5× was
-a single-seed fluctuation rather than an architectural effect. Capacity
-is not the bottleneck: a 10.1 M-parameter run (\(d=384\), \(L=5\),
-\texttt{gpu\_v12}) stayed at the same \textasciitilde1.0 coord-loss
-plateau as v10. Under the full pipeline (sampled lattice), v13 drops to
-1.2 \% at n = 256; the Phase 9 v21 checkpoint reaches 4.5 \% under
-oracle (three seeds; an earlier single-seed snapshot read 5.6 \%) but
-only 1.0 \% under full pipeline. §5.2 attacks that gap.
+1 (v11 → v13) lifted single-seed match 0.9 \% → 2.5 \%, but a multi-seed
+checkpoint sweep (two seeds × five checkpoints, 20k--100k) found ε and
+x₀-residual indistinguishable on match rate (1.20 \% vs 1.35 \% pooled;
+x₀ never exceeds 1.5 \% at any checkpoint, including the 80 k one
+matching the original's 79.5 k --- §7), so the 3.5× match lift was a
+single-seed fluctuation. The x₀-residual parameterisation does, however,
+reproducibly improve pattern-Pearson (0.36 → 0.40), which is the part of
+the Phase-4 signal that survives. Capacity is not the bottleneck: a 10.1
+M-parameter run (\(d=384\), \(L=5\), \texttt{gpu\_v12}) stayed at the
+same \textasciitilde1.0 coord-loss plateau as v10. Under the full
+pipeline (sampled lattice), v13 drops to 1.2 \% at n = 256; the Phase 9
+v21 checkpoint reaches 4.5 \% under oracle (three seeds; an earlier
+single-seed snapshot read 5.6 \%) but only 1.0 \% under full pipeline.
+§5.2 attacks that gap.
 
 \hypertarget{phase-9-classical-indexer-drop-in}{%
 \subsection{5.2 Phase 9 --- classical indexer
@@ -1217,20 +1225,24 @@ parameters and runs inference in seconds.
   --- no larger cells, organics, or higher-Z.
 \item
   \textbf{Statistics.} The Phase 4 ablations in Table 1 are single-seed.
-  A three-seed re-run of the ε-vs-x₀-residual contrast (the reported
-  3.5× lift) did \textbf{not} replicate: the two parameterisations are
-  statistically indistinguishable at three seeds (ε 1.10 \%, x₀-residual
-  1.27 \%; identical 100 k recipe, true-lattice n = 1000), so we demote
-  that lift to a single-seed artifact. (The original v13 was a 79.5
-  k-step checkpoint vs our 100 k; a checkpoint-step sweep would settle
-  the residual ambiguity.) The lattice-input fix remains load-bearing as
-  a training-dynamics result (lattice loss 1.0 → 0.02), and the
-  oracle-vs-indexer gap has disjoint CIs. The indexer-vs-learned-head
-  comparison was rerun at three seeds and the lift confirmed significant
-  by a paired McNemar test (p \textless{} 10⁻⁴; §5.2) --- superseding
-  the earlier underpowered unpaired test (p = 0.24). The oracle has
-  since been multi-seeded --- three seeds give 4.5 \% {[}3.8, 5.3{]}
-  pooled, firming the single-seed 5.6 \%.
+  A multi-seed checkpoint sweep of the ε-vs-x₀-residual contrast (two
+  seeds × five checkpoints, 20k--100k, true-lattice n = 1000) shows the
+  reported 3.5× \emph{match-rate} lift does \textbf{not} replicate:
+  pooled match is 1.20 \% (ε) vs 1.35 \% (x₀-residual), and x₀ never
+  exceeds 1.5 \% at any checkpoint --- including the 80 k checkpoint
+  that matches the original v13's 79.5 k --- so the single-seed 2.51 \%
+  was a high draw, not a checkpoint-selection effect. We therefore
+  demote the \emph{match-rate} lift to a single-seed artifact. What does
+  reproduce is the pattern-Pearson improvement (ε 0.359 vs x₀ 0.403,
+  with disjoint ranges across both seeds), consistent with Table 1. The
+  lattice-input fix remains load-bearing as a training-dynamics result
+  (lattice loss 1.0 → 0.02), and the oracle-vs-indexer gap has disjoint
+  CIs. The indexer-vs-learned-head comparison was rerun at three seeds
+  and the lift confirmed significant by a paired McNemar test (p
+  \textless{} 10⁻⁴; §5.2) --- superseding the earlier underpowered
+  unpaired test (p = 0.24). The oracle has since been multi-seeded ---
+  three seeds give 4.5 \% {[}3.8, 5.3{]} pooled, firming the single-seed
+  5.6 \%.
 \item
   \textbf{Baselines.} PXRDnet n = 20 has a 95 \% Wilson CI of ≈ ±20 pp;
   the DGpt \textgreater{} PXRDnet all-correct ordering (§5.3/§6) is
@@ -1289,10 +1301,11 @@ all-correct) --- PXRD-Diff is 12--46× behind. The apparent divergence in
 their space-group recovery is a measurement hypothesis the n = 20
 PXRDnet sample cannot yet confirm, but the shared harness now makes it
 testable. The lattice-input fix and the classical-autoindexer drop-in
-are load-bearing; the x₀-residual switch, load-bearing at single seed,
-did not replicate at three seeds (§7); the remaining interventions are
-documented as failures. Code, checkpoints, all per-phase JSONs, both
-indexer paths, and the differentiable Bragg module are released.
+are load-bearing; the x₀-residual switch improves pattern-Pearson but
+its single-seed match-rate lift did not replicate (§7); the remaining
+interventions are documented as failures. Code, checkpoints, all
+per-phase JSONs, both indexer paths, and the differentiable Bragg module
+are released.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 

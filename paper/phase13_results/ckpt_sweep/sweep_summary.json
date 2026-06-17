@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "design": "retrain v11(eps) + v13_l1(x0-residual), debye lam=1, 2 seeds, save every 20k; eval each ckpt true-lattice n=1000 n_samples=1 refine=0",
+    "question": "does x0 match ever reach the original single-seed 2.51% at any checkpoint?"
+  },
+  "v11": {
+    "match_pct": {
+      "mean": 1.2,
+      "min": 1.0,
+      "max": 1.4000000000000001
+    },
+    "pearson": {
+      "mean": 0.359,
+      "min": 0.3514,
+      "max": 0.3623
+    },
+    "n_evals": 10
+  },
+  "v13_l1": {
+    "match_pct": {
+      "mean": 1.35,
+      "min": 1.0,
+      "max": 1.5
+    },
+    "pearson": {
+      "mean": 0.4034,
+      "min": 0.3676,
+      "max": 0.4244
+    },
+    "n_evals": 10
+  },
+  "_verdict": "x0 match peaks 1.5% at any ckpt/seed (never near 2.51%); match indistinguishable from eps (1.35 vs 1.20). Pearson reproducibly higher (0.403 vs 0.359, disjoint ranges). => match-rate 3.5x lift is single-seed artifact; Pearson gain is real."
+}
