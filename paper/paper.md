@@ -289,7 +289,7 @@ This research received no external funding.
 
 ## Data and Code Availability
 
-Source code, trained checkpoints, and all per-phase training/evaluation logs are available at `https://github.com/fronkt/pxrd-diff` and archived at Zenodo (DOI: 10.5281/zenodo.XXXXXXX, *to be minted at submission*). The MP-20 dataset is publicly available via the CDVAE benchmark. All experiments reproduce from a single `requirements.txt` and the `scripts/` pipeline; per-structure evaluation flags are released to support paired re-analysis.
+Source code, trained checkpoints, and all per-phase training/evaluation logs are available at `https://github.com/fronkt/pxrd-diff` and archived at Zenodo (DOI: 10.5281/zenodo.20738994). The MP-20 dataset is publicly available via the CDVAE benchmark. All experiments reproduce from a single `requirements.txt` and the `scripts/` pipeline; per-structure evaluation flags are released to support paired re-analysis.
 
 ## Ethics Declaration
 
