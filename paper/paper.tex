@@ -1,11 +1,13 @@
 % Options for packages loaded elsewhere
 \PassOptionsToPackage{unicode}{hyperref}
 \PassOptionsToPackage{hyphens}{url}
-%
 \documentclass[
   11pt,
 ]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
 \usepackage{iftex}
 \ifPDFTeX
   \usepackage[T1]{fontenc}
@@ -36,9 +38,8 @@
 }{% if KOMA class
   \KOMAoptions{parskip=half}}
 \makeatother
-\usepackage{xcolor}
-\usepackage[margin=1in]{geometry}
 \usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
 \usepackage{calc} % for calculating minipage widths
 % Correct order of tables after \paragraph or \subparagraph
 \usepackage{etoolbox}
@@ -50,21 +51,22 @@
 \makesavenoteenv{longtable}
 \usepackage{graphicx}
 \makeatletter
-\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
-\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
-\makeatother
-% Scale images if necessary, so that they will not overflow the page
-% margins by default, and it is still possible to overwrite the defaults
-% using explicit options in \includegraphics[width, height, ...]{}
-\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
 % Set default figure placement to htbp
-\makeatletter
 \def\fps@figure{htbp}
 \makeatother
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
 % Header injected for pandoc+tectonic (XeTeX) builds of paper.md.
 % Maps the non-ASCII characters used in prose to font-independent LaTeX
 % commands so they render via Latin Modron + math mode (no special font /
@@ -112,19 +114,21 @@
 \newunicodechar{⁴}{\ensuremath{^4}}
 \newunicodechar{⁸}{\ensuremath{^8}}
 \newunicodechar{⁻}{\ensuremath{^-}}
-\ifLuaTeX
-  \usepackage{selnolig}  % disable illegal ligatures
-\fi
-\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\usepackage{bookmark}
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
+% fallback for those not using the hyperref driver hyperxmp:
+\makeatletter
+\@ifundefined{xmpquote}{\newcommand{\xmpquote}[1]{#1}}{}
+\makeatother
 \hypersetup{
-  pdftitle={PXRD-Diff: Conditional Diffusion for Powder-Diffraction Inversion --- an Encoder-Bottleneck Diagnosis and Shared-Harness Reproduction},
+  pdftitle={PXRD-Diff: Conditional Diffusion for Powder-Diffraction Inversion: an Encoder-Bottleneck Diagnosis and Shared-Harness Reproduction},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 
-\title{PXRD-Diff: Conditional Diffusion for Powder-Diffraction Inversion
---- an Encoder-Bottleneck Diagnosis and Shared-Harness Reproduction}
+\title{PXRD-Diff: Conditional Diffusion for Powder-Diffraction
+Inversion: an Encoder-Bottleneck Diagnosis and Shared-Harness
+Reproduction}
 \author{}
 \date{}
 
@@ -133,13 +137,12 @@
 
 \textbf{Frank Cai} \texttt{frankyc11223@gmail.com}
 
-\emph{Manuscript type: Article --- methodological study with
-reproduction and negative results.}
+\emph{Manuscript type: Article, a methodological study with reproduction
+and negative results.}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{abstract}{%
-\section{Abstract}\label{abstract}}
+\section{Abstract}\label{abstract}
 
 Inverting a 1D powder X-ray diffraction (PXRD) pattern to a 3D crystal
 structure remains open, and recent generative approaches report numbers
@@ -169,7 +172,7 @@ diffusion model on the CDVAE MP-20 split, and reproduce DiffractGPT
 robust finding is a \textbf{mechanism}: the learned PXRD encoder reaches
 a 0.007 \emph{normalised} auxiliary lattice-regression loss in
 isolation, but that relative fit does not survive conversion to absolute
-scale --- substituting the auxiliary head's own lattice into the sampler
+scale: substituting the auxiliary head's own lattice into the sampler
 recovers only 1.2 \%, because its \textasciitilde1.1 Å length error
 shifts every Bragg peak by \textasciitilde15 \% and collapses pattern
 agreement. The bottleneck is the global pooling that discards absolute
@@ -185,8 +188,8 @@ dichotomy) raises no-true-lattice match to 1.5 \% {[}1.2, 2.0{]}
 (three-seed pooled) from a learned-head baseline that recovers
 essentially nothing (0 / 1 949). A \textbf{paired McNemar test across
 three seeds confirms the improvement is significant} (p \textless{}
-10⁻⁴; 27 structures fixed, none broken) --- an earlier unpaired test (p
-= 0.24) was simply underpowered. The gain is concentrated in the
+10⁻⁴; 27 structures fixed, none broken); an earlier unpaired test (p =
+0.24) was simply underpowered. The gain is concentrated in the
 high-symmetry systems where the indexer's cell error sits below the 0.5
 Å knee. Reproduced baselines on our harness: \textbf{deCIFer 73.8 \%}
 match (69.5 \% all-correct) at n = 300, \textbf{DiffractGPT 18.9 \%}
@@ -210,8 +213,7 @@ physics; ablation study; negative results
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{introduction}{%
-\section{1. Introduction}\label{introduction}}
+\section{1. Introduction}\label{introduction}
 
 PXRD is the most common structural-characterization measurement in
 solid-state chemistry. The forward problem is solved by 1920s
@@ -223,8 +225,8 @@ Bail → Rietveld pipeline needs a trained crystallographer and a starting
 model good enough to converge; for the long tail of new materials,
 structures stay unsolved.
 
-Three recent generative approaches --- DiffractGPT \footnote{Choudhary,
-  K. (2025). DiffractGPT: Atomic Structure Determination from X-ray
+Three recent generative approaches (DiffractGPT \footnote{Choudhary, K.
+  (2025). DiffractGPT: Atomic Structure Determination from X-ray
   Diffraction Patterns using a Generative Pretrained Transformer.
   \emph{The Journal of Physical Chemistry Letters}, 16(8), 2110--2119.
   DOI: 10.1021/acs.jpclett.4c03137. Reproduced from HF checkpoint
@@ -244,15 +246,15 @@ Three recent generative approaches --- DiffractGPT \footnote{Choudhary,
   1726--1734. DOI: 10.1038/s41563-025-02220-y (Author Correction:
   10.1038/s41563-025-02301-y; preprint arXiv:2406.10796). Reproduced
   from HF checkpoint \texttt{therealgabeguo/cdvae\_xrd\_sinc100} and
-  code at \texttt{github.com/gabeguo/cdvae\_xrd}.} --- argue neural
+  code at \texttt{github.com/gabeguo/cdvae\_xrd}.}) argue neural
 networks can shortcut this pipeline. They report match rates in the tens
 of percent, but under mutually incompatible evaluation protocols, and
 failure modes are seldom catalogued. A practitioner cannot easily form a
 calibrated expectation of \emph{what is hard} about PXRD inversion.
 
-We build a small reproducible conditional diffusion model ---
-\textbf{PXRD-Diff} --- and run it against two of the three baselines on
-a shared \texttt{StructureMatcher} harness. Contributions:
+We build a small reproducible conditional diffusion model
+(\textbf{PXRD-Diff}) and run it against two of the three baselines on a
+shared \texttt{StructureMatcher} harness. Contributions:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -270,8 +272,8 @@ a shared \texttt{StructureMatcher} harness. Contributions:
   Wilson 95 \% CI {[}3.8, 5.3{]}, disjoint from the indexer's {[}1.2,
   2.0{]}). The encoder reaches a 0.007 \emph{normalised} aux lattice
   loss in isolation, but substituting that head's lattice into the
-  sampler recovers only 1.2 \% (§5.6) --- its \textasciitilde1.1 Å error
-  sits well above the knee --- so the pooled encoding, not merely the
+  sampler recovers only 1.2 \% (§5.6). Its \textasciitilde1.1 Å error
+  sits well above the knee, so the pooled encoding, not merely the
   denoiser, fails to deliver absolute d-spacings. The lattice channel is
   the dominant \emph{accessible} limiter; the 4.5 \% oracle ceiling
   shows coordinates remain a co-bottleneck.
@@ -308,8 +310,7 @@ a shared \texttt{StructureMatcher} harness. Contributions:
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{related-work}{%
-\section{2. Related work}\label{related-work}}
+\section{2. Related work}\label{related-work}
 
 \textbf{Diffusion for crystals.} CDVAE \footnote{Xie, T., Fu, X., Ganea,
   O.-E., Barzilay, R., \& Jaakkola, T. (2022). Crystal diffusion
@@ -386,10 +387,10 @@ Relevant to our negative results, Segal et al. \footnote{Segal, N.,
   (2025). The Loss Landscape of Powder X-Ray Diffraction-Based Structure
   Optimization Is Too Rough for Gradient Descent.
   \emph{arXiv:2512.04036}.} show the powder-XRD similarity loss
-landscape is ``too rough for gradient descent'' --- independent evidence
+landscape is ``too rough for gradient descent'', independent evidence
 for why our sampling-time Debye-gradient guidance fails (§5.4).
 
-\textbf{Equivariance.} Not strictly E(3)-equivariant --- we use
+\textbf{Equivariance.} Not strictly E(3)-equivariant: we use
 periodic-distance RBFs (SchNet-style \footnote{Schütt, K. T., et
   al.~(2017). SchNet: A continuous-filter convolutional neural network
   for modeling quantum interactions. \emph{Advances in Neural
@@ -402,11 +403,9 @@ scale in pilots and was deferred.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{method}{%
-\section{3. Method}\label{method}}
+\section{3. Method}\label{method}
 
-\hypertarget{problem-formulation}{%
-\subsection{3.1 Problem formulation}\label{problem-formulation}}
+\subsection{3.1 Problem formulation}\label{problem-formulation}
 
 Let \(\mathcal{C} = (\mathbf{F}, \mathbf{Z}, \mathbf{L})\) denote a
 crystal structure with fractional coordinates
@@ -422,11 +421,10 @@ We are given \(\mathbf{p}\) and \(\mathbf{Z}\) at test time, and we wish
 to sample
 \((\mathbf{F}, \mathbf{L}) \sim p(\,\cdot\, | \mathbf{p}, \mathbf{Z})\).
 Note that the composition \(\mathbf{Z}\) being known is a meaningful
-simplification --- in practice one usually knows the chemistry from
-synthesis --- but it is consistent with prior work on the same task.
+simplification (in practice one usually knows the chemistry from
+synthesis), but it is consistent with prior work on the same task.
 
-\hypertarget{architecture-overview}{%
-\subsection{3.2 Architecture overview}\label{architecture-overview}}
+\subsection{3.2 Architecture overview}\label{architecture-overview}
 
 PXRD-Diff has three trained components: a PXRD encoder, a denoiser, and
 a small auxiliary lattice head used only during training.
@@ -441,7 +439,7 @@ concatenating along the spatial axis. \emph{The multi-resolution map is
 critical.} In an early run (referred to as \texttt{gpu\_v4} in our logs)
 we conditioned the denoiser on \(\mathbf{g}\) only via additive
 broadcast, and the coordinate loss never moved off the random baseline
-of 3.0 --- the auxiliary head told us the encoder was learning useful
+of 3.0; the auxiliary head told us the encoder was learning useful
 features (its loss dropped from 0.99 to 0.007), but the
 \texttt{AdaptiveAvgPool1d(1)} collapse destroyed all spectral structure
 before it could reach the denoiser.
@@ -457,21 +455,20 @@ per-atom coordinate noise
 \(\boldsymbol{\epsilon}_F \in \mathbb{R}^{N \times 3}\) and lattice
 noise \(\boldsymbol{\epsilon}_L \in \mathbb{R}^6\). The lattice head is
 a small MLP applied to
-\([\,\bar{\mathbf{h}}\,;\, \mathbf{g}\,;\, W_\text{lat}\boldsymbol{\ell}^{(t)}\,;\, \mathbf{t}_\text{cond}\,]\)
---- that is, the pooled atom features, the global PXRD embedding,
-\textbf{a projection of the noisy lattice itself}, and the timestep
-encoding (see §3.4).
+\([\,\bar{\mathbf{h}}\,;\, \mathbf{g}\,;\, W_\text{lat}\boldsymbol{\ell}^{(t)}\,;\, \mathbf{t}_\text{cond}\,]\):
+that is, the pooled atom features, the global PXRD embedding, \textbf{a
+projection of the noisy lattice itself}, and the timestep encoding (see
+§3.4).
 
 \textbf{Auxiliary head.} A single-hidden-layer MLP that predicts
 \((a,b,c,\alpha,\beta,\gamma)\) from \(\mathbf{g}\) alone, trained with
 an MSE loss against the (normalised) ground-truth lattice. Its purpose
-is purely diagnostic --- to expose whether the encoder is learning any
-lattice-relevant representation --- and its loss does not flow back into
+is purely diagnostic, to expose whether the encoder is learning any
+lattice-relevant representation, and its loss does not flow back into
 the denoiser.
 
-\hypertarget{differentiable-bragg-structure-factor-loss}{%
 \subsection{3.3 Differentiable Bragg structure-factor
-loss}\label{differentiable-bragg-structure-factor-loss}}
+loss}\label{differentiable-bragg-structure-factor-loss}
 
 The core physics-informed contribution. We implement, in PyTorch, \[
 F(hkl) = \sum_j f_j(s) \exp\!\left(-B_{\text{iso}} s^2\right) \exp\!\left[2\pi i\,(h x_j + k y_j + l z_j)\right],
@@ -496,15 +493,14 @@ non-zero gradients through the structure factor with respect to
 fractional coordinates.
 
 \begin{figure}
-\hypertarget{fig:validation}{%
 \centering
-\includegraphics{fig3_diffpxrd_validation.pdf}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1. Differentiable-simulator validation. Distribution of Pearson correlation between the PyTorch DiffPXRD module and pymatgen.XRDCalculator over 50 random MP-20 test structures (mean 0.962). All 50 exceed 0.7; the lower tail is dominated by layered structures with strong texture in the reference.}]{fig3_diffpxrd_validation.pdf}}
 \caption{\textbf{Figure 1. Differentiable-simulator validation.}
 Distribution of Pearson correlation between the PyTorch DiffPXRD module
-and \texttt{pymatgen.XRDCalculator} over 50 random MP-20 test structures
-(mean 0.962). All 50 exceed 0.7; the lower tail is dominated by layered
-structures with strong texture in the reference.}\label{fig:validation}
-}
+and \protect\texttt{pymatgen.XRDCalculator} over 50 random MP-20 test
+structures (mean 0.962). All 50 exceed 0.7; the lower tail is dominated
+by layered structures with strong texture in the
+reference.}\label{fig:validation}
 \end{figure}
 
 \textbf{As a loss.} During training we recover an estimate
@@ -518,8 +514,7 @@ differentiable simulator is more sensitive to lattice errors than to
 coordinate errors at the early stages of training, and disentangling the
 two signals proved more stable.
 
-\hypertarget{training-objective}{%
-\subsection{3.4 Training objective}\label{training-objective}}
+\subsection{3.4 Training objective}\label{training-objective}
 
 We use a VP-SDE with cosine schedule \footnote{Nichol, A., \& Dhariwal,
   P. (2021). Improved denoising diffusion probabilistic models.
@@ -548,7 +543,7 @@ that is added to the noisy input to obtain the clean estimate: \[
 \hat{\mathbf{F}}^{(0)} = \mathbf{F}^{(t)} + \text{Coord-Head}(\mathbf{h}),\quad
 \hat{\boldsymbol{\ell}}^{(0)} = \boldsymbol{\ell}^{(t)} + \text{Lat-Head}(\cdot).
 \] Because the heads are MLPs initialised to output near-zero, this
-means the model starts as the identity transform --- at \(t \approx 1\)
+means the model starts as the identity transform: at \(t \approx 1\)
 (near pure noise) the model outputs the noisy input as its
 \(\hat{\mathbf{F}}^{(0)}\) estimate, which is wrong but at least
 bounded; ε-prediction with the same architecture had to learn the entire
@@ -559,13 +554,12 @@ replicate, but the parameterisation does reproducibly improve the
 pattern-Pearson (≈ 0.36 → 0.40, see §5.1).
 
 \emph{Lattice-head input.} The lattice head reads the noisy lattice
-\(\boldsymbol{\ell}^{(t)}\) as an explicit input feature. Without this
---- i.e.~if the head only sees the (clean) lattice that is also passed
-to the denoiser as the geometry context --- the head can only ever
-predict the unconditional mean noise,
-\(\mathbb{E}[\boldsymbol{\epsilon}] = 0\), and its loss stays pinned at
-the random baseline of 1.0 forever. With this fix, the lattice loss
-drops to 0.02--0.06 on stable runs.
+\(\boldsymbol{\ell}^{(t)}\) as an explicit input feature. Without this,
+i.e.~if the head only sees the (clean) lattice that is also passed to
+the denoiser as the geometry context, the head can only ever predict the
+unconditional mean noise, \(\mathbb{E}[\boldsymbol{\epsilon}] = 0\), and
+its loss stays pinned at the random baseline of 1.0 forever. With this
+fix, the lattice loss drops to 0.02--0.06 on stable runs.
 
 We also experimented with two extensions that did not pan out (§5.4): a
 \textbf{Wyckoff-site embedding} added to atom features, and an auxiliary
@@ -574,9 +568,8 @@ ground-truth periodic distances between atoms. Both are documented in
 the released code behind the \texttt{-\/-use-wyckoff} and
 \texttt{-\/-dist-weight} flags.
 
-\hypertarget{classical-indexing-as-a-drop-in-for-the-learned-lattice-head}{%
 \subsection{3.5 Classical indexing as a drop-in for the learned lattice
-head}\label{classical-indexing-as-a-drop-in-for-the-learned-lattice-head}}
+head}\label{classical-indexing-as-a-drop-in-for-the-learned-lattice-head}
 
 The lattice head described in §3.2 is the \emph{only} path by which the
 model encodes absolute d-spacings: every Bragg reflection 2θ position is
@@ -585,10 +578,10 @@ the absolute reference frame against which all peak positions in the
 input pattern must be interpreted. As §5.5 shows, the encoder + denoiser
 learns \emph{relative} d-spacing structure (Pearson 0.43 between
 predicted and target patterns at evaluation time, vs 0.97 between target
-and ground truth) but not the absolute scale. Classical autoindexing ---
-extracting peak positions, mapping them to Q-space (Q = 4π sinθ/λ), and
-fitting a unit cell by enumeration of (h,k,l) → Q²(h,k,l) --- has solved
-this sub-problem since the 1970s and runs on a CPU in milliseconds per
+and ground truth) but not the absolute scale. Classical autoindexing,
+which extracts peak positions, maps them to Q-space (Q = 4π sinθ/λ), and
+fits a unit cell by enumeration of (h,k,l) → Q²(h,k,l), has solved this
+sub-problem since the 1970s and runs on a CPU in milliseconds per
 pattern.
 
 We implement a from-scratch Q-space autoindexer that takes (i) the same
@@ -623,8 +616,7 @@ unchanged, the diffusion sampler is unchanged except for the
 lattice-channel substitution at t = T, and the headline metric (§5.2)
 reports both with and without the indexer for direct comparison.
 
-\hypertarget{sampling}{%
-\subsection{3.6 Sampling}\label{sampling}}
+\subsection{3.6 Sampling}\label{sampling}
 
 DDIM \footnote{Song, J., Meng, C., \& Ermon, S. (2021). Denoising
   diffusion implicit models. \emph{International Conference on Learning
@@ -646,8 +638,7 @@ initially saw.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{experiments}{%
-\section{4. Experiments}\label{experiments}}
+\section{4. Experiments}\label{experiments}
 
 \textbf{Dataset.} Canonical CDVAE \footnote{Xie, T., Fu, X., Ganea,
   O.-E., Barzilay, R., \& Jaakkola, T. (2022). Crystal diffusion
@@ -661,15 +652,14 @@ cell. Patterns simulated with \texttt{pymatgen.XRDCalculator} (Cu Kα₁, λ
 \textbf{Evaluation.} Three views: (1) \textbf{composition match}
 (trivial, \(\mathbf{Z}\) given); (2) \textbf{structure match} via
 \texttt{pymatgen.StructureMatcher} at
-\((\ell_\text{tol}, s_\text{tol}, \alpha_\text{tol}) = (0.2, 0.3, 5°)\)
---- the headline ``match rate''; (3) \textbf{coordinate RMSD} on
-aligned, permuted atoms when matched. We also report space-group match
-at symprec \(\in \{0.01, 0.05, 0.1, 0.2\}\), pattern Pearson, and
-\(R_{wp}\).
+\((\ell_\text{tol}, s_\text{tol}, \alpha_\text{tol}) = (0.2, 0.3, 5°)\),
+the headline ``match rate''; (3) \textbf{coordinate RMSD} on aligned,
+permuted atoms when matched. We also report space-group match at symprec
+\(\in \{0.01, 0.05, 0.1, 0.2\}\), pattern Pearson, and \(R_{wp}\).
 
 The stricter \textbf{``all-correct''} rule combines
-\texttt{composition\ ∧\ sg-match@symprec=0.1\ ∧\ rmsd\ ≤\ 0.1\ Å} ---
-the experimentally relevant case for downstream crystallographic use.
+\texttt{composition\ ∧\ sg-match@symprec=0.1\ ∧\ rmsd\ ≤\ 0.1\ Å}, the
+experimentally relevant case for downstream crystallographic use.
 
 Two evaluation modes: \emph{full pipeline} (predicted lattice + coords)
 and \emph{true-lattice/coord-only} (ground-truth lattice substituted).
@@ -687,16 +677,14 @@ n=1000 + PXRDnet n=20 + evaluation).
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{results}{%
-\section{5. Results}\label{results}}
+\section{5. Results}\label{results}
 
 Order: Phase 4 architectural ablation (§5.1) → Phase 9 indexer drop-in
 (§5.2) → reproduced baselines (§5.3) → failure catalogue (§5.4) →
 encoder-bottleneck perturbation study (§5.5).
 
-\hypertarget{phase-4-architectural-ablation-true-lattice-setting}{%
-\subsection{5.1 Phase 4 --- architectural ablation (true-lattice
-setting)}\label{phase-4-architectural-ablation-true-lattice-setting}}
+\subsection{5.1 Phase 4: architectural ablation (true-lattice
+setting)}\label{phase-4-architectural-ablation-true-lattice-setting}
 
 Table 1: seven runs sweeping the Debye loss, the lattice-input fix,
 x₀-residual, and two extensions (Wyckoff, distance loss), all on n = 1
@@ -705,15 +693,16 @@ x₀-residual, and two extensions (Wyckoff, distance loss), all on n = 1
 \textbf{Table 1.} Phase 4 coordinate-only ablation, MP-20 test (n = 1
 000, true lattice substituted).
 
+{\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.0886}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.2278}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1139}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1139}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1013}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1139}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1139}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1266}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0886}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.2278}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1139}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1139}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1013}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1139}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1139}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1266}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Run
@@ -744,19 +733,18 @@ v14 & x₀-residual & 1 & yes & 0.01 & 0.80 & 0.367 & 0.14 \\
 v15 & x₀-residual & 1 & yes & 0 & 2.10 & 0.392 & 0.21 \\
 v16 & x₀-residual & 1 & -- & 0.01 & 1.80 & 0.368 & 0.22 \\
 \end{longtable}
+}
 
 \begin{figure}
-\hypertarget{fig:ablation}{%
 \centering
-\includegraphics{fig1_ablation.pdf}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 2. Phase 4 architectural ablation. Match rate (a) and pattern Pearson (b) for the seven coordinate-only runs of Table 1 on MP-20 test (n = 1000, true lattice substituted). The ε → x₀-residual switch (v11 → v13) shows the largest single-seed match lift (panel a), but that match lift does not replicate across seeds; only the pattern-Pearson gain (panel b) does (§7); adding Wyckoff embeddings or a distance-matrix loss regresses below it.}]{fig1_ablation.pdf}}
 \caption{\textbf{Figure 2. Phase 4 architectural ablation.} Match rate
 (a) and pattern Pearson (b) for the seven coordinate-only runs of Table
 1 on MP-20 test (n = 1000, true lattice substituted). The ε →
 x₀-residual switch (v11 → v13) shows the largest single-seed match lift
-(panel a), but that match lift does not replicate across seeds --- only
-the pattern-Pearson gain (panel b) does (§7); adding Wyckoff embeddings
-or a distance-matrix loss regresses below it.}\label{fig:ablation}
-}
+(panel a), but that match lift does not replicate across seeds; only the
+pattern-Pearson gain (panel b) does (§7); adding Wyckoff embeddings or a
+distance-matrix loss regresses below it.}\label{fig:ablation}
 \end{figure}
 
 The \textbf{lattice-input fix} (§3.4) is load-bearing: it drops lattice
@@ -768,7 +756,7 @@ replication: switching from \textbf{ε to x₀-residual} at fixed Debye λ =
 checkpoint sweep (two seeds × five checkpoints, 20k--100k) found ε and
 x₀-residual indistinguishable on match rate (1.20 \% vs 1.35 \% pooled;
 x₀ never exceeds 1.5 \% at any checkpoint, including the 80 k one
-matching the original's 79.5 k --- §7), so the 3.5× match lift was a
+matching the original's 79.5 k, §7), so the 3.5× match lift was a
 single-seed fluctuation. The x₀-residual parameterisation does, however,
 reproducibly improve pattern-Pearson (0.36 → 0.40), which is the part of
 the Phase-4 signal that survives. Capacity is not the bottleneck: a 10.1
@@ -779,9 +767,8 @@ v21 checkpoint reaches 4.5 \% under oracle (three seeds; an earlier
 single-seed snapshot read 5.6 \%) but only 1.0 \% under full pipeline.
 §5.2 attacks that gap.
 
-\hypertarget{phase-9-classical-indexer-drop-in}{%
-\subsection{5.2 Phase 9 --- classical indexer
-drop-in}\label{phase-9-classical-indexer-drop-in}}
+\subsection{5.2 Phase 9: classical indexer
+drop-in}\label{phase-9-classical-indexer-drop-in}
 
 Table 2: three rows on the same n = 1 000 with the v21 checkpoint (Phase
 9 retrain, Phase 4 fixes + retuned encoder); they differ only in which
@@ -791,13 +778,14 @@ lattice the sampler conditions on.
 test, v21 checkpoint, single-seed snapshot). Match \% with 95 \% Wilson
 CI; the three-seed paired analysis follows below.
 
+{\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.4234}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1712}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1351}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.0901}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1261}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.0541}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.4234}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1712}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1351}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.0901}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1261}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.0541}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Lattice source
@@ -816,23 +804,24 @@ R\_wp
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Learned head only (full pipeline) & 1.0 {[}0.5, 1.8{]} & 0.0 & 1.4 & ---
+Learned head only (full pipeline) & 1.0 {[}0.5, 1.8{]} & 0.0 & 1.4 & n/a
 & 11.7 \\
 \textbf{Classical Q-space autoindexer (§3.5) drop-in} & \textbf{1.6
 {[}1.0, 2.6{]}} & \textbf{0.1} & \textbf{1.4} & \textbf{0.125} & 11.5 \\
 Ground-truth lattice (oracle) & 5.6 {[}4.3, 7.2{]} & 0.6 & 1.7 & 0.106 &
 5.6 \\
 \end{longtable}
+}
 
 \textbf{The lift is real: a three-seed paired test.} The single-seed
-snapshot alone does not establish a genuine improvement --- its Wilson
-CIs overlap and an unpaired two-proportion test gives p = 0.24. To
-resolve it we reran \emph{both} lattice sources at three seeds (n = 1
-000 each), differing only in the lattice channel, and applied a paired
-McNemar test on the per-structure outcomes --- the correct test, because
-the two arms see the same materials. The result is unambiguous. The two
-arms are scored on the same materials per seed, but the learned-head arm
-yields fewer \emph{evaluable} cells: its diffusion-sampled lattices are
+snapshot alone does not establish a genuine improvement: its Wilson CIs
+overlap and an unpaired two-proportion test gives p = 0.24. To resolve
+it we reran \emph{both} lattice sources at three seeds (n = 1 000 each),
+differing only in the lattice channel, and applied a paired McNemar test
+on the per-structure outcomes, the correct test, because the two arms
+see the same materials. The result is unambiguous. The two arms are
+scored on the same materials per seed, but the learned-head arm yields
+fewer \emph{evaluable} cells: its diffusion-sampled lattices are
 frequently degenerate and hang \texttt{StructureMatcher}/\texttt{spglib}
 (C calls that a Python signal cannot interrupt), so we run
 structure-domain scoring in a spawn worker hard-killed at 30 s and count
@@ -841,12 +830,13 @@ scored across the three seeds versus all 3 000 for the indexer; the
 paired test runs on the 1 949-structure intersection (every learned-head
 row has a matched indexer row). On that paired set the indexer recovers
 \textbf{27} structures the learned head misses and the learned head
-recovers \textbf{none} the indexer misses --- the explicit 2×2 below.
+recovers \textbf{none} the indexer misses (the explicit 2×2 below).
 
 \textbf{Table 2a.} Paired per-structure outcomes, learned head vs
 indexer drop-in (three seeds pooled; match = \texttt{StructureMatcher}
 hit).
 
+{\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}llll@{}}
 \toprule\noalign{}
 & indexer \textbf{match} & indexer \textbf{miss} & row total \\
@@ -858,39 +848,39 @@ hit).
 \textbf{learned miss} & 27 & 1 922 & 1 949 \\
 \textbf{col total} & 27 & 1 922 & 1 949 \\
 \end{longtable}
+}
 
 The discordant cells are \emph{b} = 27 (indexer fixes), \emph{c} = 0
 (indexer breaks); an exact two-sided McNemar test gives \textbf{p = 1.5
-× 10⁻⁸}. (Marginal match counts differ --- indexer 46 / 3 000, learned 0
-/ 1 949 --- because 19 further indexer matches fall on structures the
-learned arm could not score; these do not enter the paired test.) The
+× 10⁻⁸}. (Marginal match counts differ: indexer 46 / 3 000, learned 0 /
+1 949, because 19 further indexer matches fall on structures the learned
+arm could not score; these do not enter the paired test.) The
 single-seed 1.0 \% learned-head figure in Table 2 is within run-to-run
 noise of zero; across three fresh seeds the learned lattice head matched
 nothing. The gain does \textbf{not} carry to the stricter all-correct
 metric: there the discordant cells are \emph{b} = 4, \emph{c} = 0 (exact
-McNemar \textbf{p = 0.13}) --- the indexer fixes the cell but not the
-space group. So the drop-in reproducibly improves match rate over the
-learned lattice head; the \emph{mechanism} (§5.5, §5.6) is that its
-gains come entirely from high-symmetry systems where the indexer's cell
-error falls below the 0.5 Å sensitivity knee, with low-symmetry
-contributing nothing.
+McNemar \textbf{p = 0.13}): the indexer fixes the cell but not the space
+group. So the drop-in reproducibly improves match rate over the learned
+lattice head; the \emph{mechanism} (§5.5, §5.6) is that its gains come
+entirely from high-symmetry systems where the indexer's cell error falls
+below the 0.5 Å sensitivity knee, with low-symmetry contributing
+nothing.
 
 What the indexer does \emph{not} do is close the gap to the oracle. We
 re-ran the oracle at three seeds, firming the single-seed 5.6 \% to
-\textbf{4.5 \% {[}3.8, 5.3{]}} (135 / 3 000 pooled) --- still disjoint
-from the indexer's 1.5 \% {[}1.2, 2.0{]}. The indexer → oracle gap (1.5
-→ 4.5 \%) is itself significant (disjoint CIs) and isolates the
+\textbf{4.5 \% {[}3.8, 5.3{]}} (135 / 3 000 pooled), still disjoint from
+the indexer's 1.5 \% {[}1.2, 2.0{]}. The indexer → oracle gap (1.5 → 4.5
+\%) is itself significant (disjoint CIs) and isolates the
 lattice-attributable error: even with a perfect lattice, match caps at
 4.5 \%, so coordinate prediction is the dominant limiter while lattice
 error explains the 1.5 → 4.5 \% shortfall. The indexer's per-system MAE
 (1.45 Å overall, dominated by mono 1.76 Å and triclinic NaN) sits above
-the 0.5 Å knee --- closing the rest requires fixing the low-symmetry
-path (GSAS-II remains experimental).
+the 0.5 Å knee; closing the rest requires fixing the low-symmetry path
+(GSAS-II remains experimental).
 
 \begin{figure}
-\hypertarget{fig:indexer}{%
 \centering
-\includegraphics{fig4_indexer_bench.pdf}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 3. Per-system indexer performance. Strict and consistent indexing rates (a) and length MAE (b) on n = 1 000. High-symmetry systems (hex, ortho) sit below the 0.5 Å knee; trig and mono blow up; triclinic is unindexable in this implementation. The overall 1.45 Å MAE hides two regimes, and explains why the indexer's significant match-rate gain (§5.2) is concentrated entirely in the high-symmetry systems.}]{fig4_indexer_bench.pdf}}
 \caption{\textbf{Figure 3. Per-system indexer performance.} Strict and
 consistent indexing rates (a) and length MAE (b) on n = 1 000.
 High-symmetry systems (hex, ortho) sit below the 0.5 Å knee; trig and
@@ -898,12 +888,10 @@ mono blow up; triclinic is unindexable in this implementation. The
 overall 1.45 Å MAE hides two regimes, and explains why the indexer's
 significant match-rate gain (§5.2) is concentrated entirely in the
 high-symmetry systems.}\label{fig:indexer}
-}
 \end{figure}
 
-\hypertarget{head-to-head-with-external-baselines}{%
 \subsection{5.3 Head-to-head with external
-baselines}\label{head-to-head-with-external-baselines}}
+baselines}\label{head-to-head-with-external-baselines}
 
 DiffractGPT (\texttt{knc6/diffractgpt\_mistral\_chemical\_formula}) at n
 = 1 000, PXRDnet (\texttt{therealgabeguo/cdvae\_xrd\_sinc100}) at n = 20
@@ -915,13 +903,14 @@ checkpoint download is inactive; cite-but-not-reproduced.
 \textbf{Table 3.} Reproduced head-to-head on MP-20 test
 (StructureMatcher ltol 0.2, stol 0.3, angle\_tol 5°).
 
+{\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.3770}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.0574}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1639}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.2049}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.0820}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1148}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.3770}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.0574}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1639}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.2049}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.0820}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1148}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Model
@@ -966,11 +955,12 @@ deCIFer \footnote{Johansen, F. L., Friis-Jensen, U., Dam, E. B., Jensen,
   (arXiv:2502.02189).} & 298 & 73.8 {[}68.6, 78.5{]} & 69.5 {[}64.0,
 74.4{]} & 83.6 & 0.009 \\
 \end{longtable}
+}
 
 \textbf{Match rate} ranks deCIFer ≫ PXRDnet \textgreater{} DGpt
-\textgreater{} PXRD-Diff. deCIFer --- a concurrent autoregressive
-CIF-token model conditioned on XRD + composition --- is the strongest
-external reference at 73.8 \% match / 69.5 \% all-correct (n = 300),
+\textgreater{} PXRD-Diff. deCIFer, a concurrent autoregressive CIF-token
+model conditioned on XRD + composition, is the strongest external
+reference at 73.8 \% match / 69.5 \% all-correct (n = 300),
 \textasciitilde46× above PXRD-Diff; notably its all-correct nearly
 equals its match, i.e.~when it recovers structure it almost always
 recovers the space group too, the same CIF-token signature seen in DGpt.
@@ -980,15 +970,15 @@ behind PXRDnet/DGpt. A more interesting pattern is that the
 \emph{all-correct} ordering need not follow match rate: DGpt's
 all-correct (15.9 \% {[}13.8, 18.3{]}) exceeds its space-group-loose
 match by little, while PXRDnet's drops from 30 \% match to 5 \%
-all-correct --- i.e.~PXRDnet matches structure under loose tolerances
-but rarely recovers the space group, whereas DGpt's CIF-token output
-appears to encode symmetry. \textbf{We flag this as a hypothesis, not a
+all-correct, i.e.~PXRDnet matches structure under loose tolerances but
+rarely recovers the space group, whereas DGpt's CIF-token output appears
+to encode symmetry. \textbf{We flag this as a hypothesis, not a
 finding.} At n = 20 the PXRDnet all-correct estimate (1/20) carries a 95
 \% CI of {[}0.9, 23.6{]}, which overlaps DGpt's {[}13.8, 18.3{]}; the
 apparent ``reversal'' is \emph{not} statistically established and would
 require n ≈ 100--200 to confirm. If it holds, the implication is
-consequential --- published single-number ``match rates'' would conflate
-structure recovery with symmetry recovery --- which is precisely why we
+consequential: published single-number ``match rates'' would conflate
+structure recovery with symmetry recovery, which is precisely why we
 surface it despite the underpowered sample, and why §6 frames it as
 motivation for future measurement rather than a claim. \textbf{RMSD} is
 heavy-tailed for us and tight-near-zero for both baselines, suggesting
@@ -997,44 +987,41 @@ our matches are tolerance-stretch rather than coordinate recovery.
 \textbf{The gap is capability and compute, not input information.} All
 three systems are given the same chemistry (composition/formula; §3.1),
 so it is worth checking whether the 12--19× gap could instead be an
-artefact of one model being handed a richer \emph{pattern}. It is not
---- if anything the asymmetry runs the other way. DiffractGPT is
-conditioned on a \textbf{coarse 300-bin pattern} (2θ ∈ {[}0, 90°{]},
-0.3° bins, rendered as a \texttt{;}-separated string) --- an order of
-magnitude lower resolution than PXRD-Diff's 4 251-bin 0.02° input ---
-yet it still reaches 18.9 \%. So the baselines do not win by seeing more
-of the pattern. The asymmetries that do matter are \textbf{capacity}
-(DiffractGPT is a 7 B-parameter LLM; PXRD-Diff is 3.7 M --- three orders
-of magnitude) and \textbf{inference compute} (PXRDnet's
-\textasciitilde35 k-op latent optimisation vs our single DDIM pass). The
-honest reading of Table 3 is therefore a capability/compute gap at fixed
-input information, not an input-handicap artefact; it is exactly the gap
-a deliberately small diagnostic model is expected to exhibit (§6).
+artefact of one model being handed a richer \emph{pattern}. It is not;
+if anything the asymmetry runs the other way. DiffractGPT is conditioned
+on a \textbf{coarse 300-bin pattern} (2θ ∈ {[}0, 90°{]}, 0.3° bins,
+rendered as a \texttt{;}-separated string), an order of magnitude lower
+resolution than PXRD-Diff's 4 251-bin 0.02° input, yet it still reaches
+18.9 \%. So the baselines do not win by seeing more of the pattern. The
+asymmetries that do matter are \textbf{capacity} (DiffractGPT is a 7
+B-parameter LLM; PXRD-Diff is 3.7 M, three orders of magnitude) and
+\textbf{inference compute} (PXRDnet's \textasciitilde35 k-op latent
+optimisation vs our single DDIM pass). The honest reading of Table 3 is
+therefore a capability/compute gap at fixed input information, not an
+input-handicap artefact; it is exactly the gap a deliberately small
+diagnostic model is expected to exhibit (§6).
 
 \begin{figure}
-\hypertarget{fig:threeway}{%
 \centering
-\includegraphics{fig5_threeway_headline.pdf}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 4. Three-way headline comparison. Match rate, all-correct, and pattern-Pearson on the same MP-20 test materials scored through our StructureMatcher harness, with 95 \% Wilson CIs. PXRD-Diff loses on match rate by 12--19× but wins on per-pattern Pearson. Note the wide PXRDnet (n = 20) intervals: the DGpt \textgreater{} PXRDnet all-correct ordering is a hypothesis, not an established result (§5.3, §6).}]{fig5_threeway_headline.pdf}}
 \caption{\textbf{Figure 4. Three-way headline comparison.} Match rate,
 all-correct, and pattern-Pearson on the same MP-20 test materials scored
-through \emph{our} \texttt{StructureMatcher} harness, with 95 \% Wilson
-CIs. PXRD-Diff loses on match rate by 12--19× but wins on per-pattern
-Pearson. Note the wide PXRDnet (n = 20) intervals: the DGpt
+through \emph{our} \protect\texttt{StructureMatcher} harness, with 95 \%
+Wilson CIs. PXRD-Diff loses on match rate by 12--19× but wins on
+per-pattern Pearson. Note the wide PXRDnet (n = 20) intervals: the DGpt
 \textgreater{} PXRDnet all-correct ordering is a hypothesis, not an
 established result (§5.3, §6).}\label{fig:threeway}
-}
 \end{figure}
 
 \emph{Caveats.} PXRDnet n = 20 has a 95 \% Wilson CI of roughly ±20 pp
 on every rate; n = 200 would need \textasciitilde33 days of RTX 5090
 rental at \textasciitilde4 GPU-hr/material. Patterns are simulated
 through each model's own preprocessing (different bins, 2θ vs Q,
-broadening) --- material\_ids are identical, pattern inputs are not
+broadening): material\_ids are identical, pattern inputs are not
 bit-identical; §7 bounds this.
 
-\hypertarget{what-did-not-work}{%
 \subsection{\texorpdfstring{5.4 What did \emph{not}
-work}{5.4 What did not work}}\label{what-did-not-work}}
+work}{5.4 What did not work}}\label{what-did-not-work}
 
 Four interventions failed at n ≥ 200; one paragraph each.
 
@@ -1048,7 +1035,7 @@ Coordinate-channel guidance term
 \(-g \cdot \nabla_{\mathcal{C}} \mathcal{L}_\text{Debye}\), sweep
 \(g \in \{0,0.5,1,2,5\}\) on n = 200: flat 1.0--2.5 \% within noise,
 all-correct 0 \% throughout. Sampling-time Debye gradient is too noisy
-to steer the trajectory --- consistent with Segal et al. \footnote{Segal,
+to steer the trajectory, consistent with Segal et al. \footnote{Segal,
   N., Subramanian, A., Li, M., Miller, B. K., \& Gómez-Bombarelli, R.
   (2025). The Loss Landscape of Powder X-Ray Diffraction-Based Structure
   Optimization Is Too Rough for Gradient Descent.
@@ -1063,17 +1050,15 @@ drops 2.5 \% → 2.1 \% and destabilises lattice prediction (lat loss
 inflated atom-feature norm shifts the lattice-pool input distribution.
 
 \begin{figure}
-\hypertarget{fig:training}{%
 \centering
-\includegraphics{fig2_training_curves.pdf}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 5. Wyckoff embedding destabilises lattice prediction. Lattice (a) and coordinate (b) training-loss curves for the distance-aux run (v16) vs the Wyckoff-embedding run (v15). Adding the Wyckoff embedding inflates the lattice loss by an order of magnitude (\textasciitilde0.6 vs \textasciitilde0.02) while leaving the coordinate loss largely unchanged; the failure is localised to the lattice channel.}]{fig2_training_curves.pdf}}
 \caption{\textbf{Figure 5. Wyckoff embedding destabilises lattice
 prediction.} Lattice (a) and coordinate (b) training-loss curves for the
 distance-aux run (v16) vs the Wyckoff-embedding run (v15). Adding the
 Wyckoff embedding inflates the lattice loss by an order of magnitude
 (\textasciitilde0.6 vs \textasciitilde0.02) while leaving the coordinate
-loss largely unchanged --- the failure is localised to the lattice
+loss largely unchanged; the failure is localised to the lattice
 channel.}\label{fig:training}
-}
 \end{figure}
 
 \textbf{Distance-matrix aux loss (v16, n = 1 000).} Pairwise MLP
@@ -1087,15 +1072,14 @@ diffusion needs.
 to 0.8 \%, below the bare ε baseline; the two interact destructively, no
 clean theoretical explanation.
 
-\hypertarget{encoder-bottleneck-perturbation-study}{%
 \subsection{5.5 Encoder-bottleneck perturbation
-study}\label{encoder-bottleneck-perturbation-study}}
+study}\label{encoder-bottleneck-perturbation-study}
 
 Best predicted-vs-target Pearson is 0.43; the same model with
 \emph{correct} coordinates plugged into the differentiable simulator
-hits 0.97 --- the encoder + denoiser leaves \textasciitilde0.5 of
+hits 0.97; the encoder + denoiser leaves \textasciitilde0.5 of
 pattern-space agreement on the table. The aux head (sees \(\mathbf{g}\)
-only) reaches a 0.007 \emph{normalised} lattice-regression loss --- but
+only) reaches a 0.007 \emph{normalised} lattice-regression loss, but
 that figure is a relative fit that does \textbf{not} survive conversion
 to absolute scale: when the aux head's own lattice is substituted into
 the sampler it recovers only 1.2 \% (§5.6), because its 1.1 Å length MAE
@@ -1109,17 +1093,15 @@ at n = 200: match decays 5.6 \% (Δ=0) → 2.0 \% (0.5 Å) → 0.5 \% (1.0 Å)
 → 0 \% (≥1.5 Å), steeper than linear with a knee at \textasciitilde0.5
 Å. This matches the indexer's per-system MAE: high-symmetry systems
 (hex, ortho; MAE ≤ 1.0 Å) lift; low-symmetry (mono, tri; MAE ≥ 1.5 Å) do
-not. §5.2's indexer lift is \emph{predictable} --- it works where it
-can.
+not. §5.2's indexer lift is \emph{predictable}: it works where it can.
 
-\hypertarget{why-the-learned-lattice-fails-a-pooling-bottleneck-not-a-head-bottleneck}{%
 \subsection{5.6 Why the learned lattice fails: a pooling bottleneck, not
 a head
-bottleneck}\label{why-the-learned-lattice-fails-a-pooling-bottleneck-not-a-head-bottleneck}}
+bottleneck}\label{why-the-learned-lattice-fails-a-pooling-bottleneck-not-a-head-bottleneck}
 
-The natural reading of the 0.007 aux loss --- that the lattice is
-already recoverable from the encoder and only the denoiser is at fault
---- is testable, and it is wrong. Two experiments (released as
+The natural reading of the 0.007 aux loss, that the lattice is already
+recoverable from the encoder and only the denoiser is at fault, is
+testable, and it is wrong. Two experiments (released as
 \texttt{paper/phase5\_results/} and \texttt{paper/phase5b6\_results/})
 promote the auxiliary head from a training-time regulariser to the
 inference-time lattice source and measure what it actually delivers.
@@ -1128,7 +1110,7 @@ inference-time lattice source and measure what it actually delivers.
 v13 aux head's predicted \((a,b,c,\alpha,\beta,\gamma)\) for the sampled
 lattice channel at n = 1 000 gives a length MAE of (1.12, 1.02, 1.38) Å
 and an angle MAE of (13.0°, 11.9°, 17.6°) at \textbf{99.8 \%} cell
-validity --- far better conditioned than the diffusion sampler, whose
+validity, far better conditioned than the diffusion sampler, whose
 predicted cells are near-0 \% valid, but still \textasciitilde15 \%
 relative length error. End-to-end this recovers \textbf{1.2 \%} match
 (1.3 \% with Phase 4 ensembling + coordinate refinement) and 0.0 \%
@@ -1147,7 +1129,7 @@ needs to fix absolute lengths, and no head reading \(\mathbf{g}\)
 recovers it.
 
 This reconciles the diagnosis with the indexer result. The 0.007
-normalised aux loss is a \emph{relative} fit --- enough to place the
+normalised aux loss is a \emph{relative} fit, enough to place the
 crystal system (a space-group head on the same encoder reaches 39 \%
 top-1 / 71 \% top-5 across 230 classes, released under
 \texttt{phase5b6\_results/}) but not the absolute scale. The classical
@@ -1156,14 +1138,13 @@ peak \emph{positions} directly rather than a pooled summary; this is why
 §5.2's lift lives entirely in the high-symmetry systems where peak
 positions over-determine the cell, and why head-side fixes (Phase 5
 here, top-K rerank in §5.4) cannot substitute for it. The architectural
-implication is concrete: the next gain must come from the encoder ---
-explicit d-spacing/peak extraction or per-peak attention in place of
-global pooling --- not from a better lattice head or a better denoiser.
+implication is concrete: the next gain must come from the encoder
+(explicit d-spacing/peak extraction or per-peak attention in place of
+global pooling), not from a better lattice head or a better denoiser.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{discussion}{%
-\section{6. Discussion}\label{discussion}}
+\section{6. Discussion}\label{discussion}
 
 \textbf{Encoder bottleneck (the robust result).} A 0.007
 \emph{normalised} aux loss shows \(\mathbf{g}\) carries
@@ -1179,21 +1160,21 @@ of the 4.5 \% oracle ceiling on the high-symmetry subset; top-K rerank
 and gradient guidance fail because they operate \emph{after} the encoder
 commits to a bad lattice prior, while the indexer bypasses that
 decision. (The oracle ceiling is itself only 4.5 \%, so even a perfect
-lattice leaves coordinates as a co-limiter --- see §8.)
+lattice leaves coordinates as a co-limiter; see §8.)
 
 \textbf{Per-atom anchoring is hard.} PXRD is permutation-invariant; our
 denoiser is permutation-equivariant; there is no symmetry-breaking
 signal that pins atom \(i\) to a specific Wyckoff site. The Wyckoff
 embedding tried to break symmetry at the input and failed. A promising
-untried direction: break symmetry at the \emph{output} --- predict an
+untried direction: break symmetry at the \emph{output}: predict an
 unordered set of orbits plus a Hungarian-style matcher.
 
 \textbf{A measurement hypothesis: match rate may conflate two
 capabilities.} PXRDnet's 30 \% match / 5 \% all-correct vs DGpt's 18.9
 \% / 15.9 \% (Table 3) suggests the two systems recover \emph{structure}
 at broadly comparable rates while differing sharply in \emph{symmetry}
-recovery --- DGpt's CIF-token output appears to encode space group in a
-way PXRDnet's coordinate decode does not. We stress that the underlying
+recovery: DGpt's CIF-token output appears to encode space group in a way
+PXRDnet's coordinate decode does not. We stress that the underlying
 numbers cannot yet support this: PXRDnet's all-correct CI {[}0.9,
 23.6{]} at n = 20 overlaps DGpt's, so the ordering is unconfirmed. We
 raise it as a \emph{measurement hypothesis} worth testing at adequate n,
@@ -1208,41 +1189,39 @@ comparison itself.
 \textbf{Niche for small reproducible models.} At 1.6 \% we are 12--19×
 behind much larger systems, but small models make the encoder bottleneck
 visible (capacity hides it) and the indexer drop-in trivial to integrate
-(larger models would need architecture-level surgery). The recipe ---
-encoder + Phase 4 fixes + Phase 9 indexer drop-in --- is 3.7 M
-parameters and runs inference in seconds.
+(larger models would need architecture-level surgery). The recipe
+(encoder + Phase 4 fixes + Phase 9 indexer drop-in) is 3.7 M parameters
+and runs inference in seconds.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{limitations}{%
-\section{7. Limitations}\label{limitations}}
+\section{7. Limitations}\label{limitations}
 
 \begin{itemize}
 \tightlist
 \item
   \textbf{Scope.} Composition given; simulated PXRD only (no instrument
-  response, preferred orientation, asymmetry, background); MP-20 only
-  --- no larger cells, organics, or higher-Z.
+  response, preferred orientation, asymmetry, background); MP-20 only,
+  with no larger cells, organics, or higher-Z.
 \item
   \textbf{Statistics.} The Phase 4 ablations in Table 1 are single-seed.
   A multi-seed checkpoint sweep of the ε-vs-x₀-residual contrast (two
   seeds × five checkpoints, 20k--100k, true-lattice n = 1000) shows the
   reported 3.5× \emph{match-rate} lift does \textbf{not} replicate:
   pooled match is 1.20 \% (ε) vs 1.35 \% (x₀-residual), and x₀ never
-  exceeds 1.5 \% at any checkpoint --- including the 80 k checkpoint
-  that matches the original v13's 79.5 k --- so the single-seed 2.51 \%
-  was a high draw, not a checkpoint-selection effect. We therefore
-  demote the \emph{match-rate} lift to a single-seed artifact. What does
-  reproduce is the pattern-Pearson improvement (ε 0.359 vs x₀ 0.403,
-  with disjoint ranges across both seeds), consistent with Table 1. The
-  lattice-input fix remains load-bearing as a training-dynamics result
-  (lattice loss 1.0 → 0.02), and the oracle-vs-indexer gap has disjoint
-  CIs. The indexer-vs-learned-head comparison was rerun at three seeds
-  and the lift confirmed significant by a paired McNemar test (p
-  \textless{} 10⁻⁴; §5.2) --- superseding the earlier underpowered
-  unpaired test (p = 0.24). The oracle has since been multi-seeded ---
-  three seeds give 4.5 \% {[}3.8, 5.3{]} pooled, firming the single-seed
-  5.6 \%.
+  exceeds 1.5 \% at any checkpoint, including the 80 k checkpoint that
+  matches the original v13's 79.5 k, so the single-seed 2.51 \% was a
+  high draw, not a checkpoint-selection effect. We therefore demote the
+  \emph{match-rate} lift to a single-seed artifact. What does reproduce
+  is the pattern-Pearson improvement (ε 0.359 vs x₀ 0.403, with disjoint
+  ranges across both seeds), consistent with Table 1. The lattice-input
+  fix remains load-bearing as a training-dynamics result (lattice loss
+  1.0 → 0.02), and the oracle-vs-indexer gap has disjoint CIs. The
+  indexer-vs-learned-head comparison was rerun at three seeds and the
+  lift confirmed significant by a paired McNemar test (p \textless{}
+  10⁻⁴; §5.2), superseding the earlier underpowered unpaired test (p =
+  0.24). The oracle has since been multi-seeded: three seeds give 4.5 \%
+  {[}3.8, 5.3{]} pooled, firming the single-seed 5.6 \%.
 \item
   \textbf{Baselines.} PXRDnet n = 20 has a 95 \% Wilson CI of ≈ ±20 pp;
   the DGpt \textgreater{} PXRDnet all-correct ordering (§5.3/§6) is
@@ -1250,7 +1229,7 @@ parameters and runs inference in seconds.
   days RTX 5090. Crystalyze checkpoint download is inactive (verified
   2026-06-01); cited but unreproduced. Patterns are not bit-identical
   across the three preprocessors (PXRD-Diff 4 251-bin 2θ, DGpt 300-bin
-  2θ, PXRDnet 4 096-bin Q with sinc² broadening) --- structures match,
+  2θ, PXRDnet 4 096-bin Q with sinc² broadening): structures match,
   patterns do not; we did not quantify the residual preprocessing effect
   on match rate, and a matched-vs-native re-scoring on a structure
   subset is the natural check.
@@ -1262,7 +1241,7 @@ parameters and runs inference in seconds.
   must determine, so the per-system rates of §3.5 are conditional on
   knowing the system. (ii) \emph{Patterns are ideal.} All patterns are
   clean \texttt{pymatgen} simulations with no zero-point shift,
-  sample-displacement error, or peak asymmetry --- precisely the
+  sample-displacement error, or peak asymmetry, precisely the
   perturbations that drive real-world indexing failure. The 48.8 \%
   native-indexer match and the downstream 1.5 \% should be read as upper
   bounds under ideal peak positions. A zero-shift/displacement
@@ -1282,14 +1261,13 @@ parameters and runs inference in seconds.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{conclusion}{%
-\section{8. Conclusion}\label{conclusion}}
+\section{8. Conclusion}\label{conclusion}
 
 A 3.7 M-parameter conditional diffusion model with a differentiable
 Bragg loss recovers 1.5 \% {[}1.2, 2.0{]} of MP-20 test structures with
-a classical Q-space autoindexer supplying the lattice --- a significant
+a classical Q-space autoindexer supplying the lattice, a significant
 improvement over the learned lattice head, which recovers essentially
-nothing (three-seed paired McNemar p \textless{} 10⁻⁴) --- and 4.5 \%
+nothing (three-seed paired McNemar p \textless{} 10⁻⁴), and 4.5 \%
 {[}3.8, 5.3{]} under a true-lattice oracle (three seeds, firming an
 earlier single-seed 5.6 \%). The oracle gap is significant and is the
 paper's firmest result: even with a perfect lattice, coordinate
@@ -1297,7 +1275,7 @@ prediction caps match at 4.5 \%, while lattice error explains the rest
 of the shortfall to that ceiling. Reproduced on the same
 \texttt{StructureMatcher} harness, deCIFer reaches 73.8 \% / 69.5 \%,
 DGpt 18.9 \% / 15.9 \%, and PXRDnet 30.0 \% / 5.0 \% (match /
-all-correct) --- PXRD-Diff is 12--46× behind. The apparent divergence in
+all-correct); PXRD-Diff is 12--46× behind. The apparent divergence in
 their space-group recovery is a measurement hypothesis the n = 20
 PXRDnet sample cannot yet confirm, but the shared harness now makes it
 testable. The lattice-input fix and the classical-autoindexer drop-in
@@ -1309,8 +1287,7 @@ are released.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{acknowledgments}{%
-\section{Acknowledgments}\label{acknowledgments}}
+\section{Acknowledgments}\label{acknowledgments}
 
 We thank the maintainers of \texttt{pymatgen}, \texttt{spglib}, the
 CDVAE benchmark, GSAS-II, and the upstream maintainers of DiffractGPT
@@ -1321,38 +1298,33 @@ spend was approximately USD 25 across roughly 30 GPU-hours on RTX 5090
 instances (Phase 4 ablation, Phase 9 retrain + indexer sweeps,
 DiffractGPT n = 1 000 inference, and PXRDnet n = 20 inference).
 
-\hypertarget{author-contributions-credit}{%
 \section{Author Contributions
-(CRediT)}\label{author-contributions-credit}}
+(CRediT)}\label{author-contributions-credit}
 
 F. Cai: Conceptualization, Methodology, Software, Validation, Formal
-analysis, Investigation, Data curation, Writing --- Original Draft,
-Writing --- Review \& Editing, Visualization, Project administration.
+analysis, Investigation, Data curation, Writing -- Original Draft,
+Writing -- Review \& Editing, Visualization, Project administration.
 
-\hypertarget{conflict-of-interest}{%
-\section{Conflict of Interest}\label{conflict-of-interest}}
+\section{Conflict of Interest}\label{conflict-of-interest}
 
 The author declares no competing interests.
 
-\hypertarget{funding}{%
-\section{Funding}\label{funding}}
+\section{Funding}\label{funding}
 
 This research received no external funding.
 
-\hypertarget{data-and-code-availability}{%
-\section{Data and Code Availability}\label{data-and-code-availability}}
+\section{Data and Code Availability}\label{data-and-code-availability}
 
 Source code, trained checkpoints, and all per-phase training/evaluation
 logs are available at \texttt{https://github.com/fronkt/pxrd-diff} and
-archived at Zenodo (DOI: 10.5281/zenodo.XXXXXXX --- \emph{to be minted
-at submission}). The MP-20 dataset is publicly available via the CDVAE
+archived at Zenodo (DOI: 10.5281/zenodo.XXXXXXX, \emph{to be minted at
+submission}). The MP-20 dataset is publicly available via the CDVAE
 benchmark. All experiments reproduce from a single
 \texttt{requirements.txt} and the \texttt{scripts/} pipeline;
 per-structure evaluation flags are released to support paired
 re-analysis.
 
-\hypertarget{ethics-declaration}{%
-\section{Ethics Declaration}\label{ethics-declaration}}
+\section{Ethics Declaration}\label{ethics-declaration}
 
 This study uses no human subjects, animal subjects, or sensitive data.
 The MP-20 dataset is composed entirely of publicly available crystal
@@ -1360,8 +1332,7 @@ structures from the Materials Project.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{references}{%
-\section{References}\label{references}}
+\section{References}\label{references}
 
 \begin{quote}
 \textbf{Author note on reproduced numbers.} The reproduced PXRDnet and
@@ -1374,23 +1345,22 @@ confidence intervals stated throughout.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\hypertarget{appendix}{%
-\section{Appendix}\label{appendix}}
+\section{Appendix}\label{appendix}
 
-\hypertarget{a.-full-ablation-history}{%
-\subsection{A. Full ablation history}\label{a.-full-ablation-history}}
+\subsection{A. Full ablation history}\label{a.-full-ablation-history}
 
 For completeness, Table A1 lists every training run discussed in the
 development of this paper, including those that did not make it into the
 main ablation table. Logs and checkpoints for all runs are in the
 released repository under \texttt{runs/}.
 
+{\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.0943}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2075}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2453}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.1509}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.3019}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.0943}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2075}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2453}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1509}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.3019}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Run
@@ -1434,10 +1404,10 @@ beat v13 by more than noise & §5.1 \\
 9 retrain + indexer drop-in support & \textbf{1.6 \% match (no-true-lat,
 indexer); 4.5 \% (true-lat oracle, 3-seed)} & Tables 2, 3 \\
 \end{longtable}
+}
 
-\hypertarget{b.-hyperparameter-sensitivity}{%
 \subsection{B. Hyperparameter
-sensitivity}\label{b.-hyperparameter-sensitivity}}
+sensitivity}\label{b.-hyperparameter-sensitivity}
 
 We did not perform a full hyperparameter sweep. Pilot experiments on
 \texttt{d\_model\ ∈\ \{128,\ 256,\ 384\}} and
@@ -1446,9 +1416,8 @@ Pareto point. The Debye loss weight was swept \{0, 0.1, 1, 10\} in early
 ε-prediction runs (v6--v9) without measurable effect on match rate; we
 re-fixed it at 1.0 for the x₀-residual runs by analogy.
 
-\hypertarget{c.-differentiable-simulator-validation-details}{%
 \subsection{C. Differentiable simulator validation
-details}\label{c.-differentiable-simulator-validation-details}}
+details}\label{c.-differentiable-simulator-validation-details}
 
 Pearson correlations between our DiffPXRD module and
 \texttt{pymatgen.XRDCalculator} over a random 50-structure MP-20 test
@@ -1477,9 +1446,8 @@ Gradient sanity: for all 50 structures we confirmed \texttt{∂L/∂F} and
 \texttt{∂L/∂L} are non-zero and finite via
 \texttt{torch.autograd.gradcheck} on a 4-atom subset.
 
-\hypertarget{d.-reproducibility-checklist}{%
 \subsection{D. Reproducibility
-checklist}\label{d.-reproducibility-checklist}}
+checklist}\label{d.-reproducibility-checklist}
 
 \begin{itemize}
 \tightlist
