@@ -1510,3 +1510,22 @@ footnote-citations to numbered cite-commands against the existing references.bib
 (eps) + v13_l1 (x0) at seeds 0,1 saving every 20k, evals each ckpt at the ablation protocol
 -> results/ckpt_sweep/. Question: does x0 ever reach the original single-seed 2.5% at any
 checkpoint? Result pending; fold verdict into section 7.
+
+### Phase 13 follow-up 3 — checkpoint-sweep VERDICT (2026-06-17, commit 4b81126)
+
+Sweep done (results in paper/phase13_results/ckpt_sweep/, summary json + 20 evals).
+v11 (eps) and v13_l1 (x0-residual), 2 seeds x 5 checkpoints (20k-100k), true-lattice n=1000.
+
+**Match rate:** eps 1.20% (1.0-1.4), x0 1.35% (1.0-1.5). x0 NEVER exceeds 1.5% at any
+checkpoint or seed — including the 80k checkpoint matching the original v13's 79.5k. So the
+single-seed 2.51% was a high draw, NOT a checkpoint-selection effect. Residual caveat CLOSED.
+
+**Pearson:** eps 0.359 (0.351-0.362) vs x0 0.403 (0.368-0.424) — disjoint ranges across both
+seeds. The x0 pattern-Pearson improvement IS real and reproduces (orig Table 1: 0.434 vs 0.365).
+
+**Net claim (now in paper):** the x0-residual MATCH-rate 3.5x lift is a single-seed artifact
+(demoted); the x0-residual PEARSON improvement is genuine and survives. Refined §3.4 (line 101),
+Fig 2 caption, §5.1, §7 statistics bullet, §8. paper.tex + paper.pdf rebuilt clean (tectonic).
+
+ε/x₀ thread fully resolved. Remaining pre-submission: Zenodo DOI + repo public; Method-section
+expansion to ~7-9k words; then RSC class + footnote→bibtex camera-ready pass; em-dash pass.
