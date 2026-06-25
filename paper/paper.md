@@ -2,7 +2,7 @@
 
 **Frank Cai**
 
-Independent Researcher, Fort Wayne, IN, USA
+Purdue University, West Lafayette, IN, USA
 
 frankyc11223@gmail.com
 
