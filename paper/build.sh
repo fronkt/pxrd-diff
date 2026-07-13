@@ -15,3 +15,10 @@ pandoc paper.md -H _pandoc_header.tex -s --shift-heading-level-by=-1 \
 
 tectonic paper.tex
 echo "Built $(pwd)/paper.pdf"
+
+# docx for journal submission portals. Word cannot render embedded PDF figures,
+# so figure refs are swapped to the PNG copies before conversion.
+sed 's/\.pdf)/.png)/g' paper.md > _paper_docx.md
+pandoc _paper_docx.md -s --shift-heading-level-by=-1 -o paper.docx
+rm _paper_docx.md
+echo "Built $(pwd)/paper.docx"

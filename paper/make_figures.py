@@ -1,6 +1,6 @@
 """Generate publication figures for PXRD-Diff paper.
 
-Outputs (all 300 dpi PNG + matched PDF):
+Outputs (all 600 dpi PNG + matched PDF; IUCr requires >= 600 dpi bitmaps):
   fig1_ablation.{png,pdf}             -- main ablation bar chart (Phase 4)
   fig2_training_curves.{png,pdf}      -- v15 vs v16 lattice loss   (Phase 4)
   fig3_diffpxrd_validation.{png,pdf}  -- Pearson histogram         (Phase 4)
@@ -46,7 +46,7 @@ plt.rcParams.update({
     "grid.alpha": 0.30,
     "figure.dpi": 150,
     "savefig.bbox": "tight",
-    "savefig.dpi": 300,
+    "savefig.dpi": 600,
 })
 
 CB = {  # Wong colorblind-safe palette

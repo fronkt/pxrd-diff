@@ -1529,3 +1529,29 @@ Fig 2 caption, §5.1, §7 statistics bullet, §8. paper.tex + paper.pdf rebuilt 
 
 ε/x₀ thread fully resolved. Remaining pre-submission: Zenodo DOI + repo public; Method-section
 expansion to ~7-9k words; then RSC class + footnote→bibtex camera-ready pass; em-dash pass.
+
+### Phase 14 — venue retarget: Digital Discovery → J. Appl. Cryst. (2026-07-13)
+
+**Digital Discovery DESK-REJECTED** DD-ART-06-2026-000389 on 2026-07-13: "does not meet the
+impact requirements" — editorial triage by Assoc. Ed. M. Christensen, never sent to review,
+no transfer offer. Interpretation: framing (reproduction/negative-results lead), not science.
+
+**Retarget: Journal of Applied Crystallography (IUCr), Research Paper.** ≤15k words (ours
+8,345). Word/LaTeX single file + separate ≥600 dpi figure files + cover letter. Non-OA route
+is FREE — do NOT tick open access (APC $5,370). IUCr style: synopsis, citation-free abstract,
+author–date (Harvard) refs, all authors named in list.
+
+- [x] Title reframed: "PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based
+      powder-diffraction structure inversion, with classical autoindexing as a drop-in remedy"
+- [x] 2-sentence Synopsis added; abstract stripped of citations/bold/first person (265 w);
+      keywords retuned to JAC audience (powder diffraction; autoindexing; ...)
+- [x] All 27 inline [N] cites → author–date; reference list → alphabetical IUCr format;
+      "et al." entries expanded to full author lists (Jiao/DiffCSP 7, Schütt/SchNet 6,
+      Zeni/MatterGen 26 — verified via web); MatterGen upgraded arXiv → Nature 639, 624–632
+- [x] Figures regenerated at 600 dpi (IUCr min; was 300); tex+pdf rebuilt clean (tectonic)
+- [x] docx step ADDED to build.sh (pdf→png swap inside) — closes the silent-drift gap;
+      paper.docx rebuilt (1.4 MB, 5 PNGs embedded)
+- [x] Cover letter drafted: paper/cover_letter_jac.md
+- [x] Verification: 0 stray [N]; 15/15 refs cited in body and none orphaned; PNG dpi 600
+- [ ] HUMAN: submit at journals.iucr.org — Word route (paper.docx) + 5 fig*.png + cover
+      letter; select Research Paper, non-OA. arXiv posting still blocked on endorsement.
