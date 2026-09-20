@@ -1598,8 +1598,16 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
       --system-mode unknown`, best-M20 over cubic/tetragonal/hexagonal/orthorhombic/
       monoclinic. Sharded 6× in `analysis/index_unknown_chunk*.json`; merge → per-system
       strict %, system-correct %, len MAE. Then Phase C3 samples with those cells.
-- [~] B3 given-system reproduction check on first 60 rows vs committed
-      `index_cells_test1000.json` (confirms the rebuilt local cache matches the original).
+- [x] B3 given-system reproduction check on first 60 rows vs committed
+      `index_cells_test1000.json`: 60/60 identical cells (rebuilt local cache = original).
+- NOTE 2026-09-20 ~17:45: the B2 shards (6 × `09_index_benchmark.py --system-mode unknown`,
+      ~35 s/structure while the CPU is shared) and the C2 head-level run
+      (`13_pooling_ablation.py`, log `paper/phase15_results/pooling_ablation_v21.log`) were
+      still running when the session's completion watchers were killed for low system RAM.
+      When the six `index_unknown_chunk*.json` exist: `python paper/submissions/JAC-R1/analysis/
+      merge_index_unknown.py` → fill `[PENDING B2]` in §3.5 and the letter. When
+      `pooling_ablation_v21/pooling_ablation.json` exists: fill the head-level MAE part of
+      `[PENDING C2]` (end-to-end match still needs the GPU). Neither has been checked since.
 
 **C. GPU experiments (rented RTX 5090, ~$10–20; runbook
 `paper/submissions/JAC-R1/compute-runbook.md`) — FRANK'S CALL to rent:**
