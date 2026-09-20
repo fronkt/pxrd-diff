@@ -18,3 +18,6 @@ wandb/
 .DS_Store
 .vscode/
 .idea/
+# Confidential peer-review material (public repo): keep local only
+paper/submissions/JAC-R1/referee_reports/
+paper/submissions/JAC-R1/response_to_referees.md

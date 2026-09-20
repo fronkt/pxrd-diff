@@ -122,13 +122,12 @@
 \@ifundefined{xmpquote}{\newcommand{\xmpquote}[1]{#1}}{}
 \makeatother
 \hypersetup{
-  pdftitle={PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based powder-diffraction structure inversion{,} with classical autoindexing as a drop-in remedy},
+  pdftitle={PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based powder-diffraction structure inversion},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 
 \title{PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based
-powder-diffraction structure inversion, with classical autoindexing as a
-drop-in remedy}
+powder-diffraction structure inversion}
 \author{}
 \date{}
 
@@ -144,46 +143,54 @@ frankyc11223@gmail.com
 \emph{Manuscript type: Research Paper (Journal of Applied
 Crystallography).}
 
-\textbf{Synopsis:} A conditional diffusion model for powder-diffraction
-structure inversion is diagnosed: global pooling in the pattern encoder
-destroys the absolute d-spacing information that lattice recovery
-requires, and substituting a classical Q-space autoindexer for the
-learned lattice head yields a statistically significant improvement.
-Three external generative baselines are re-scored on a single shared
-evaluation harness.
+\textbf{Synopsis:} A deliberately small conditional diffusion model for
+powder-diffraction structure inversion is used as a diagnostic
+instrument. The evidence points to global pooling in the pattern encoder
+as the stage that discards the absolute d-spacing information lattice
+recovery needs. A classical autoindexer, supplied with the true crystal
+system, serves as a control; three external generative models are
+re-scored on one shared evaluation harness; and a code audit prompted by
+review corrects three implementation errors.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \section{Abstract}\label{abstract}
 
 Inverting a one-dimensional powder X-ray diffraction (PXRD) pattern to a
-three-dimensional crystal structure remains an open problem, and recent
+three-dimensional crystal structure remains an open problem. Recent
 generative approaches report results under mutually incompatible
-protocols with failure modes seldom catalogued. PXRD-Diff, a 3.7
-M-parameter conditional diffusion model trained on the CDVAE MP-20
-split, is presented, and DiffractGPT, PXRDnet and deCIFer are reproduced
-through the same pymatgen StructureMatcher harness. The central,
-statistically robust finding is mechanistic: the learned PXRD encoder
-reaches a 0.007 normalised auxiliary lattice-regression loss in
-isolation, yet substituting that head's own lattice into the sampler
-recovers only 1.2 \% of structures, because its \textasciitilde1.1 Å
-length error shifts every Bragg peak by \textasciitilde15 \%. The
-limiter is the global pooling that discards absolute peak positions, not
-the denoiser alone. A perturbation study locates a sharp sensitivity
-knee at \textasciitilde0.5 Å cell error, and a true-lattice oracle lifts
-match to 4.5 \% at n = 1000 (three seeds; 95 \% Wilson confidence
-interval {[}3.8, 5.3{]}), disjoint from the no-true-lattice indexer's
-1.5 \% {[}1.2, 2.0{]}. Replacing the learned lattice head with a
-classical Q-space autoindexer raises no-true-lattice match to 1.5 \%
-from a learned head that recovers essentially nothing; a three-seed
-paired McNemar test confirms the gain is significant (p \textless{}
-10⁻⁴; 27 fixed, none broken), concentrated in the high-symmetry systems
-below the sensitivity knee. Reproduced on one harness, deCIFer reaches
-73.8 \% match, DiffractGPT 18.9 \% and PXRDnet 30.0 \%, leaving
-PXRD-Diff 12--46 times behind. The contributions are the
-encoder-bottleneck diagnosis, the classical-indexer drop-in, a four-item
-failure catalogue and the shared evaluation harness; code, checkpoints
-and the differentiable Bragg simulator are released.
+protocols, and their failure modes are seldom catalogued. This paper is
+a diagnostic study. PXRD-Diff, a 3.7 M-parameter conditional diffusion
+model trained on the CDVAE MP-20 split, is kept deliberately small so
+that its failure modes are visible; it is not proposed as a competitive
+inversion tool. DiffractGPT, PXRDnet and deCIFer are re-scored through
+the same pymatgen StructureMatcher harness and reach 18.9 \%, 30.0 \%
+and 73.8 \% match respectively; PXRD-Diff reaches 1.6 \%. The central
+finding is mechanistic. The learned PXRD encoder reaches a 0.007
+normalised auxiliary lattice-regression loss in isolation, yet
+substituting that head's own lattice into the sampler recovers only 1.2
+\% of structures, because its \textasciitilde1.1 Å length error shifts
+every Bragg peak by \textasciitilde15 \%. Stronger, constrained
+supervision of the head does not reduce that error. The evidence
+therefore points to the global pooling that discards absolute peak
+positions, rather than to the denoiser alone {[}PENDING C2: one sentence
+with the controlled pooling-ablation outcome{]}. A perturbation study
+locates a sharp sensitivity knee at \textasciitilde0.5 Å cell error. A
+true-lattice oracle lifts match to 4.5 \% at n = 1000 (three seeds; 95
+\% Wilson confidence interval {[}3.8, 5.3{]}). As a classical control, a
+Q-space autoindexer that is supplied with the true crystal system
+replaces the learned lattice head and reaches 1.6 \% {[}1.2, 2.1{]}. A
+three-seed paired McNemar test shows the gain over the learned head is
+significant (p \textless{} 10⁻⁴; 27 fixed, none broken) and confined to
+the high-symmetry systems below the knee. A code audit prompted by
+review found and corrected three implementation errors, including an
+atomic form factor evaluated in the wrong convention. The corrected
+simulator agrees with pymatgen at a median Pearson correlation of 0.999
+over 1000 structures, and the affected runs were repeated {[}PENDING C1:
+one clause stating whether the retrained headline numbers changed{]}.
+The contributions are the encoder-bottleneck diagnosis, a four-item
+failure catalogue, the shared evaluation harness and the audited,
+released code.
 
 \textbf{Keywords:} powder diffraction; autoindexing; crystal structure
 determination; conditional diffusion models; machine learning;
@@ -212,56 +219,73 @@ practitioner cannot easily form a calibrated expectation of \emph{what
 is hard} about PXRD inversion.
 
 We build a small reproducible conditional diffusion model
-(\textbf{PXRD-Diff}) and run it against two of the three baselines on a
-shared \texttt{StructureMatcher} harness. Contributions:
+(\textbf{PXRD-Diff}) and use it as a diagnostic instrument. Its size is
+a design choice: a 3.7 M-parameter model exposes an encoder bottleneck
+that capacity would hide. It is not proposed as an alternative to the
+larger systems it is compared with. Contributions:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  \textbf{A clean small baseline.} 3.7 M parameters, trains on a single
-  RTX 5090 in \textasciitilde1.5 h on CDVAE MP-20. A differentiable
-  PyTorch Bragg simulator (Pearson 0.96 vs \texttt{pymatgen} on 50
-  references) supplies an auxiliary pattern-matching loss.
+  \textbf{A small, fully released baseline.} 3.7 M parameters, trains on
+  a single RTX 5090 in \textasciitilde1.5 h on CDVAE MP-20. A PyTorch
+  port of the \texttt{pymatgen} structure-factor calculation,
+  differentiable with respect to coordinates and lattice, supplies an
+  auxiliary pattern-matching loss. The port introduces no new physics
+  (§3.3).
 \item
-  \textbf{Encoder-bottleneck diagnosis (our primary contribution).} A
+  \textbf{Encoder-bottleneck diagnosis (the primary contribution).} A
   perturbation study (§5.5) locates a sharp \textasciitilde0.5 Å
-  sensitivity knee; a true-lattice oracle lifts match to \textbf{4.5 \%}
-  at n = 1000 (three-seed firm-up of an earlier single-seed 5.6 \%;
-  Wilson 95 \% CI {[}3.8, 5.3{]}, disjoint from the indexer's {[}1.2,
-  2.0{]}). The encoder reaches a 0.007 \emph{normalised} aux lattice
-  loss in isolation, but substituting that head's lattice into the
-  sampler recovers only 1.2 \% (§5.6). Its \textasciitilde1.1 Å error
-  sits well above the knee, so the pooled encoding, not merely the
-  denoiser, fails to deliver absolute d-spacings. The lattice channel is
-  the dominant \emph{accessible} limiter; the 4.5 \% oracle ceiling
-  shows coordinates remain a co-bottleneck.
+  sensitivity knee. A true-lattice oracle lifts match to \textbf{4.5 \%}
+  at n = 1000 (three seeds; Wilson 95 \% CI {[}3.8, 5.3{]}). The encoder
+  reaches a 0.007 \emph{normalised} aux lattice loss in isolation, but
+  substituting that head's lattice into the sampler recovers only 1.2 \%
+  (§5.6). Its \textasciitilde1.1 Å error sits well above the knee. The
+  evidence points to the pooled encoding, not merely the denoiser, as
+  the stage that fails to deliver absolute d-spacings; a controlled
+  pooling ablation tests this directly (§5.6) {[}PENDING C2: one-line
+  outcome of the pooling ablation{]}. The 4.5 \% oracle ceiling shows
+  coordinates remain a co-bottleneck.
 \item
-  \textbf{Classical-indexer drop-in.} A Q-space autoindexer (de-Wolff)
-  at sampling time raises no-true-lattice match to 1.5 \% {[}1.2, 2.0{]}
-  from a learned-head baseline of \textasciitilde0 \%. A three-seed
-  paired McNemar test confirms the improvement is significant (p
-  \textless{} 10⁻⁴; 27 fixed, 0 broken); the gain appears exactly where
-  the indexer's MAE falls below the 0.5 Å knee, i.e.~the high-symmetry
-  systems (§5.2, §5.5), and nowhere else.
+  \textbf{A classical control.} A Q-space autoindexer, supplied with the
+  true crystal system, replaces the learned lattice head at sampling
+  time and reaches 1.6 \% {[}1.2, 2.1{]} where the learned head recovers
+  nothing. A three-seed paired McNemar test confirms the difference (p
+  \textless{} 10⁻⁴; 27 fixed, 0 broken). The gain appears only where the
+  indexer's cell error falls below the 0.5 Å knee, i.e.~in the
+  high-symmetry systems (§5.2, §5.5). We treat this as a sanity check on
+  the diagnosis, not as a method: a fifty-year-old algorithm given extra
+  prior information is expected to beat the learned head. An indexer run
+  without the crystal system is reported alongside (§3.5) {[}PENDING C3:
+  one-line outcome of the unknown-system run{]}.
 \item
   \textbf{Four-item failure catalogue.} Top-K Debye rerank,
-  Debye-gradient DDIM guidance, Wyckoff-site embeddings, and
+  Debye-gradient DDIM guidance, Wyckoff-letter embeddings and a
   distance-matrix aux loss all fail at n ≥ 200; the latter two combined
   (v14) underperform the bare ε baseline. The gradient-guidance failure
-  is corroborated independently by concurrent work showing the PXRD loss
-  landscape is too rough for gradient descent (Segal \emph{et al.},
-  2025).
+  agrees with independent work showing the PXRD loss landscape is too
+  rough for gradient descent (Segal \emph{et al.}, 2025). The Wyckoff
+  result is read narrowly: the embedding carried a label, not a
+  constraint (§5.4).
 \item
-  \textbf{Reproduced baselines + shared harness.} DiffractGPT
-  (Mistral-7B + LoRA) and PXRDnet (CDVAE + XRD encoder) re-scored on our
-  harness: \textbf{18.9 \%} match (DGpt n = 1000), \textbf{30.0 \%}
-  match (PXRDnet n = 20). PXRD-Diff at 1.6 \% is 12--19× behind. We
-  surface a \emph{candidate} discrepancy in how match rate and
-  space-group recovery diverge across the two baselines (§5.3, §6), but
-  flag it as a hypothesis the n = 20 PXRDnet sample cannot yet
+  \textbf{Reproduced baselines and a shared harness.} DiffractGPT
+  (Mistral-7B + LoRA), PXRDnet (CDVAE + XRD encoder) and deCIFer are
+  re-scored on our harness: \textbf{18.9 \%} match (DGpt, n = 1000),
+  \textbf{30.0 \%} (PXRDnet, n = 20) and \textbf{73.8 \%} (deCIFer, n =
+  298). These numbers set the scale of the diagnostic model; they are
+  not a claim of competitiveness. A candidate divergence between match
+  rate and space-group recovery across two baselines is raised in §5.3
+  and §6 as a hypothesis that the n = 20 PXRDnet sample cannot
   establish. Crystalyze's checkpoint download link is inactive; we cite
   but cannot reproduce.
+\item
+  \textbf{A code audit.} Review of the released code identified three
+  implementation errors: the atomic form factor was evaluated in the
+  wrong convention, the Debye loss in x₀-residual mode was evaluated on
+  the wrong tensor, and patterns the indexer could not index were
+  silently given the true lattice. §5.7 reports each error, its effect
+  on every published number, and what was re-run.
 \end{enumerate}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
@@ -290,24 +314,54 @@ deCIFer on a single shared \texttt{StructureMatcher} harness.
 Crystalyze's checkpoint download link is ``not yet active'' (verified
 2026-06-01).
 
-\textbf{Classical autoindexing.} Recovering a unit cell from peak
-positions is a solved sub-problem with a fifty-year toolchain: the
-de-Wolff dichotomy method, ITO, TREOR, and DICVOL (Boultif \& Louër,
-2004) index high-symmetry powder patterns in CPU milliseconds, with the
-difficulty concentrated in low-symmetry (monoclinic/triclinic) cells.
-§3.5 reuses this machinery as a drop-in for the learned lattice head,
-and §5.2/§5.5 show the resulting lift tracks exactly the
+\textbf{Where the unit cell comes from.} Recent approaches differ in
+whether the unit cell is generated jointly with the coordinates or
+supplied as a separate input. PXRDGen (Li \emph{et al.}, 2025) generates
+lattice and coordinates jointly by default, but can accept an
+independently determined cell, from a cell network or from conventional
+indexing, as an additional condition. XtalNet (Lai \emph{et al.}, 2025)
+is an end-to-end equivariant approach, reported on
+metal--organic-framework benchmarks. Parackal \emph{et al.} (2024)
+enumerate symmetry-confined Wyckoff arrangements and rank them with a
+learned energy model before fitting the pattern. XRDSol (Yu \emph{et
+al.}, 2026) denoises coordinates with an equivariant diffusion model
+conditioned on the pattern, and takes the stoichiometry and the unit
+cell as inputs. That last design choice is the one this paper examines
+from the other side: XRDSol assumes an indexed cell, and the cell is
+exactly what our learned head fails to recover. Chitturi \emph{et al.}
+(2021) regress lattice parameters from simulated patterns with a
+convolutional network and analyse how impurities, noise and broadening
+degrade the prediction, a diagnostic aim close to ours. None of these is
+reproduced here. They are cited to place PXRD-Diff, a diagnostic
+instrument rather than a competing solver, within the range of current
+designs.
+
+\textbf{Classical structure solution from powder data.} Recovering a
+unit cell from peak positions is a solved sub-problem with a fifty-year
+toolchain: the de-Wolff dichotomy method, ITO, TREOR and DICVOL (Boultif
+\& Louër, 2004) index high-symmetry powder patterns in CPU milliseconds,
+with the difficulty concentrated in low-symmetry (monoclinic and
+triclinic) cells. Indexing is only the first stage of classical
+structure solution. Once the cell and space group are fixed,
+direct-space search, simulated annealing and charge flipping complete
+the structure, as implemented in programs such as FOX (Favre-Nicolin \&
+Černý, 2002) and EXPO (Cuocci \emph{et al.}, 2022). §3.5 reuses only the
+indexing stage, as a control for the learned lattice head. The indexer
+is given the true crystal system, which classical practice must itself
+infer. §5.2 and §5.5 show the resulting lift tracks the
 symmetry-dependent accuracy classical indexers have always had.
 
 \textbf{Differentiable physics.} Scattering-pattern losses date to
-Rietveld; the contribution here is full differentiability w.r.t.
-coordinates and lattice in PyTorch, usable as a diffusion-training loss
-term. Concurrent generative-inversion work conditions on differentiable
-spectral targets for amorphous and nanostructured systems (Guo \&
-Schwalbe-Koda, 2026). Relevant to our negative results, Segal \emph{et
-al.} (2025) show the powder-XRD similarity loss landscape is ``too rough
-for gradient descent'', independent evidence for why our sampling-time
-Debye-gradient guidance fails (§5.4).
+Rietveld. The module used here is a PyTorch port of the
+\texttt{pymatgen} structure-factor computation, differentiable with
+respect to coordinates and lattice so that it can serve as a
+diffusion-training loss term; it adds no physics beyond that computation
+(§3.3). Concurrent generative-inversion work conditions on
+differentiable spectral targets for amorphous and nanostructured systems
+(Guo \& Schwalbe-Koda, 2026). Relevant to our negative results, Segal
+\emph{et al.} (2026) show the powder-XRD similarity loss landscape is
+``too rough for gradient descent'', independent evidence for why our
+sampling-time Debye-gradient guidance fails (§5.4).
 
 \textbf{Equivariance.} Not strictly E(3)-equivariant: we use
 periodic-distance RBFs (SchNet-style; Schütt \emph{et al.}, 2017). A
@@ -383,36 +437,72 @@ the denoiser.
 \subsection{3.3 Differentiable Bragg structure-factor
 loss}\label{differentiable-bragg-structure-factor-loss}
 
-The core physics-informed contribution. We implement, in PyTorch, \[
+This module is an engineering component, not a physical contribution. It
+is a PyTorch port of the structure-factor calculation in
+\texttt{pymatgen.analysis.diffraction.xrd.XRDCalculator}, written so
+that gradients flow to fractional coordinates and lattice. We implement
+\[
 F(hkl) = \sum_j f_j(s) \exp\!\left(-B_{\text{iso}} s^2\right) \exp\!\left[2\pi i\,(h x_j + k y_j + l z_j)\right],
-\] where \(f_j(s) = \sum_{k=1}^4 a_k \exp(-b_k s^2)\) is the
-four-Gaussian atomic form factor (coefficients pulled directly from
-\texttt{pymatgen.analysis.diffraction.xrd.ATOMIC\_SCATTERING\_PARAMS}),
+\] with the atomic form factor in the convention \texttt{pymatgen} uses
+for its tabulated coefficients, \[
+f_j(s) = Z_j - 41.78214\, s^2 \sum_{k=1}^{4} a_k \exp(-b_k s^2),
+\] where \((a_k, b_k)\) are read from
+\texttt{ATOMIC\_SCATTERING\_PARAMS}, \(Z_j\) is the atomic number,
 \(s = \sin\theta/\lambda\), and \(B_{\text{iso}} = 0.5\) Å² is a uniform
 isotropic temperature factor. The intensity at each reflection is
 \(|F(hkl)|^2\) multiplied by the standard Lorentz-polarisation
 correction. We enumerate all \((h,k,l)\) with \(|h|,|k|,|l| \le 5\)
 (1330 reflections after excluding the origin), place each on the 2θ grid
 via Bragg's law, and broadcast each reflection as a Gaussian peak with
-FWHM 0.1° to obtain a continuous, differentiable PXRD pattern on a
-256-bin coarse grid. The whole module is a single \texttt{nn.Module},
-fully vectorised over the batch dimension.
+FWHM 0.1° to obtain a continuous, differentiable pattern on a 256-bin
+coarse grid. The module treats ideal powders only: no preferred
+orientation, peak asymmetry, instrument profile or background is
+modelled. It is a single \texttt{nn.Module}, vectorised over the batch
+dimension.
 
-\textbf{Validation.} On 50 random MP-20 test structures we compute the
-Pearson correlation between our differentiable pattern and the
-\texttt{pymatgen.XRDCalculator} reference: mean 0.962, std 0.027, min
-0.896, max 0.998. All 50/50 correlations exceed 0.7 and we verified
-non-zero gradients through the structure factor with respect to
-fractional coordinates.
+\textbf{Correction made during review.} The submitted version of this
+paper evaluated the form factor as the bare sum
+\(\sum_k a_k \exp(-b_k s^2)\) with the same coefficients. That
+expression is not the one the coefficients were fitted for. It gives the
+wrong element weighting: for silicon it returns \(f(0) = 5.8\) where the
+correct value is \(Z = 14\), and it decays too quickly with \(s\). Both
+referees who inspected the code identified the discrepancy. The module
+was corrected to the expression above and re-validated (below). The
+training runs that used the Debye loss were repeated with the corrected
+module {[}PENDING C1: state which runs were retrained and whether the
+numbers in Tables 1 and 2 changed, and by how much{]}.
+
+\textbf{Validation.} On the first 1000 MP-20 test structures we compute
+the Pearson correlation between the differentiable pattern and the
+\texttt{pymatgen.XRDCalculator} reference, both on the 256-bin coarse
+grid. With the corrected form factor the mean is 0.988 and the median
+0.999; 98.0 \% of structures exceed 0.9. With the submitted version's
+form factor the same structures give a mean of 0.952 and a median of
+0.969; 90.7 \% exceed 0.9. The correction improves the agreement for
+every one of the 1000 structures. On the first 50 structures the means
+are 0.939 (submitted form factor) and 0.974 (corrected). The submitted
+version reported 0.962 on 50 structures with the validation script's
+default reflection range (\(|h|,|k|,|l| \le 10\)), which is wider than
+the training configuration (\(\le 5\)) used for the numbers above.
+Re-running that wider range reproduces the submitted value for the
+submitted expression (0.963 on the first 50 structures, 0.960 on all
+1000) and gives 0.999 for the corrected expression at both sizes
+(Appendix C). The wider range also removes most of the lower tail, which
+is therefore a truncation effect of the \(\le 5\) training grid on small
+cells rather than a property of the form factor. Gradients through the
+structure factor with respect to fractional coordinates were verified
+non-zero.
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1. Differentiable-simulator validation. Distribution of Pearson correlation between the PyTorch DiffPXRD module and pymatgen.XRDCalculator over 50 random MP-20 test structures (mean 0.962). All 50 exceed 0.7; the lower tail is dominated by layered structures with strong texture in the reference.}]{fig3_diffpxrd_validation.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1. Differentiable-simulator validation. Distribution of Pearson correlation between the PyTorch DiffPXRD module and pymatgen.XRDCalculator over the first 1000 MP-20 test structures, with the corrected form factor (mean 0.988, median 0.999) and with the form factor of the submitted version (mean 0.952, median 0.969). The correction improves every structure. The residual lower tail is dominated by layered structures with strong texture in the reference.}]{fig3_diffpxrd_validation.pdf}}
 \caption{\textbf{Figure 1. Differentiable-simulator validation.}
 Distribution of Pearson correlation between the PyTorch DiffPXRD module
-and \protect\texttt{pymatgen.XRDCalculator} over 50 random MP-20 test
-structures (mean 0.962). All 50 exceed 0.7; the lower tail is dominated
-by layered structures with strong texture in the
+and \protect\texttt{pymatgen.XRDCalculator} over the first 1000 MP-20
+test structures, with the corrected form factor (mean 0.988, median
+0.999) and with the form factor of the submitted version (mean 0.952,
+median 0.969). The correction improves every structure. The residual
+lower tail is dominated by layered structures with strong texture in the
 reference.}\label{fig:validation}
 \end{figure}
 
@@ -464,6 +554,18 @@ multi-seed checkpoint sweep (§7) shows that match-rate lift does not
 replicate, but the parameterisation does reproducibly improve the
 pattern-Pearson (≈ 0.36 → 0.40, see §5.1).
 
+\textbf{Correction made during review.} In x₀-residual mode the Debye
+loss must be evaluated on the clean-coordinate estimate
+\(\hat{\mathbf{F}}^{(0)} = \mathbf{F}^{(t)} + \text{Coord-Head}(\mathbf{h})\).
+The submitted code evaluated it on the residual
+\(\text{Coord-Head}(\mathbf{h})\) alone. For every x₀-residual run (v13,
+v14, v15, v16 and the Phase 9 checkpoint v21) the Debye term therefore
+compared the pattern of the wrong tensor with the target. The ε-mode
+runs v10 and v11 were unaffected, as were the coordinate and lattice
+losses and every evaluation-time number. The code is fixed. The affected
+runs were retrained with the corrected loss and the corrected simulator
+{[}PENDING C1: retrained numbers for the x₀-residual runs{]}.
+
 \emph{Lattice-head input.} The lattice head reads the noisy lattice
 \(\boldsymbol{\ell}^{(t)}\) as an explicit input feature. Without this,
 i.e.~if the head only sees the (clean) lattice that is also passed to
@@ -479,8 +581,8 @@ ground-truth periodic distances between atoms. Both are documented in
 the released code behind the \texttt{-\/-use-wyckoff} and
 \texttt{-\/-dist-weight} flags.
 
-\subsection{3.5 Classical indexing as a drop-in for the learned lattice
-head}\label{classical-indexing-as-a-drop-in-for-the-learned-lattice-head}
+\subsection{3.5 Classical indexing as a control for the learned lattice
+head}\label{classical-indexing-as-a-control-for-the-learned-lattice-head}
 
 The lattice head described in §3.2 is the \emph{only} path by which the
 model encodes absolute d-spacings: every Bragg reflection 2θ position is
@@ -496,14 +598,18 @@ sub-problem since the 1970s and runs on a CPU in milliseconds per
 pattern.
 
 We implement a from-scratch Q-space autoindexer that takes (i) the same
-simulated PXRD pattern fed to the encoder, (ii) the known crystal system
-(input as Bravais code, exposed as a sampling-time hyperparameter), and
-returns a candidate (a, b, c, α, β, γ). Peak picking uses a 1D
-local-maximum filter with a relative-intensity floor; the candidate
-Q-vector is fit by least squares to the de-Wolff dichotomy parameter
-form for each Bravais lattice. At sampling time we run the indexer
-first, substitute its output for the lattice channel of the diffusion
-sampler, and run DDIM only on the coordinate channel.
+simulated PXRD pattern fed to the encoder and (ii) the true crystal
+system of the target structure, supplied as a Bravais code, and returns
+a candidate (a, b, c, α, β, γ). Item (ii) is prior information beyond
+the composition that the learned head receives. It makes the indexer an
+optimistic control rather than a fair competitor, and every indexer
+number in this paper should be read with that in mind (see also §7 and
+the unknown-system run below). Peak picking uses a 1D local-maximum
+filter with a relative-intensity floor; the candidate Q-vector is fit by
+least squares to the de-Wolff dichotomy parameter form for each Bravais
+lattice. At sampling time we run the indexer first, substitute its
+output for the lattice channel of the diffusion sampler, and run DDIM
+only on the coordinate channel.
 
 \textbf{Per-system accuracy (n = 1000 MP-20 test).} Native indexer
 overall: 48.8 \% strict cell match, 1.45 Å mean cell-length MAE. Per
@@ -518,10 +624,22 @@ practice \texttt{DoIndexPeaks} hangs on real MP-20 monoclinic/triclinic
 patterns inside \texttt{findBestCell} and is documented experimental
 rather than headline.
 
-The indexer is a \emph{drop-in} in the strongest sense: training is
-unchanged, the diffusion sampler is unchanged except for the
-lattice-channel substitution at t = T, and the headline metric (§5.2)
-reports both with and without the indexer for direct comparison.
+\textbf{Without the crystal system.} At a referee's request the indexer
+was also run with no crystal system supplied. Cubic, tetragonal,
+hexagonal/trigonal, orthorhombic and monoclinic cells are all searched,
+and the candidate with the highest de-Wolff M20 figure of merit is kept.
+{[}PENDING B2: per-system strict \% and length MAE, and the fraction of
+patterns whose lattice type is recovered, on the same n = 1000.{]}
+{[}PENDING C3: downstream match rate at three seeds when these cells
+replace the learned head.{]}
+
+The indexer is a drop-in in the mechanical sense: training is unchanged,
+and the diffusion sampler is unchanged except for the lattice-channel
+substitution at t = T. Patterns for which the indexer returns no cell
+(39 of the 1000 test patterns) are scored as misses. The submitted
+version had given them the true lattice; §5.7 reports the correction and
+its effect. The headline metric (§5.2) reports both with and without the
+indexer for direct comparison.
 
 \subsection{3.6 Sampling}\label{sampling}
 
@@ -566,16 +684,20 @@ experimentally relevant case for downstream crystallographic use.
 Two evaluation modes: \emph{full pipeline} (predicted lattice + coords)
 and \emph{true-lattice/coord-only} (ground-truth lattice substituted).
 The latter isolates coordinate quality from lattice quality and is the
-stricter ablation setting.
+stricter ablation setting. In the indexer mode (§3.5) a pattern the
+indexer cannot index counts as a miss; it is never scored with the true
+lattice.
 
-\textbf{Implementation.} AdamW, LR \(5\times10^{-4}\), cosine decay to
-zero over 100 k steps, WD \(10^{-4}\), grad-clip 1.0. Batch 64,
-\textasciitilde24 epochs, single RTX 5090 (\textasciitilde1.5--1.7
-h/run). 3.7 M parameters; \(L=5, d=384\) (\textasciitilde10 M) gave no
-benefit (§5.2). VP-SDE with \(t \sim U(0,1)\). Total compute:
-\textasciitilde35 GPU-hours, \textasciitilde USD 25 on Vast.ai (Phase 4
-ablation + Phase 9 v21 retrain + indexer/perturbation sweeps + DGpt
-n=1000 + PXRDnet n=20 + evaluation).
+\textbf{Implementation.} AdamW, learning rate \(10^{-3}\) (the value
+stored in the released v21 checkpoint; the submitted text gave
+\(5\times10^{-4}\), see §5.7(d)), cosine decay to zero over 100 k steps,
+WD \(10^{-4}\), grad-clip 1.0. Batch 64, \textasciitilde24 epochs,
+single RTX 5090 (\textasciitilde1.5--1.7 h/run). 3.7 M parameters;
+\(L=5, d=384\) (\textasciitilde10 M) gave no benefit (§5.2). VP-SDE with
+\(t \sim U(0,1)\). Total compute: \textasciitilde35 GPU-hours,
+\textasciitilde USD 25 on Vast.ai (Phase 4 ablation + Phase 9 v21
+retrain + indexer/perturbation sweeps + DGpt n=1000 + PXRDnet n=20 +
+evaluation).
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -590,10 +712,16 @@ setting)}\label{phase-4-architectural-ablation-true-lattice-setting}
 
 Table 1: seven runs sweeping the Debye loss, the lattice-input fix,
 x₀-residual, and two extensions (Wyckoff, distance loss), all on n = 1
-000 MP-20 test with true lattice substituted.
+000 MP-20 test with true lattice substituted. Every row is a single
+training seed. The table is exploratory: it guided the design, and only
+the ε-vs-x₀-residual contrast was later replicated across seeds (§7).
+Runs v11 and v13--v16 were trained with the submitted version's
+simulator, and v13--v16 with the x₀-mode Debye defect (§3.3, §3.4)
+{[}PENDING C1: retrained rows, or a statement of which rows were
+retrained{]}.
 
 \textbf{Table 1.} Phase 4 coordinate-only ablation, MP-20 test (n = 1
-000, true lattice substituted).
+000, true lattice substituted). Single seed per row; exploratory.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
@@ -639,14 +767,15 @@ v16 & x₀-residual & 1 & -- & 0.01 & 1.80 & 0.368 & 0.22 \\
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 2. Phase 4 architectural ablation. Match rate (a) and pattern Pearson (b) for the seven coordinate-only runs of Table 1 on MP-20 test (n = 1000, true lattice substituted). The ε → x₀-residual switch (v11 → v13) shows the largest single-seed match lift (panel a), but that match lift does not replicate across seeds; only the pattern-Pearson gain (panel b) does (§7); adding Wyckoff embeddings or a distance-matrix loss regresses below it.}]{fig1_ablation.pdf}}
-\caption{\textbf{Figure 2. Phase 4 architectural ablation.} Match rate
-(a) and pattern Pearson (b) for the seven coordinate-only runs of Table
-1 on MP-20 test (n = 1000, true lattice substituted). The ε →
-x₀-residual switch (v11 → v13) shows the largest single-seed match lift
-(panel a), but that match lift does not replicate across seeds; only the
-pattern-Pearson gain (panel b) does (§7); adding Wyckoff embeddings or a
-distance-matrix loss regresses below it.}\label{fig:ablation}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 2. Phase 4 architectural ablation (single seed per run; exploratory). Match rate (a) and pattern Pearson (b) for the seven coordinate-only runs of Table 1 on MP-20 test (n = 1000, true lattice substituted). The ε → x₀-residual switch (v11 → v13) shows the largest single-seed match lift (panel a), but that match lift does not replicate across seeds; only the pattern-Pearson gain (panel b) does (§7); adding Wyckoff embeddings or a distance-matrix loss regresses below it.}]{fig1_ablation.pdf}}
+\caption{\textbf{Figure 2. Phase 4 architectural ablation (single seed
+per run; exploratory).} Match rate (a) and pattern Pearson (b) for the
+seven coordinate-only runs of Table 1 on MP-20 test (n = 1000, true
+lattice substituted). The ε → x₀-residual switch (v11 → v13) shows the
+largest single-seed match lift (panel a), but that match lift does not
+replicate across seeds; only the pattern-Pearson gain (panel b) does
+(§7); adding Wyckoff embeddings or a distance-matrix loss regresses
+below it.}\label{fig:ablation}
 \end{figure}
 
 The \textbf{lattice-input fix} (§3.4) is load-bearing: it drops lattice
@@ -670,15 +799,19 @@ single-seed snapshot read 5.6 \%) but only 1.0 \% under full pipeline.
 §5.2 attacks that gap.
 
 \subsection{5.2 Phase 9: classical indexer
-drop-in}\label{phase-9-classical-indexer-drop-in}
+control}\label{phase-9-classical-indexer-control}
 
 Table 2: three rows on the same n = 1 000 with the v21 checkpoint (Phase
 9 retrain, Phase 4 fixes + retuned encoder); they differ only in which
-lattice the sampler conditions on.
+lattice the sampler conditions on. The indexer row is a control with
+extra prior information: the indexer is supplied with the true crystal
+system (§3.5).
 
 \textbf{Table 2.} Phase 9 lattice-source comparison (n = 1 000 MP-20
-test, v21 checkpoint, single-seed snapshot). Match \% with 95 \% Wilson
-CI; the three-seed paired analysis follows below.
+test, v21 checkpoint, single-seed snapshot). The indexer receives the
+true crystal system. Match \% with 95 \% Wilson CI; the three-seed
+paired analysis follows below. {[}PENDING C1: replace with the
+retrained-v21 snapshot if the retrain changes these rows.{]}
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
@@ -708,8 +841,9 @@ R\_wp
 \endlastfoot
 Learned head only (full pipeline) & 1.0 {[}0.5, 1.8{]} & 0.0 & 1.4 & n/a
 & 11.7 \\
-\textbf{Classical Q-space autoindexer (§3.5) drop-in} & \textbf{1.6
-{[}1.0, 2.6{]}} & \textbf{0.1} & \textbf{1.4} & \textbf{0.125} & 11.5 \\
+\textbf{Classical Q-space autoindexer (§3.5), crystal system given} &
+\textbf{1.6 {[}1.0, 2.6{]}} & \textbf{0.1} & \textbf{1.4} &
+\textbf{0.125} & 11.5 \\
 Ground-truth lattice (oracle) & 5.6 {[}4.3, 7.2{]} & 0.6 & 1.7 & 0.106 &
 5.6 \\
 \end{longtable}
@@ -728,11 +862,16 @@ frequently degenerate and hang \texttt{StructureMatcher}/\texttt{spglib}
 (C calls that a Python signal cannot interrupt), so we run
 structure-domain scoring in a spawn worker hard-killed at 30 s and count
 overruns as misses. This leaves \textbf{1 949} learned-head structures
-scored across the three seeds versus all 3 000 for the indexer; the
-paired test runs on the 1 949-structure intersection (every learned-head
-row has a matched indexer row). On that paired set the indexer recovers
-\textbf{27} structures the learned head misses and the learned head
-recovers \textbf{none} the indexer misses (the explicit 2×2 below).
+scored across the three seeds. The indexer arm scores 2 883
+structure-seeds: 39 patterns per seed, 117 in total, could not be
+indexed and are counted as misses (the submitted version had given them
+the true lattice; none of them matched under it, §5.7). The paired test
+runs on the 1 949-structure intersection (every learned-head row has a
+matched indexer row); 86 of these are unindexed patterns, which enter as
+concordant misses and do not affect the discordant cells. On that paired
+set the indexer recovers \textbf{27} structures the learned head misses
+and the learned head recovers \textbf{none} the indexer misses (the
+explicit 2×2 below).
 
 \textbf{Table 2a.} Paired per-structure outcomes, learned head vs
 indexer drop-in (three seeds pooled; match = \texttt{StructureMatcher}
@@ -754,7 +893,7 @@ hit).
 
 The discordant cells are \emph{b} = 27 (indexer fixes), \emph{c} = 0
 (indexer breaks); an exact two-sided McNemar test gives \textbf{p = 1.5
-× 10⁻⁸}. (Marginal match counts differ: indexer 46 / 3 000, learned 0 /
+× 10⁻⁸}. (Marginal match counts differ: indexer 46 / 2 883, learned 0 /
 1 949, because 19 further indexer matches fall on structures the learned
 arm could not score; these do not enter the paired test.) The
 single-seed 1.0 \% learned-head figure in Table 2 is within run-to-run
@@ -762,20 +901,22 @@ noise of zero; across three fresh seeds the learned lattice head matched
 nothing. The gain does \textbf{not} carry to the stricter all-correct
 metric: there the discordant cells are \emph{b} = 4, \emph{c} = 0 (exact
 McNemar \textbf{p = 0.13}): the indexer fixes the cell but not the space
-group. So the drop-in reproducibly improves match rate over the learned
-lattice head; the \emph{mechanism} (§5.5, §5.6) is that its gains come
-entirely from high-symmetry systems where the indexer's cell error falls
-below the 0.5 Å sensitivity knee, with low-symmetry contributing
-nothing.
+group. So the control reproducibly improves match rate over the learned
+lattice head. This is the expected outcome for a classical algorithm
+handed the crystal system, and we read it as a sanity check on the
+diagnosis rather than as a result about PXRD inversion. The
+\emph{mechanism} (§5.5, §5.6) is that its gains come entirely from
+high-symmetry systems where the indexer's cell error falls below the 0.5
+Å sensitivity knee, with low-symmetry contributing nothing.
 
 What the indexer does \emph{not} do is close the gap to the oracle. We
 re-ran the oracle at three seeds, firming the single-seed 5.6 \% to
 \textbf{4.5 \% {[}3.8, 5.3{]}} (135 / 3 000 pooled), still disjoint from
-the indexer's 1.5 \% {[}1.2, 2.0{]}. The indexer → oracle gap (1.5 → 4.5
+the indexer's 1.6 \% {[}1.2, 2.1{]}. The indexer → oracle gap (1.6 → 4.5
 \%) is itself significant (disjoint CIs) and isolates the
 lattice-attributable error: even with a perfect lattice, match caps at
 4.5 \%, so coordinate prediction is the dominant limiter while lattice
-error explains the 1.5 → 4.5 \% shortfall. The indexer's per-system MAE
+error explains the 1.6 → 4.5 \% shortfall. The indexer's per-system MAE
 (1.45 Å overall, dominated by mono 1.76 Å and triclinic NaN) sits above
 the 0.5 Å knee; closing the rest requires fixing the low-symmetry path
 (GSAS-II remains experimental).
@@ -803,7 +944,11 @@ conditioned on XRD + composition) at n = 300 re-scored on \emph{our}
 checkpoint download is inactive; cite-but-not-reproduced.
 
 \textbf{Table 3.} Reproduced head-to-head on MP-20 test
-(StructureMatcher ltol 0.2, stol 0.3, angle\_tol 5°).
+(StructureMatcher ltol 0.2, stol 0.3, angle\_tol 5°). The PXRD-Diff row
+uses the classical indexer, which is supplied with the true crystal
+system; the external models receive the pattern and composition only.
+The rows set the scale of the diagnostic model and are not a
+competitiveness claim.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
@@ -831,8 +976,8 @@ RMSD med (Å)
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-PXRD-Diff (v21 + indexer drop-in) & 1 000 & 1.6 {[}1.0, 2.6{]} & 0.1
-{[}0.0, 0.6{]} & 1.4 & 0.125 \\
+PXRD-Diff (v21 + indexer control, crystal system given) & 1 000 & 1.6
+{[}1.0, 2.6{]} & 0.1 {[}0.0, 0.6{]} & 1.4 & 0.125 \\
 DiffractGPT (Choudhary, 2025) & 1 000 & 18.9 {[}16.6, 21.4{]} & 15.9
 {[}13.8, 18.3{]} & 21.3 & 0.001 \\
 PXRDnet sinc100 (Guo \emph{et al.}, 2025) & 20 & 30.0 {[}14.5, 51.9{]} &
@@ -845,13 +990,13 @@ deCIFer (Johansen \emph{et al.}, 2025) & 298 & 73.8 {[}68.6, 78.5{]} &
 \textbf{Match rate} ranks deCIFer ≫ PXRDnet \textgreater{} DGpt
 \textgreater{} PXRD-Diff. deCIFer, a concurrent autoregressive CIF-token
 model conditioned on XRD + composition, is the strongest external
-reference at 73.8 \% match / 69.5 \% all-correct (n = 300),
-\textasciitilde46× above PXRD-Diff; notably its all-correct nearly
-equals its match, i.e.~when it recovers structure it almost always
-recovers the space group too, the same CIF-token signature seen in DGpt.
-PXRDnet's lead over DGpt is consistent with its 35 k-op latent
-optimisation, whereas DGpt is one forward pass. PXRD-Diff is 12--19×
-behind PXRDnet/DGpt. A more interesting pattern is that the
+reference at 73.8 \% match / 69.5 \% all-correct (n = 300). Its
+all-correct nearly equals its match: when it recovers structure it
+almost always recovers the space group too, the same CIF-token signature
+seen in DGpt. PXRDnet's lead over DGpt is consistent with its 35 k-op
+latent optimisation, whereas DGpt is one forward pass. PXRD-Diff, at 1.6
+\%, sits an order of magnitude below all three, as expected for a 3.7
+M-parameter diagnostic model. A more interesting pattern is that the
 \emph{all-correct} ordering need not follow match rate: DGpt's
 all-correct (15.9 \% {[}13.8, 18.3{]}) exceeds its space-group-loose
 match by little, while PXRDnet's drops from 30 \% match to 5 \%
@@ -869,33 +1014,35 @@ motivation for future measurement rather than a claim. \textbf{RMSD} is
 heavy-tailed for us and tight-near-zero for both baselines, suggesting
 our matches are tolerance-stretch rather than coordinate recovery.
 
-\textbf{The gap is capability and compute, not input information.} All
-three systems are given the same chemistry (composition/formula; §3.1),
-so it is worth checking whether the 12--19× gap could instead be an
-artefact of one model being handed a richer \emph{pattern}. It is not;
-if anything the asymmetry runs the other way. DiffractGPT is conditioned
-on a \textbf{coarse 300-bin pattern} (2θ ∈ {[}0, 90°{]}, 0.3° bins,
-rendered as a \texttt{;}-separated string), an order of magnitude lower
+\textbf{What the gap does and does not reflect.} All four systems are
+given the composition (§3.1). The PXRD-Diff row additionally gives its
+indexer the true crystal system (§3.5), so on prior information
+PXRD-Diff is favoured, not handicapped. On the pattern itself the
+asymmetry runs the other way. DiffractGPT is conditioned on a
+\textbf{coarse 300-bin pattern} (2θ ∈ {[}0, 90°{]}, 0.3° bins, rendered
+as a \texttt{;}-separated string), an order of magnitude lower
 resolution than PXRD-Diff's 4 251-bin 0.02° input, yet it still reaches
-18.9 \%. So the baselines do not win by seeing more of the pattern. The
-asymmetries that do matter are \textbf{capacity} (DiffractGPT is a 7
-B-parameter LLM; PXRD-Diff is 3.7 M, three orders of magnitude) and
-\textbf{inference compute} (PXRDnet's \textasciitilde35 k-op latent
-optimisation vs our single DDIM pass). The honest reading of Table 3 is
-therefore a capability/compute gap at fixed input information, not an
-artefact of unequal input information; it is exactly the gap a
-deliberately small diagnostic model is expected to exhibit (§6).
+18.9 \%. So the external models do not win by seeing more of the
+pattern. The differences that matter are \textbf{capacity} (DiffractGPT
+is a 7 B-parameter LLM; PXRD-Diff is 3.7 M, three orders of magnitude)
+and \textbf{inference compute} (PXRDnet's \textasciitilde35 k-op latent
+optimisation vs our single DDIM pass). Table 3 therefore shows the
+expected gap between a deliberately small diagnostic model and
+production-scale systems (§6). It is reported to set the scale, not to
+rank PXRD-Diff among them.
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 4. Three-way headline comparison. Match rate, all-correct, and pattern-Pearson on the same MP-20 test materials scored through our StructureMatcher harness, with 95 \% Wilson CIs. PXRD-Diff loses on match rate by 12--19× but wins on per-pattern Pearson. Note the wide PXRDnet (n = 20) intervals: the DGpt \textgreater{} PXRDnet all-correct ordering is a hypothesis, not an established result (§5.3, §6).}]{fig5_threeway_headline.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 4. Three-way headline comparison. Match rate, all-correct, and pattern-Pearson on the same MP-20 test materials scored through our StructureMatcher harness, with 95 \% Wilson CIs. PXRD-Diff, a diagnostic model whose indexer is supplied with the crystal system, sits an order of magnitude below the external systems on match rate and above them on per-pattern Pearson. Note the wide PXRDnet (n = 20) intervals: the DGpt \textgreater{} PXRDnet all-correct ordering is a hypothesis, not an established result (§5.3, §6).}]{fig5_threeway_headline.pdf}}
 \caption{\textbf{Figure 4. Three-way headline comparison.} Match rate,
 all-correct, and pattern-Pearson on the same MP-20 test materials scored
 through \emph{our} \protect\texttt{StructureMatcher} harness, with 95 \%
-Wilson CIs. PXRD-Diff loses on match rate by 12--19× but wins on
-per-pattern Pearson. Note the wide PXRDnet (n = 20) intervals: the DGpt
-\textgreater{} PXRDnet all-correct ordering is a hypothesis, not an
-established result (§5.3, §6).}\label{fig:threeway}
+Wilson CIs. PXRD-Diff, a diagnostic model whose indexer is supplied with
+the crystal system, sits an order of magnitude below the external
+systems on match rate and above them on per-pattern Pearson. Note the
+wide PXRDnet (n = 20) intervals: the DGpt \textgreater{} PXRDnet
+all-correct ordering is a hypothesis, not an established result (§5.3,
+§6).}\label{fig:threeway}
 \end{figure}
 
 \emph{Caveats.} PXRDnet n = 20 has a 95 \% Wilson CI of roughly ±20 pp
@@ -920,16 +1067,28 @@ Coordinate-channel guidance term
 \(-g \cdot \nabla_{\mathcal{C}} \mathcal{L}_\text{Debye}\), sweep
 \(g \in \{0,0.5,1,2,5\}\) on n = 200: flat 1.0--2.5 \% within noise,
 all-correct 0 \% throughout. Sampling-time Debye gradient is too noisy
-to steer the trajectory, consistent with Segal \emph{et al.} (2025), who
+to steer the trajectory, consistent with Segal \emph{et al.} (2026), who
 show the powder-XRD similarity loss landscape is too non-convex for
 direct gradient descent.
 
-\textbf{Wyckoff-site embeddings (v15, n = 1 000).}
-\texttt{spglib}-computed, \texttt{nn.Embedding(27,\ 256)} added to atom
-features. The embedding learns (5 404/6 912 entries non-zero) but match
-drops 2.5 \% → 2.1 \% and destabilises lattice prediction (lat loss
-\textasciitilde0.6 vs \textasciitilde0.02; Figure 5). We suspect
-inflated atom-feature norm shifts the lattice-pool input distribution.
+\textbf{Wyckoff-letter embeddings (v15, n = 1 000).} Each atom received
+an \texttt{nn.Embedding(27,\ 256)} token for its
+\texttt{spglib}-assigned Wyckoff letter. A Wyckoff letter is meaningful
+only within a given space group: the same letter denotes different
+multiplicities, site symmetries and coordinate constraints in different
+groups (Dauter \& Jaskolski, 2010; de la Flor \emph{et al.}, 2023). The
+embedding therefore carried a label, not a constraint. Atomic
+coordinates were still generated freely, and nothing in the loss or the
+sampler enforced the fixed or symmetry-related coordinates that a
+Wyckoff position implies. The embedding learns (5 404 of 6 912 entries
+non-zero), but match drops from 2.5 \% to 2.1 \% and lattice prediction
+destabilises (lattice loss \textasciitilde0.6 vs \textasciitilde0.02;
+Figure 5). We suspect the inflated atom-feature norm shifts the
+lattice-pool input distribution. The negative result is narrow. It shows
+that a space-group-agnostic label token does not help and may hurt
+training dynamics. It says nothing about whether symmetry information
+imposed as a constraint, on the coordinates or on the space group, would
+help; that experiment was not run.
 
 \begin{figure}
 \centering
@@ -968,7 +1127,8 @@ the sampler it recovers only 1.2 \% (§5.6), because its 1.1 Å length MAE
 shifts every Bragg reflection by \textasciitilde15 \%. So the global
 encoding carries crystal-system and relative-spacing structure but not
 absolute d-spacings at the \textless0.5 Å precision the knee demands;
-the limiter is the pooled encoding, not merely the denoiser's use of it.
+the evidence points to the pooled encoding, not merely the denoiser's
+use of it.
 
 Perturbing the sampler-supplied lattice by Å of cell-length error, v21
 at n = 200: match decays 5.6 \% (Δ=0) → 2.0 \% (0.5 Å) → 0.5 \% (1.0 Å)
@@ -1003,12 +1163,13 @@ so the simulated pattern no longer overlaps the target.
 \textbf{Stronger, constrained supervision (retrain).} Bounding the head
 (softplus lengths, sigmoid-scaled angles), raising the aux weight 0.5 →
 5.0, and warm-starting 30 k further steps leaves the MAE essentially
-unchanged (a ≈ 1.11 Å, α ≈ 14°). The error is a property of the
-\emph{pooled global encoding}, not of the head: the
+unchanged (a ≈ 1.11 Å, α ≈ 14°). The error behaves like a property of
+the \emph{pooled global encoding} rather than of the head: the
 \texttt{AdaptiveAvgPool1d(1)} collapse that §3.2 already identified for
-coordinates discards the peak-position fidelity Bragg's-law decoding
-needs to fix absolute lengths, and no head reading \(\mathbf{g}\)
-recovers it.
+coordinates would discard the peak-position fidelity Bragg's-law
+decoding needs to fix absolute lengths, and no head reading
+\(\mathbf{g}\) recovers it. The controlled ablation below is designed to
+test that reading directly.
 
 This reconciles the diagnosis with the indexer result. The 0.007
 normalised aux loss is a \emph{relative} fit, enough to place the
@@ -1019,10 +1180,89 @@ autoindexer succeeds exactly where the encoder fails because it reads
 peak \emph{positions} directly rather than a pooled summary; this is why
 §5.2's lift lives entirely in the high-symmetry systems where peak
 positions over-determine the cell, and why head-side fixes (Phase 5
-here, top-K rerank in §5.4) cannot substitute for it. The architectural
-implication is concrete: the next gain must come from the encoder
-(explicit d-spacing/peak extraction or per-peak attention in place of
-global pooling), not from a better lattice head or a better denoiser.
+here, top-K rerank in §5.4) cannot substitute for it. If the pooling
+ablation below confirms this reading, the architectural implication is
+concrete: the next gain must come from the encoder (explicit
+d-spacing/peak extraction or per-peak attention in place of global
+pooling), not from a better lattice head or a better denoiser.
+
+\textbf{Controlled pooling ablation.} The two experiments above vary the
+head and its supervision while holding the encoder fixed. They show that
+no head reading \(\mathbf{g}\) recovers the absolute scale. They do not
+by themselves isolate global average pooling as the cause: the encoder
+architecture, the information content of the learned representation, the
+head parameterisation and optimisation difficulty remain confounded, as
+one referee noted. To separate them, a controlled ablation holds the
+encoder, the denoiser, the training objective and the schedule fixed and
+changes only how the auxiliary head reads the encoder: (i) the global
+average pool \(\mathbf{g}\) of the submitted version; (ii) a
+position-aware pooling that retains the 2θ coordinate of each feature;
+(iii) explicit peak-position features extracted from the input pattern
+and concatenated to \(\mathbf{g}\). If absolute d-spacings are lost at
+the pooling stage, variants (ii) and (iii) should reduce the
+\textasciitilde1.1 Å length error while (i) does not. {[}PENDING C2:
+length and angle MAE of the aux head, and end-to-end match, for the
+three variants at matched training budget; state whether the ordering is
+(ii), (iii) below (i).{]} Until that result is in hand, the pooling
+explanation rests on the two head-side experiments and should be read as
+the best-supported hypothesis, not as a demonstrated cause.
+
+\subsection{5.7 Code audit and
+corrections}\label{code-audit-and-corrections}
+
+Review of the released code, prompted by two referees, identified three
+implementation errors. Each is listed with its effect on the numbers in
+this paper.
+
+\begin{enumerate}
+\def\labelenumi{(\alph{enumi})}
+\item
+  \emph{Atomic form factor.} The differentiable simulator evaluated
+  \(\sum_k a_k \exp(-b_k s^2)\) with coefficients fitted for
+  \(Z - 41.78214\,s^2 \sum_k a_k \exp(-b_k s^2)\) (§3.3). Affected: the
+  Debye training loss in every run with \(\lambda_\text{Debye} > 0\)
+  (v11, v13--v16, v21); the Debye-gradient guidance and top-K rerank of
+  §5.4; and the validation figure. Not affected: all match, all-correct,
+  space-group and RMSD numbers, which \texttt{pymatgen} scores on the
+  predicted structures; the indexer; the oracle; the perturbation study;
+  the aux-head substitution of §5.6; and the external baselines. The
+  module was corrected and re-validated (mean Pearson 0.952 → 0.988 over
+  1000 structures). The affected runs were retrained {[}PENDING C1:
+  which runs, and the resulting changes to Tables 1 and 2 and to
+  §5.4{]}.
+\item
+  \emph{Debye loss in x₀-residual mode.} The loss was evaluated on the
+  residual tensor rather than on the clean-coordinate estimate (§3.4).
+  Affected: the Debye term of runs v13--v16 and v21. Not affected: the
+  ε-mode runs v10 and v11, and every evaluation-time number. Fixed; the
+  retrained runs of (a) also carry this fix.
+\item
+  \emph{Indexer fallback.} When the classical indexer returned no cell,
+  the sampling script substituted the true lattice and the pattern was
+  scored as if indexed. This affected 39 of the 1000 test patterns in
+  every indexer run, 117 structure-seeds over three seeds. Recomputing
+  from the released per-structure records, none of the 117 fallback
+  structure-seeds matched, so the published McNemar cells (27 fixed, 0
+  broken) and the all-correct cells (4, 0) are unchanged. The match rate
+  is now reported on the 2 883 indexed structure-seeds only: 46 / 2 883
+  = 1.6 \% {[}1.2, 2.1{]}, in place of 46 / 3 000 = 1.5 \% {[}1.2,
+  2.0{]}. The script now scores unindexed patterns as misses and records
+  their count. The top-K rerank experiment of §5.4 used the same
+  fallback; because the fallback rows did not match, its 1.0 \% result
+  can only be lower, and its conclusion (no improvement) stands.
+\item
+  \emph{Reported learning rate.} The submitted §4 gave the learning rate
+  as \(5\times10^{-4}\). The arguments stored in the released v21
+  checkpoint give \(10^{-3}\), which is the value that was used; §4 now
+  says so. No result depends on this, but the referees asked for a
+  systematic check of the description against the implementation and
+  this is what it found.
+\end{enumerate}
+
+The corrected code, the per-structure records used for (c), the
+re-validation script and a regression test that pins the form-factor
+convention (\texttt{tests/test\_debye\_form\_factor.py}) are in the
+released repository.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -1033,23 +1273,26 @@ global pooling), not from a better lattice head or a better denoiser.
 lattice-\emph{relevant} structure, but it is a relative fit: feeding the
 aux head's own lattice to the sampler recovers only 1.2 \% (§5.6), and
 stronger constrained-head supervision does not move its
-\textasciitilde1.1 Å error. The limiter is therefore the global pooling
-that discards absolute peak-position fidelity, not the denoiser's use of
-an otherwise-adequate signal; the disjoint oracle-vs-indexer CIs (§5.2)
-make the lattice's role the paper's statistically firmest claim. The
-Q-space autoindexer, which reads peak positions directly, recovers part
-of the 4.5 \% oracle ceiling on the high-symmetry subset; top-K rerank
-and gradient guidance fail because they operate \emph{after} the encoder
-commits to a bad lattice prior, while the indexer bypasses that
-decision. (The oracle ceiling is itself only 4.5 \%, so even a perfect
-lattice leaves coordinates as a co-limiter; see §8.)
+\textasciitilde1.1 Å error. The evidence therefore points to the global
+pooling that discards absolute peak-position fidelity, rather than to
+the denoiser's use of an otherwise-adequate signal; the controlled
+ablation of §5.6 tests this directly {[}PENDING C2: one clause with its
+outcome{]}. The disjoint oracle-vs-indexer CIs (§5.2) make the lattice's
+role the paper's statistically firmest claim. The Q-space autoindexer,
+which reads peak positions directly, recovers part of the 4.5 \% oracle
+ceiling on the high-symmetry subset; top-K rerank and gradient guidance
+fail because they operate \emph{after} the encoder commits to a bad
+lattice prior, while the indexer bypasses that decision. (The oracle
+ceiling is itself only 4.5 \%, so even a perfect lattice leaves
+coordinates as a co-limiter; see §8.)
 
 \textbf{Per-atom anchoring is hard.} PXRD is permutation-invariant; our
 denoiser is permutation-equivariant; there is no symmetry-breaking
-signal that pins atom \(i\) to a specific Wyckoff site. The Wyckoff
-embedding tried to break symmetry at the input and failed. A promising
-untried direction: break symmetry at the \emph{output}: predict an
-unordered set of orbits plus a Hungarian-style matcher.
+signal that pins atom \(i\) to a specific Wyckoff site. The
+Wyckoff-letter embedding tried to break symmetry at the input with a
+label rather than a constraint, and failed (§5.4). A promising untried
+direction: break symmetry at the \emph{output}: predict an unordered set
+of orbits plus a Hungarian-style matcher.
 
 \textbf{A measurement hypothesis: match rate may conflate two
 capabilities.} PXRDnet's 30 \% match / 5 \% all-correct vs DGpt's 18.9
@@ -1068,12 +1311,14 @@ coordinates) would be mis-served by it. The contribution here is the
 shared harness that makes such a test possible, not the (underpowered)
 comparison itself.
 
-\textbf{Niche for small reproducible models.} At 1.6 \% we are 12--19×
-behind much larger systems, but small models make the encoder bottleneck
-visible (capacity hides it) and the indexer drop-in trivial to integrate
-(larger models would need architecture-level surgery). The recipe
-(encoder + Phase 4 fixes + Phase 9 indexer drop-in) is 3.7 M parameters
-and runs inference in seconds.
+\textbf{Niche for small reproducible models.} At 1.6 \% PXRD-Diff sits
+an order of magnitude below much larger systems, and that is the point
+of its size. Small models make the encoder bottleneck visible (capacity
+hides it) and make the indexer control trivial to wire in (larger models
+would need architecture-level surgery). The model is a diagnostic
+instrument, not a candidate solver. The recipe (encoder + Phase 4 fixes
++ Phase 9 indexer control) is 3.7 M parameters and runs inference in
+seconds.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -1125,13 +1370,26 @@ and runs inference in seconds.
   clean \texttt{pymatgen} simulations with no zero-point shift,
   sample-displacement error, or peak asymmetry, precisely the
   perturbations that drive real-world indexing failure. The 48.8 \%
-  native-indexer match and the downstream 1.5 \% should be read as upper
-  bounds under ideal peak positions. A zero-shift/displacement
+  native-indexer match and the downstream 1.6 \% should be read as upper
+  bounds under ideal peak positions and a known crystal system; the
+  unknown-system run of §3.5 removes the second assumption {[}PENDING
+  C3: one clause with its outcome{]}. A zero-shift/displacement
   robustness sweep (n = 300) confirms the concern: the indexer's
   length-MAE rises from 1.24 Å on clean patterns past the v20 learned
   head's 1.37 Å once displacement or zero-shift exceeds
   \textasciitilde0.10°, so the indexer's advantage over the learned head
   holds only for well-calibrated input.
+\item
+  \textbf{Idealised conditions and the bottleneck conclusion.} Every
+  pattern is an ideal simulation. Instrument profile, zero shift, sample
+  displacement, preferred orientation and background all move or reshape
+  peaks. Each would further degrade an encoder that already fails to fix
+  absolute d-spacings on clean input. The encoder-bottleneck diagnosis
+  is therefore a lower bound on the difficulty of real data, not an
+  estimate of it. The 0.5 Å knee is a property of the sampler under
+  clean cells; under real peak shifts its position may move, and the
+  indexer's own degradation past \textasciitilde0.10° suggests the whole
+  curve shifts towards smaller tolerable errors.
 \item
   \textbf{Indexer (low-symmetry path).} GSAS-II low-symmetry path hangs
   in \texttt{findBestCell} on real MP-20 mono/tri patterns; shipped
@@ -1145,31 +1403,43 @@ and runs inference in seconds.
 
 \section{8. Conclusion}\label{conclusion}
 
-A 3.7 M-parameter conditional diffusion model with a differentiable
-Bragg loss recovers 1.5 \% {[}1.2, 2.0{]} of MP-20 test structures with
-a classical Q-space autoindexer supplying the lattice, a significant
-improvement over the learned lattice head, which recovers essentially
-nothing (three-seed paired McNemar p \textless{} 10⁻⁴), and 4.5 \%
-{[}3.8, 5.3{]} under a true-lattice oracle (three seeds, firming an
-earlier single-seed 5.6 \%). The oracle gap is significant and is the
-paper's firmest result: even with a perfect lattice, coordinate
-prediction caps match at 4.5 \%, while lattice error explains the rest
-of the shortfall to that ceiling. Reproduced on the same
-\texttt{StructureMatcher} harness, deCIFer reaches 73.8 \% / 69.5 \%,
-DGpt 18.9 \% / 15.9 \%, and PXRDnet 30.0 \% / 5.0 \% (match /
-all-correct); PXRD-Diff is 12--46× behind. The apparent divergence in
-their space-group recovery is a measurement hypothesis the n = 20
-PXRDnet sample cannot yet confirm, but the shared harness now makes it
-testable. The lattice-input fix and the classical-autoindexer drop-in
-are load-bearing; the x₀-residual switch improves pattern-Pearson but
-its single-seed match-rate lift did not replicate (§7); the remaining
-interventions are documented as failures. Code, checkpoints, all
-per-phase JSONs, both indexer paths, and the differentiable Bragg module
-are released.
+A 3.7 M-parameter conditional diffusion model, used as a diagnostic
+instrument, locates the dominant accessible failure in PXRD inversion at
+the pattern encoder. The encoder's pooled representation supports a
+0.007 normalised lattice-regression loss yet delivers a
+\textasciitilde1.1 Å absolute cell error that no head reading it,
+however constrained, reduces. The evidence points to global pooling as
+the stage that discards absolute d-spacings {[}PENDING C2: one clause
+with the pooling-ablation outcome{]}. A true-lattice oracle caps match
+at 4.5 \% {[}3.8, 5.3{]} (three seeds), so coordinate prediction remains
+a co-limiter. A classical Q-space autoindexer, supplied with the true
+crystal system, serves as a control: it reaches 1.6 \% {[}1.2, 2.1{]}
+where the learned head recovers nothing (three-seed paired McNemar p
+\textless{} 10⁻⁴), and only in the high-symmetry systems below the 0.5 Å
+knee. Re-scored on one \texttt{StructureMatcher} harness, deCIFer
+reaches 73.8 \% / 69.5 \%, DGpt 18.9 \% / 15.9 \% and PXRDnet 30.0 \% /
+5.0 \% (match / all-correct). These set the scale of the diagnostic
+model and are not a ranking claim. The apparent divergence in their
+space-group recovery is a measurement hypothesis the n = 20 PXRDnet
+sample cannot yet confirm, but the shared harness now makes it testable.
+A code audit corrected three implementation errors, and every affected
+number was recomputed or re-run {[}PENDING C1: one clause on whether the
+retrained numbers changed{]}. The lattice-input fix is load-bearing; the
+x₀-residual switch improves pattern-Pearson but its single-seed
+match-rate lift did not replicate (§7); the remaining interventions are
+documented as failures, with the Wyckoff-letter result now read
+narrowly. Code, checkpoints, all per-phase JSONs, per-structure records,
+both indexer paths and the differentiable Bragg module are released.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \section{Acknowledgments}\label{acknowledgments}
+
+\emph{Use of AI tools.} The author used a large language model (Claude,
+Anthropic) as a coding and writing assistant throughout this work, for
+drafting and editing text and code under the author's direction. The
+author reviewed all code, analyses and text, and takes full
+responsibility for their content.
 
 We thank the maintainers of \texttt{pymatgen}, \texttt{spglib}, the
 CDVAE benchmark, GSAS-II, and the upstream maintainers of DiffractGPT
@@ -1204,7 +1474,9 @@ https://github.com/fronkt/pxrd-diff and archived at Zenodo:
 10.5281/zenodo.20738994). The MP-20 dataset is publicly available via
 the CDVAE benchmark. All experiments reproduce from a single
 requirements.txt and the scripts/ pipeline; per-structure evaluation
-flags are released to support paired re-analysis.
+flags are released to support paired re-analysis. The corrected
+simulator, the audit scripts of §5.7 and the per-structure records
+behind Table 2a are included.
 
 \section{Ethics Declaration}\label{ethics-declaration}
 
@@ -1224,10 +1496,28 @@ Processing Systems}, Vol. 35.
 Boultif, A. \& Louër, D. (2004). \emph{J. Appl. Cryst.} \textbf{37},
 724--731. DOI: 10.1107/S0021889804014876.
 
+Chitturi, S. R., Ratner, D., Walroth, R. C., Thampy, V., Reed, E. J.,
+Dunne, M., Tassone, C. J. \& Stone, K. H. (2021). \emph{J. Appl. Cryst.}
+\textbf{54}, 1799--1810. DOI: 10.1107/S1600576721010840.
+
 Choudhary, K. (2025). \emph{J. Phys. Chem. Lett.} \textbf{16},
 2110--2119. DOI: 10.1021/acs.jpclett.4c03137. Reproduced from HF
 checkpoint \texttt{knc6/diffractgpt\_mistral\_chemical\_formula} and
 code at \texttt{github.com/atomgptlab/atomgpt}.
+
+Cuocci, C., Corriero, N., Dell'Aera, M., Falcicchio, A., Rizzi, R. \&
+Altomare, A. (2022). \emph{Comput. Mater. Sci.} \textbf{210}, 111465.
+DOI: 10.1016/j.commatsci.2022.111465.
+
+Dauter, Z. \& Jaskolski, M. (2010). \emph{J. Appl. Cryst.} \textbf{43},
+1150--1171. DOI: 10.1107/S0021889810026956.
+
+de la Flor, G., Kroumova, E., Hanson, R. M. \& Aroyo, M. I. (2023).
+\emph{J. Appl. Cryst.} \textbf{56}, 1824--1840. DOI:
+10.1107/S1600576723009068.
+
+Favre-Nicolin, V. \& Černý, R. (2002). \emph{J. Appl. Cryst.}
+\textbf{35}, 734--743. DOI: 10.1107/S0021889802015236.
 
 Guo, G., Saidi, T. L., Terban, M. W., Valsecchi, M., Billinge, S. J. L.
 \& Lipson, H. (2025). \emph{Nat. Mater.} \textbf{24}, 1726--1734. DOI:
@@ -1249,9 +1539,21 @@ Mercado, R. \& Selvan, R. (2025). deCIFer: crystal structure prediction
 from powder diffraction data using autoregressive language models.
 \emph{Transactions on Machine Learning Research} (arXiv:2502.02189).
 
+Lai, Q., Xu, F., Yao, L., Gao, Z., Liu, S., Wang, H., Lu, S., He, D.,
+Wang, L., Zhang, L., Wang, C. \& Ke, G. (2025). \emph{Adv. Sci.}
+\textbf{12}, 2410722. DOI: 10.1002/advs.202410722.
+
+Li, Q., Jiao, R., Wu, L., Zhu, T., Huang, W., Jin, S., Liu, Y., Weng, H.
+\& Chen, X. (2025). \emph{Nat. Commun.} \textbf{16}, 7428. DOI:
+10.1038/s41467-025-62708-8.
+
 Nichol, A. \& Dhariwal, P. (2021). Improved denoising diffusion
 probabilistic models. \emph{Proceedings of the 38th International
 Conference on Machine Learning}, PMLR \textbf{139}, 8162--8171.
+
+Parackal, A. S., Goodall, R. E. A., Faber, F. A. \& Armiento, R. (2024).
+\emph{Phys. Rev.~Mater.} \textbf{8}, 103801. DOI:
+10.1103/PhysRevMaterials.8.103801.
 
 Riesel, E. A., Mackey, T., Nilforoshan, H., Xu, M., Badding, C. K.,
 Altman, A. B., Leskovec, J. \& Freedman, D. E. (2024). \emph{J. Am.
@@ -1266,9 +1568,8 @@ convolutional neural network for modeling quantum interactions.
 \emph{Advances in Neural Information Processing Systems}, Vol. 30.
 
 Segal, N., Subramanian, A., Li, M., Miller, B. K. \& Gómez-Bombarelli,
-R. (2025). The loss landscape of powder X-ray diffraction-based
-structure optimization is too rough for gradient descent.
-arXiv:2512.04036.
+R. (2026). \emph{Digital Discovery} \textbf{5}, 1590--1599. DOI:
+10.1039/D6DD00017G. (Preprint: arXiv:2512.04036.)
 
 Song, J., Meng, C. \& Ermon, S. (2021). Denoising diffusion implicit
 models. \emph{International Conference on Learning Representations}.
@@ -1280,6 +1581,9 @@ Toby, B. H. \& Von Dreele, R. B. (2013). \emph{J. Appl. Cryst.}
 Xie, T., Fu, X., Ganea, O.-E., Barzilay, R. \& Jaakkola, T. (2022).
 Crystal diffusion variational autoencoder for periodic material
 generation. \emph{International Conference on Learning Representations}.
+
+Yu, D., Zhu, Z., Leng, F. \& Zhu, Y. (2026). \emph{Nat. Commun.}
+\textbf{17}, 3274. DOI: 10.1038/s41467-026-70035-9.
 
 Zeni, C., Pinsler, R., Zügner, D., Fowler, A., Horton, M., Fu, X., Wang,
 Z., Shysheya, A., Crabbé, J., Ueda, S., Sordillo, R., Sun, L., Smith,
@@ -1373,32 +1677,64 @@ re-fixed it at 1.0 for the x₀-residual runs by analogy.
 \subsection{C. Differentiable simulator validation
 details}\label{c.-differentiable-simulator-validation-details}
 
-Pearson correlations between our DiffPXRD module and
-\texttt{pymatgen.XRDCalculator} over a random 50-structure MP-20 test
-subset:
+Pearson correlations between the DiffPXRD module and
+\texttt{pymatgen.XRDCalculator} on the 256-bin coarse grid, first 1000
+MP-20 test structures (per-structure values in
+\texttt{paper/submissions/JAC-R1/analysis/simulator\_revalidation.json};
+script \texttt{revalidate\_simulator.py}). ``Submitted'' is the bare
+Gaussian sum of the submitted version; ``corrected'' is the pymatgen
+convention of §3.3. The \(\le 5\) range is the training configuration;
+the \(\le 10\) range is the default of
+\texttt{scripts/04\_verify\_debye.py}, behind the 0.962 reported in the
+submitted version.
 
-\begin{itemize}
-\tightlist
-\item
-  Mean: 0.962
-\item
-  Std: 0.027
-\item
-  Min: 0.896 (mp-1213821, layered structure with strong texture in the
-  reference)
-\item
-  Max: 0.998 (mp-149, Si)
-\item
-  Fraction \textgreater{} 0.95: 33/50
-\item
-  Fraction \textgreater{} 0.9: 49/50
-\item
-  Fraction \textgreater{} 0.7: 50/50
-\end{itemize}
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1429}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1429}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1429}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1429}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1429}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1429}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1429}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Reflection range
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Expression
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Mean
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Median
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Min
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Fraction \textgreater{} 0.9
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\(|h|,|k|,|l| \le 5\) & submitted & 1000 & 0.952 & 0.969 & 0.23 &
+0.907 \\
+\(|h|,|k|,|l| \le 5\) & corrected & 1000 & 0.988 & 0.999 & 0.25 &
+0.980 \\
+\(|h|,|k|,|l| \le 5\) & submitted & 50 & 0.939 & 0.971 & 0.49 & 0.90 \\
+\(|h|,|k|,|l| \le 5\) & corrected & 50 & 0.974 & 0.998 & 0.52 & 0.92 \\
+\(|h|,|k|,|l| \le 10\) & submitted & 1000 & 0.960 & 0.972 & 0.54 & -- \\
+\(|h|,|k|,|l| \le 10\) & corrected & 1000 & 0.999 & 1.000 & 0.58 & -- \\
+\(|h|,|k|,|l| \le 10\) & submitted & 50 & 0.963 & 0.972 & 0.90 & -- \\
+\(|h|,|k|,|l| \le 10\) & corrected & 50 & 0.999 & 1.000 & 0.98 & -- \\
+\end{longtable}
+}
 
-Gradient sanity: for all 50 structures we confirmed \texttt{∂L/∂F} and
-\texttt{∂L/∂L} are non-zero and finite via
-\texttt{torch.autograd.gradcheck} on a 4-atom subset.
+The corrected expression scores at least as high as the submitted one on
+every one of the 1000 structures. Gradients through the structure factor
+with respect to fractional coordinates were verified non-zero and
+finite. The regression test \texttt{tests/test\_debye\_form\_factor.py}
+pins \(f(0) = Z\) and the agreement with \texttt{pymatgen} on NaCl.
 
 \subsection{D. Reproducibility
 checklist}\label{d.-reproducibility-checklist}

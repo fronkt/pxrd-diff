@@ -38,7 +38,13 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from pxrd_diff.data import CrystalPXRDDataset                        # noqa: E402
 from pxrd_diff.debye import DiffPXRD                                  # noqa: E402
-from pxrd_diff.eval import aggregate, evaluate_one                    # noqa: E402
+from pxrd_diff.eval import (                                          # noqa: E402
+    SG_TOLS,
+    SampleMetrics,
+    aggregate,
+    evaluate_one,
+    rwp,
+)
 from pxrd_diff.model.aux_head import AuxLatHead                       # noqa: E402
 from pxrd_diff.model.denoiser import CrystalDenoiser                 # noqa: E402
 from pxrd_diff.model.lat_head import (                                # noqa: E402
@@ -137,6 +143,12 @@ def main():
                          "K*M candidates by Debye-Pearson against target, pick "
                          "the global best. The picked cell becomes the final "
                          "predicted lattice. Mutually exclusive with --lat-from-index.")
+    ap.add_argument("--index-fallback", choices=["miss", "true"], default="miss",
+                    help="How --lat-from-index treats patterns the indexer could "
+                         "not index. 'miss' (default): scored as a miss. 'true': "
+                         "substitute the true lattice, the behaviour of the "
+                         "submitted version (hat5032 v1); NOT a no-true-lattice "
+                         "measurement.")
     ap.add_argument("--samples-per-cell", type=int, default=4,
                     help="Phase 9.1.4: samples per candidate cell. With "
                          "--lat-from-index-topk this overrides --n-samples; "
@@ -382,24 +394,38 @@ def main():
         sys.exit("--lat-from-index and --lat-from-index-topk are mutually exclusive")
     index_lat_params = None
     index_lat_matrix = None
+    index_covered = None            # (B,) bool: indexer returned a cell
     use_index_lat = bool(args.lat_from_index) and not args.true_lattice
     if use_index_lat:
         with open(args.lat_from_index) as f:
             idx_rows = json.load(f).get("rows", [])
         idx_by_id = {r["mid"]: r["pred_params"]
                      for r in idx_rows if r.get("pred_params")}
-        index_lat_params = lattice_params_true.clone()        # fall back to true
-        n_cov = 0
+        # The true lattice is a SHAPE PLACEHOLDER for uncovered rows only. Under
+        # the default --index-fallback miss those rows are scored as misses in
+        # the evaluation loop and never reach StructureMatcher. The submitted
+        # version (hat5032 v1) silently evaluated them with the true lattice;
+        # that behaviour is kept behind --index-fallback true for reproduction
+        # and is not a no-true-lattice measurement.
+        index_lat_params = lattice_params_true.clone()
+        index_covered = torch.zeros(B, dtype=torch.bool)
         for bi, mid in enumerate(material_ids):
             if mid in idx_by_id:
                 index_lat_params[bi] = torch.tensor(
                     idx_by_id[mid], dtype=torch.float32, device=device)
-                n_cov += 1
+                index_covered[bi] = True
+        n_cov = int(index_covered.sum())
+        fallback_desc = ("scored as MISS" if args.index_fallback == "miss"
+                         else "given the TRUE lattice (legacy; not no-true-lattice)")
         print(f"Phase 9.1: indexed-cell lattice — {n_cov}/{B} covered "
-              f"({100.0 * n_cov / B:.1f}%); uncovered fall back to true lattice")
-        mae = (index_lat_params - lattice_params_true).abs().mean(dim=0)
-        print(f"  indexed-cell MAE vs true: a={mae[0]:.3f} b={mae[1]:.3f} "
-              f"c={mae[2]:.3f}  α={mae[3]:.2f} β={mae[4]:.2f} γ={mae[5]:.2f}")
+              f"({100.0 * n_cov / B:.1f}%); {B - n_cov} uncovered {fallback_desc}")
+        cov_idx = index_covered.nonzero().squeeze(-1).to(device)
+        if len(cov_idx) > 0:
+            mae = (index_lat_params[cov_idx]
+                   - lattice_params_true[cov_idx]).abs().mean(dim=0)
+            print(f"  indexed-cell MAE vs true (covered rows): a={mae[0]:.3f} "
+                  f"b={mae[1]:.3f} c={mae[2]:.3f}  α={mae[3]:.2f} β={mae[4]:.2f} "
+                  f"γ={mae[5]:.2f}")
         idx_clamped = index_lat_params.clone()
         idx_clamped[:, :3] = idx_clamped[:, :3].clamp(min=0.5, max=100.0)
         idx_clamped[:, 3:] = idx_clamped[:, 3:].clamp(min=10.0, max=170.0)
@@ -422,13 +448,17 @@ def main():
         print(f"Phase 9.1.4: top-K rerank — K_max={K}, "
               f"K_observed=[{min(Ks)}, {max(Ks)}], M={args.samples_per_cell} "
               f"samples per cell → {K * args.samples_per_cell} candidates per pattern")
-        # Fall back: for patterns with no candidates use true lattice (repeated K).
+        # True lattice is a SHAPE PLACEHOLDER for uncovered rows; under the
+        # default --index-fallback miss they are scored as misses (see the
+        # evaluation loop). hat5032 v1 evaluated them with the true cell.
         index_topk_lat_params = lattice_params_true.unsqueeze(1).expand(-1, K, -1).clone()
+        index_covered = torch.zeros(B, dtype=torch.bool)
         n_cov_topk = 0
         for bi, mid in enumerate(material_ids):
             cands = topk_by_id.get(mid)
             if not cands:
                 continue
+            index_covered[bi] = True
             n_cov_topk += 1
             for ki in range(K):
                 # repeat last cell if fewer than K candidates
@@ -436,7 +466,8 @@ def main():
                 index_topk_lat_params[bi, ki] = torch.tensor(
                     cands[ci]["params"], dtype=torch.float32, device=device)
         print(f"  coverage: {n_cov_topk}/{B} patterns "
-              f"({100.0 * n_cov_topk / B:.1f}%); uncovered patterns use true cell × K")
+              f"({100.0 * n_cov_topk / B:.1f}%); uncovered patterns "
+              f"{'scored as MISS' if args.index_fallback == 'miss' else 'use true cell × K (legacy)'}")
         flat = index_topk_lat_params.reshape(B * K, 6).clone()
         flat[:, :3] = flat[:, :3].clamp(min=0.5, max=100.0)
         flat[:, 3:] = flat[:, 3:].clamp(min=10.0, max=170.0)
@@ -654,10 +685,26 @@ def main():
     # Simulate PXRD for predicted structures and evaluate
     sim = PXRDSimulator()
     metrics_list = []
+    index_miss_mids = set()
 
     for i, idx in enumerate(indices):
         na = num_atoms[i]
         mid = material_ids[i]
+
+        if ((use_index_lat or use_index_topk) and args.index_fallback == "miss"
+                and not bool(index_covered[i])):
+            # The indexer returned no cell for this pattern: without a lattice
+            # there is no structure to score, so this is a miss by definition.
+            true_pattern = batch_items[i]["pxrd_pattern"].numpy()
+            metrics_list.append(SampleMetrics(
+                material_id=mid, composition_ok=True,
+                sg_match={tol: False for tol in SG_TOLS},
+                rmsd=float("nan"),
+                rwp=rwp(np.zeros_like(true_pattern), true_pattern),
+                pearson=0.0,
+            ))
+            index_miss_mids.add(mid)
+            continue
 
         # Choose lattice for building predicted structure
         eval_lat_params = lattice_params_true[i] if args.true_lattice else pred_lat_params[i]
@@ -717,6 +764,7 @@ def main():
                     "sg_match@0.1": bool(m.sg_match.get(0.1, False)),
                     "rmsd": None if np.isnan(m.rmsd) else float(m.rmsd),
                     "all_correct": bool(m.all_correct),
+                    "index_fallback_miss": m.material_id in index_miss_mids,
                 }) + "\n")
         print(f"Wrote per-sample flags to {args.per_sample_json}")
 
@@ -738,6 +786,8 @@ def main():
                 "lat_from_aux": args.lat_from_aux,
                 "lat_from_index": args.lat_from_index,
                 "lat_from_index_topk": args.lat_from_index_topk,
+                "index_fallback": args.index_fallback,
+                "n_index_fallback_miss": len(index_miss_mids),
                 "samples_per_cell": args.samples_per_cell,
                 "sg_constrain_lat": args.sg_constrain_lat,
                 "noise_aug_eval": args.noise_aug_eval,

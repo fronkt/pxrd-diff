@@ -4,7 +4,16 @@ Computes Bragg peak intensities from fractional coordinates + lattice,
 fully differentiable w.r.t. atom positions for use as a physics-informed loss.
 
 I(hkl) ∝ |F(hkl)|² × LP(θ)
-F(hkl) = Σⱼ fⱼ(s) · exp(2πi(h·xⱼ + k·yⱼ + l·zⱼ))
+F(hkl) = Σⱼ fⱼ(s) · exp(-B_iso s²) · exp(2πi(h·xⱼ + k·yⱼ + l·zⱼ))
+fⱼ(s)  = Zⱼ − 41.78214 s² Σₖ aₖ exp(−bₖ s²),  s = sin θ / λ      (form_factor="pymatgen")
+
+The (aₖ, bₖ) coefficients are pymatgen's ATOMIC_SCATTERING_PARAMS, which are
+fitted for the expression above (the one pymatgen.XRDCalculator evaluates),
+not for a bare four-Gaussian sum. The submitted version of the paper
+(J. Appl. Cryst. hat5032 v1) evaluated the bare sum Σₖ aₖ exp(−bₖ s²) with
+these coefficients; that form is retained as form_factor="legacy" so the
+v1 numbers can be reproduced, and is wrong by construction (e.g. f(0) = 5.8
+for Si instead of Z = 14).
 
 Peaks are placed on a 2θ grid with Gaussian broadening to produce a
 continuous, differentiable PXRD pattern.
@@ -22,7 +31,9 @@ def _build_ff_table(max_z: int = 100) -> torch.Tensor:
     """Extract atomic form factor coefficients from pymatgen.
 
     Returns (max_z+1, 4, 2) tensor: ff_table[Z] = [[a1,b1],[a2,b2],[a3,b3],[a4,b4]].
-    f(s) = Σₖ aₖ exp(-bₖ s²), where s = sin(θ)/λ.
+    These coefficients belong to pymatgen's convention
+        f(s) = Z − 41.78214 s² Σₖ aₖ exp(−bₖ s²),   s = sin(θ)/λ,
+    NOT to a bare Gaussian sum. See DiffPXRD(form_factor=...).
     """
     from pymatgen.analysis.diffraction.xrd import ATOMIC_SCATTERING_PARAMS
     from pymatgen.core.periodic_table import Element
@@ -62,8 +73,12 @@ class DiffPXRD(nn.Module):
 
     def __init__(self, two_theta_min: float = 5.0, two_theta_max: float = 90.0,
                  n_bins: int = 512, wavelength: float = 1.54184,
-                 hkl_max: int = 10, peak_fwhm: float = 0.1, b_iso: float = 0.5):
+                 hkl_max: int = 10, peak_fwhm: float = 0.1, b_iso: float = 0.5,
+                 form_factor: str = "pymatgen"):
         super().__init__()
+        if form_factor not in ("pymatgen", "legacy"):
+            raise ValueError(f"form_factor must be 'pymatgen' or 'legacy', got {form_factor!r}")
+        self.form_factor = form_factor
         self.wavelength = wavelength
         self.n_bins = n_bins
         sigma = peak_fwhm / (2.0 * math.sqrt(2.0 * math.log(2.0)))
@@ -94,7 +109,15 @@ class DiffPXRD(nn.Module):
         b = coeffs[..., 1]                  # (B, N, 4)
 
         s_sq = (s_vals ** 2).unsqueeze(1).unsqueeze(-1)  # (B, 1, M, 1)
-        f = (a.unsqueeze(2) * torch.exp(-b.unsqueeze(2) * s_sq)).sum(-1)  # (B, N, M)
+        g = (a.unsqueeze(2) * torch.exp(-b.unsqueeze(2) * s_sq)).sum(-1)  # (B, N, M)
+        if self.form_factor == "pymatgen":
+            # pymatgen.analysis.diffraction.xrd.XRDCalculator convention:
+            #   f(s) = Z − 41.78214 s² Σₖ aₖ exp(−bₖ s²)
+            z = atom_types.to(g.dtype).unsqueeze(-1)                 # (B, N, 1)
+            f = z - 41.78214 * s_sq.squeeze(-1) * g                  # (B, N, M)
+        else:
+            # "legacy": bare Gaussian sum, as in hat5032 v1. Reproduction only.
+            f = g
 
         # Debye-Waller factor
         dw = torch.exp(-self.b_iso * s_vals ** 2).unsqueeze(1)  # (B, 1, M)

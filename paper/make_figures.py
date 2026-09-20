@@ -221,34 +221,38 @@ def fig2_training_curves():
 
 
 def fig3_diffpxrd_validation():
-    """Real Pearson values from scripts/04_verify_debye.py on 50 MP-20 test structures."""
-    raw = ("0.9382,0.9649,0.9719,0.9386,0.9758,0.9975,0.9885,0.9946,0.9869,"
-           "0.9759,0.9183,0.9325,0.9240,0.9267,0.9692,0.9487,0.9411,0.9865,"
-           "0.9742,0.9745,0.9932,0.9864,0.9970,0.9092,0.9903,0.9807,0.9911,"
-           "0.9459,0.9543,0.9687,0.9769,0.9786,0.9456,0.9903,0.8956,0.9821,"
-           "0.9762,0.9575,0.9735,0.9616,0.9376,0.9765,0.9722,0.9469,0.9116,"
-           "0.9883,0.9709,0.9575,0.9858,0.9057")
-    samples = np.array([float(x) for x in raw.split(",")])
+    """JAC R1 revision: DiffPXRD vs pymatgen.XRDCalculator on the first 1000
+    MP-20 test structures, for the submitted (legacy) form-factor expression and
+    the corrected pymatgen-convention expression. Data:
+    paper/submissions/JAC-R1/analysis/simulator_revalidation.json
+    (produced by paper/submissions/JAC-R1/analysis/revalidate_simulator.py)."""
+    src = ROOT / "submissions" / "JAC-R1" / "analysis" / "simulator_revalidation.json"
+    d = json.loads(src.read_text(encoding="utf-8"))
+    legacy = np.array([r["legacy"] for r in d["rows"]])
+    fixed = np.array([r["pymatgen"] for r in d["rows"]])
+    n = len(legacy)
 
     fig, ax = plt.subplots(figsize=(4.4, 2.8), constrained_layout=True)
-    bins = np.linspace(0.88, 1.00, 13)
-    ax.hist(samples, bins=bins, color=CB["blue"], edgecolor="white", lw=0.7, zorder=3)
-    ax.axvline(samples.mean(), color=CB["red"], lw=1.6, ls="-", zorder=4,
-               label=f"mean = {samples.mean():.3f}")
+    bins = np.linspace(0.80, 1.00, 41)
+    ax.hist(legacy.clip(0.80, 1.0), bins=bins, color="#9A9A9A", edgecolor="white",
+            lw=0.5, zorder=3, alpha=0.85,
+            label=f"submitted expression: mean {legacy.mean():.3f}, median {np.median(legacy):.3f}")
+    ax.hist(fixed.clip(0.80, 1.0), bins=bins, color=CB["blue"], edgecolor="white",
+            lw=0.5, zorder=4, alpha=0.85,
+            label=f"corrected expression: mean {fixed.mean():.3f}, median {np.median(fixed):.3f}")
     ax.set_xlabel("Pearson correlation vs pymatgen.XRDCalculator")
-    ax.set_ylabel("Count (n = 50 structures)")
+    ax.set_ylabel(f"Count (n = {n} structures)")
     ax.set_title("DiffPXRD vs reference simulator", loc="left")
-    ax.set_xlim(0.875, 1.005)
+    ax.set_xlim(0.795, 1.005)
     ax.grid(linestyle="-")
     ax.set_axisbelow(True)
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-
-    # All 50 samples sit far above the 0.7 acceptance gate — state it instead of
-    # wasting a third of the axis on empty space down to 0.7.
-    ax.text(0.882, ax.get_ylim()[1] * 0.92,
-            f"all 50 structures ≥ {samples.min():.2f}\n(acceptance threshold = 0.70)",
-            fontsize=7, color=LABEL_GREY, ha="left", va="top")
-    ax.legend(loc="upper left", bbox_to_anchor=(0.0, 0.78))
+    below = int((legacy < 0.80).sum()), int((fixed < 0.80).sum())
+    ax.text(0.80, ax.get_ylim()[1] * 0.97,
+            f"values below 0.80 pooled into the first bin: {below[0]} (submitted), {below[1]} (corrected)\n"
+            f"corrected ≥ submitted on {int((fixed >= legacy).sum())}/{n} structures",
+            fontsize=6.5, color=LABEL_GREY, ha="left", va="top")
+    ax.legend(loc="upper left", bbox_to_anchor=(0.0, 0.80), fontsize=6.5)
     _save(fig, "fig3_diffpxrd_validation")
 
 

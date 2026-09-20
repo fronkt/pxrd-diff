@@ -68,5 +68,8 @@ class PXRDEncoder(nn.Module):
 
         global_emb = self.proj(self.pool(x).squeeze(-1))  # (B, d_model)
         multi_res = torch.cat(features, dim=1)             # (B, L_total, d_model)
+        # Per-level token counts, so position-aware heads can recover each
+        # token's absolute 2θ coordinate (JAC revision pooling ablation).
+        self.level_lengths = [f.shape[1] for f in features]
 
         return global_emb, multi_res

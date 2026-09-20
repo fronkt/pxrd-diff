@@ -192,6 +192,14 @@ def score_cell(lat, Q_obs, rel_tol=0.015):
     return m20, frac
 
 
+# Lattice types searched when the crystal system is not supplied, cheapest first.
+# hexagonal and trigonal share one Q-form (see coeff_vector), so one search
+# covers both; triclinic is excluded (six free parameters, hypothesis-capped,
+# 0 % strict in the given-system benchmark).
+UNKNOWN_SYSTEM_ORDER = ["cubic", "tetragonal", "hexagonal", "orthorhombic", "monoclinic"]
+SYSTEM_FAMILY = {"trigonal": "hexagonal"}
+
+
 def index_pattern(Q_obs, system, max_hyp=150000, topk=1):
     """Ito-style: hypothesise (hkl) for the n_free lowest peaks, solve the linear
     Q-form, score, refine the best. Hypothesis count hard-capped.
@@ -369,6 +377,9 @@ def volume_correct(lat, n_atoms):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=300)
+    ap.add_argument("--start", type=int, default=0,
+                    help="First test-set row to index (for sharding a long run "
+                         "across processes; merge the chunk JSONs afterwards).")
     ap.add_argument("--out", type=str,
                     default=str(ROOT / "paper" / "phase9_results" / "index_benchmark.json"))
     ap.add_argument("--cache", type=str, default=str(ROOT / "data" / "cache" / "test.npz"))
@@ -377,6 +388,12 @@ def main():
     ap.add_argument("--topk", type=int, default=1,
                     help=">1 emits ranked candidates per structure in 'candidates' field "
                          "(9.1.1; consumed by --lat-from-index-topk in 03_sample.py)")
+    ap.add_argument("--system-mode", choices=["given", "unknown"], default="given",
+                    help="'given' (default, as in hat5032 v1): the true crystal "
+                         "system is supplied to the indexer. 'unknown': every "
+                         "supported lattice type is tried and the best M20 wins "
+                         "(JAC revision, referee 1 point 5iii). Triclinic is not "
+                         "searched in either mode (hypothesis-capped, 0 % in v1).")
     ap.add_argument("--use-gsas", action="store_true",
                     help="9.0.7 (experimental): route monoclinic/triclinic/trigonal "
                          "patterns through GSAS-II's DoIndexPeaks. Adapter is wired "
@@ -399,13 +416,14 @@ def main():
     df = pd.read_csv(args.csv)
     cif_by_id = dict(zip(df["material_id"], df["cif"]))
 
-    n = min(args.n, len(patterns))
-    print(f"[bench] indexing {n} test structures (LAMBDA={LAMBDA} Cu-Ka)", flush=True)
+    n = min(args.n, len(patterns) - args.start)
+    print(f"[bench] indexing {n} test structures from row {args.start} "
+          f"(LAMBDA={LAMBDA} Cu-Ka, system_mode={args.system_mode})", flush=True)
     t0 = time.time()
 
     per_system = defaultdict(list)
     rows = []
-    for i in range(n):
+    for i in range(args.start, args.start + n):
         mid = mat_ids[i]
         cif = cif_by_id.get(mid)
         if cif is None:
@@ -421,12 +439,45 @@ def main():
         except Exception:
             continue
         peaks = extract_peaks(patterns[i], two_theta)
-        if peaks.size < n_free(system) + 1:
-            per_system[system].append(None)
-            continue
-        Q_obs = np.sort(two_theta_to_Q(peaks))
-        use_gsas = args.use_gsas
-        if args.topk > 1:
+        pred_system = system
+        if args.system_mode == "unknown":
+            # JAC R1 revision (referee 1, point 5iii): the crystal system is NOT
+            # supplied. Every supported lattice type is tried and the cell with
+            # the highest de-Wolff M20 figure of merit wins; M20 already
+            # penalises dense Q-grids, so it acts as the parsimony prior that
+            # classical indexing programs use to rank candidate lattice types.
+            if peaks.size < 2:
+                per_system[system].append(None)
+                continue
+            Q_obs = np.sort(two_theta_to_Q(peaks))
+            best = None
+            for cand_sys in UNKNOWN_SYSTEM_ORDER:
+                if peaks.size < n_free(cand_sys) + 1:
+                    continue
+                res = index_pattern(Q_obs, cand_sys, topk=3)
+                if not res:
+                    continue
+                lat_c, frac_c, fom_c = res[0]
+                if lat_c is None or fom_c <= 0.0:
+                    continue
+                if best is None or fom_c > best[2]:
+                    best = (lat_c, frac_c, fom_c, cand_sys)
+            if best is None:
+                per_system[system].append(None)
+                continue
+            pred_lat, frac, _, pred_system = best
+            pred_lat = volume_correct(pred_lat, n_conv_atoms)
+            cand_records = None
+            use_gsas = False
+        else:
+            if peaks.size < n_free(system) + 1:
+                per_system[system].append(None)
+                continue
+            Q_obs = np.sort(two_theta_to_Q(peaks))
+            use_gsas = args.use_gsas
+        if args.system_mode == "unknown":
+            pass
+        elif args.topk > 1:
             cands = dispatch_index_pattern(peaks, Q_obs, system,
                                            topk=args.topk, use_gsas=use_gsas)
             if not cands:
@@ -457,7 +508,10 @@ def main():
         # "consistent": explains the pattern and is the conventional cell OR a
         # small-index sub/super-cell of it (the unavoidable peak-position ambiguity)
         near_int = min(abs(ratio - k) for k in (1, 2, 3, 4, 6, 8))
-        rec = dict(mid=mid, system=system, indexed_frac=round(frac, 3),
+        rec = dict(mid=mid, system=system, pred_system=pred_system,
+                   system_correct=bool(SYSTEM_FAMILY.get(pred_system, pred_system)
+                                       == SYSTEM_FAMILY.get(system, system)),
+                   indexed_frac=round(frac, 3),
                    pred_params=[round(float(x), 4) for x in pred_lat.parameters],
                    len_mae=round(float(np.mean(np.abs(tp[:3] - pp[:3]))), 4),
                    ang_mae=round(float(np.mean(np.abs(tp[3:] - pp[3:]))), 3),
@@ -503,7 +557,9 @@ def main():
     solved = [r for r in rows if success(r)]
     consistent = [r for r in rows if r["consistent"]]
     overall = dict(
-        n=n, n_indexed=len(rows),
+        n=n, n_indexed=len(rows), system_mode=args.system_mode,
+        system_correct_pct=(round(100.0 * sum(r["system_correct"] for r in rows) / n, 1)
+                            if rows else None),
         overall_strict_pct=round(100.0 * len(solved) / n, 1),
         overall_consistent_pct=round(100.0 * len(consistent) / n, 1),
         overall_len_mae=round(float(np.mean([r["len_mae"] for r in rows])), 4) if rows else None,

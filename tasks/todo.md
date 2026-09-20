@@ -1555,3 +1555,76 @@ author–date (Harvard) refs, all authors named in list.
 - [x] Verification: 0 stray [N]; 15/15 refs cited in body and none orphaned; PNG dpi 600
 - [ ] HUMAN: submit at journals.iucr.org — Word route (paper.docx) + 5 fig*.png + cover
       letter; select Research Paper, non-OA. arXiv posting still blocked on endorsement.
+
+### Phase 15 — J. Appl. Cryst. HAT5032: MAJOR REVISION (received 2026-09-18, due 2026-10-16)
+
+Editor: Prof. V. R. Hathwar. Three referees (R1 reject/impact 2; R2 minor; R3 major).
+Reports: `paper/submissions/JAC-R1/referee_reports/`. Upload URL in the 2026-09-18 email.
+Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
+
+**Referee map (every numbered point must have a located response):**
+- R1.1 reposition as a diagnostic study, not a competitor · R1.2 simulator = engineering, not
+  novelty · R1.3 indexer = sanity check, crystal system given · R1.4 single-seed ablations are
+  exploratory; PXRDnet n=20 ordering out of the abstract · R1.5 (i) reposition (ii) 3 seeds or
+  mark preliminary (iii) indexer WITHOUT crystal system (iv) idealised conditions vs the
+  bottleneck conclusion · R1.6 readability / "AI generated"
+- R2.1 form-factor formula ≠ pymatgen convention (CONFIRMED, see A) · R2.2 controlled pooling
+  ablation to support the mechanistic claim · R2.3 crystal-system-given must be in abstract +
+  Tables 2, 3
+- R3.1 literature: PXRDGen, XtalNet, Parackal, XRDSol, FOX, EXPO, Chitturi, Segal (DD 2026) ·
+  R3.2 Wyckoff letter is not a constraint; reinterpret the negative result · R3.3 code audit:
+  (a) form factor (b) x0-mode Debye loss on pred_c (c) --lat-from-index true-lattice fallback
+
+**A. Code audit — all three R3.3 items CONFIRMED and fixed (2026-09-20):**
+- [x] A1 `debye.py`: f(s) was Σ aₖe^{−bₖs²}; pymatgen's coefficients belong to
+      f = Z − 41.78214 s² Σ aₖe^{−bₖs²} (Si: f(0)=5.8 vs Z=14). Fixed; `form_factor="legacy"`
+      kept for reproduction. Re-validation n=1000 (hkl_max 5, 256 bins):
+      legacy 0.952 mean / 0.969 median → corrected 0.988 / 0.999; improved on 1000/1000.
+      `paper/submissions/JAC-R1/analysis/simulator_revalidation.json`.
+- [x] A2 `02_train.py`: x0-residual mode fed `pred_c % 1` (the residual) to the Debye loss
+      instead of `noisy + pred_c`. Fixed. Consequence: every x0-residual run that used
+      λ_Debye=1 (v13–v16, v21) trained with a Debye term evaluated on the wrong tensor. The
+      ε-mode runs (v10, v11) were correct. Requires retrain (Phase C).
+- [x] A3 `03_sample.py --lat-from-index`: 39/1000 uncovered patterns got the TRUE lattice.
+      Recomputed from per-structure flags: 0/117 fallback structure-seeds matched, so the
+      46 indexer matches are all genuine; rate becomes 46/2883 = 1.60 % [1.20, 2.12] on
+      covered rows (was 46/3000 = 1.53 %); McNemar b=27, c=0, p=1.5e-8 unchanged.
+      Fallback now `--index-fallback miss` by default; per-sample JSONL records it.
+      `paper/submissions/JAC-R1/analysis/recompute_fallback.py`.
+
+**B. CPU experiments (local, no GPU):**
+- [x] B1 simulator re-validation (A1).
+- [~] B2 indexer with crystal system UNKNOWN (R1.5iii): `09_index_benchmark.py
+      --system-mode unknown`, best-M20 over cubic/tetragonal/hexagonal/orthorhombic/
+      monoclinic. Sharded 6× in `analysis/index_unknown_chunk*.json`; merge → per-system
+      strict %, system-correct %, len MAE. Then Phase C3 samples with those cells.
+- [~] B3 given-system reproduction check on first 60 rows vs committed
+      `index_cells_test1000.json` (confirms the rebuilt local cache matches the original).
+
+**C. GPU experiments (rented RTX 5090, ~$10–20; runbook
+`paper/submissions/JAC-R1/compute-runbook.md`) — FRANK'S CALL to rent:**
+- [ ] C1 Retrain v21 with corrected simulator + fixed x0 Debye loss (R2.1 / R3.3): same
+      config, 100 k steps; eval oracle / learned / indexer at 3 seeds with
+      `--index-fallback miss`. Report next to the v1 numbers; whatever moves, moves.
+- [ ] C2 Pooling ablation (R2.2): same encoder, same denoiser, same training; ONLY the
+      aux-head input changes: (a) global-avg-pool g (as now) (b) position-aware pooling
+      (learned-position attention over the multi-resolution map) (c) explicit peak-position
+      features (peak_features already exist: `--peak-aug-lat-head`). Report aux-head
+      lattice MAE and end-to-end match with that head's lattice. 3 runs × ~1.5 h.
+- [ ] C3 Sample with unknown-system indexer cells (B2) at 3 seeds → "no prior beyond
+      composition" row for Table 2.
+- [ ] C4 (optional, R1.5ii) Phase 4 ablation at 3 seeds: 6 configs × 2 extra seeds.
+      If not run, Table 1 is labelled single-seed/exploratory (already done in text).
+- DECLINED with reasons in the letter: PXRDnet n=200 (~33 GPU-days); ordering claim removed
+  from abstract instead.
+
+**D. Manuscript (paper.md → build.sh → docx/pdf):**
+- [ ] D1 reposition (title, synopsis, abstract, §1, §6, §8) · D2 §3.3 corrected formula +
+      "engineering" statement + new validation · D3 §3.4 x0 Debye disclosure · D4 §3.5/§4/§5.2
+      crystal-system-given + fallback=miss + corrected rate · D5 Tables 1–3 captions ·
+      D6 §5.4 Wyckoff reinterpretation · D7 §5.6 pooling ablation [PENDING C2] · D8 §7
+      limitations (idealised conditions) · D9 new "Code audit" subsection · D10 related work
+      additions (verified refs only) · D11 readability pass · D12 Fig. 1 regenerated.
+- [ ] E1 point-by-point response letter `paper/submissions/JAC-R1/response_to_referees.md`.
+- [ ] E2 rebuild pdf/docx; tracked-changes not required by IUCr but list changes.
+- [ ] E3 HUMAN: upload at submission.iucr.org before 2026-10-16; send the ack email.

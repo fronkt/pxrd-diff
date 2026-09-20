@@ -91,7 +91,9 @@ def train(args: argparse.Namespace) -> None:
 
     diff_pxrd = None
     if args.debye_weight > 0:
-        diff_pxrd = DiffPXRD(n_bins=256, hkl_max=5).to(device)
+        diff_pxrd = DiffPXRD(n_bins=256, hkl_max=5,
+                             form_factor=args.debye_form_factor).to(device)
+        print(f"DiffPXRD form factor: {args.debye_form_factor}")
         diff_pxrd.eval()
 
     params = (list(encoder.parameters()) + list(denoiser.parameters())
@@ -255,7 +257,12 @@ def train(args: argparse.Namespace) -> None:
             loss_debye = torch.tensor(0.0, device=device)
             if diff_pxrd is not None:
                 if args.predict_x0:
-                    x0_pred = pred_c % 1.0
+                    # x0-residual mode: the clean-coordinate estimate is
+                    # noisy_coords + pred_c, the same tensor the coordinate
+                    # loss is computed on. The submitted version (hat5032 v1)
+                    # used `pred_c % 1.0` here, i.e. the Debye loss was
+                    # evaluated on the residual rather than on the estimate.
+                    x0_pred = x0_pred_c % 1.0
                 else:
                     alpha_bar = cosine_alpha_bar(t)
                     while alpha_bar.dim() < noisy_coords.dim():
@@ -337,6 +344,12 @@ def main():
     ap.add_argument("--lat-weight", type=float, default=0.1)
     ap.add_argument("--aux-weight", type=float, default=0.5)
     ap.add_argument("--debye-weight", type=float, default=0.0)
+    ap.add_argument("--debye-form-factor", choices=["pymatgen", "legacy"],
+                    default="pymatgen",
+                    help="Atomic form-factor convention in DiffPXRD. 'pymatgen' "
+                         "is the correct convention for the pymatgen coefficients; "
+                         "'legacy' reproduces the submitted-version simulator "
+                         "(bare Gaussian sum, hat5032 v1).")
     ap.add_argument("--resume", type=str, default=None,
                     help="Path to ckpt to resume from")
     ap.add_argument("--predict-x0", action="store_true",
