@@ -1654,7 +1654,15 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
       TRAIN DONE 2026-09-21 03:03 UTC: `gpu_v22_jac`, 6 896 s wall on the 5090, final EMA
       loss 0.602 (v21 0.726), coord 0.071 (v21 0.075), lat 0.07, aux 0.06, debye 0.47.
       ckpt copied to local `runs/gpu_v22_jac/ckpt_final.pt` (45 MB, gitignored; E: was
-      unmounted). Evals started 03:03 UTC (learned/indexer/oracle × s0–2).
+      unmounted). EVALS DONE 04:09 UTC (9 × ~7.5 min). RESULT (3 seeds pooled, n=3000):
+      learned 58 = 1.9 % [1.5, 2.5] (v1: 0/1949); indexer 48 = 1.6 % [1.2, 2.1] (covered
+      48/2883 = 1.7 %; v1 46/2883); oracle 165 = 5.5 % [4.7, 6.4] (v1 135 = 4.5 %).
+      Paired: learned vs indexer +42/−52 p=0.35 (v1: +27/−0 p=1.5e-8 — the indexer lift
+      does NOT survive the fix); learned vs oracle +134/−27 p=3e-18; v1→v22 learned
+      +32/−0 p=4.7e-10, indexer +12/−10 p=0.83. Per system indexer fixes/breaks: cubic
+      +18/−47 (learned now wins cubic), hex +16/−0, tet +7/−2, trig +1/−2. Pearson
+      0.18 / 0.41 / 0.71. No eval hangs (3000/3000 per arm). Files committed
+      (`paper/phase15_results/v22_*`, `v22_summary.json`); paper/letter rewrite by fork.
 - [ ] C2 Pooling ablation (R2.2): same encoder, same denoiser, same training; ONLY the
       aux-head input changes: (a) global-avg-pool g (as now) (b) position-aware pooling
       (learned-position attention over the multi-resolution map) (c) explicit peak-position
