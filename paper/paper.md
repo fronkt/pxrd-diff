@@ -1,4 +1,4 @@
-# PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based powder-diffraction structure inversion
+# PXRD-Diff: diagnosing the lattice-recovery bottleneck in diffusion-based powder-diffraction structure inversion
 
 **Frank Cai**
 
@@ -156,7 +156,7 @@ Two evaluation modes: *full pipeline* (predicted lattice + coords) and *true-lat
 
 ## 5. Results
 
-Order: Phase 4 architectural ablation (§5.1) → Phase 9 indexer drop-in (§5.2) → reproduced baselines (§5.3) → failure catalogue (§5.4) → encoder-bottleneck perturbation study (§5.5).
+Order: Phase 4 architectural ablation (§5.1) → Phase 9 indexer drop-in (§5.2) → reproduced baselines (§5.3) → failure catalogue (§5.4) → lattice-perturbation study (§5.5).
 
 ### 5.1 Phase 4: architectural ablation (true-lattice setting)
 
@@ -242,7 +242,7 @@ Four interventions failed at n ≥ 200; one paragraph each.
 
 **Combination (v14).** Wyckoff + distance loss together collapses to 0.8 %, below the bare ε baseline; the two interact destructively, no clean theoretical explanation.
 
-### 5.5 Encoder-bottleneck perturbation study
+### 5.5 Lattice-perturbation study
 
 Best predicted-vs-target Pearson is 0.43; the same model with *correct* coordinates plugged into the differentiable simulator hits 0.97; the encoder + denoiser leaves ~0.5 of pattern-space agreement on the table. The aux head (sees $\mathbf{g}$ only) reaches a 0.007 *normalised* lattice-regression loss, but that figure is a relative fit that does **not** survive conversion to absolute scale: when the aux head's own lattice is substituted into the sampler it recovers only 1.2 % (§5.6), because its 1.1 Å length MAE shifts every Bragg reflection by ~15 %. So the lattice head delivers crystal-system and relative-spacing structure but not absolute d-spacings at the <0.5 Å precision the knee demands; §5.6 shows this is not repaired by giving the head the peak positions, and reads it as a failure of the regression formulation rather than of the pooled encoding or the denoiser.
 

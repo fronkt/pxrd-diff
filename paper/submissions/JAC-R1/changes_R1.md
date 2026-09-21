@@ -7,7 +7,7 @@ citation awaiting verified metadata before it enters the References list.
 
 ## Title
 - **R1.1, R1.3, R1.5i.** "…, with classical autoindexing as a drop-in remedy" → clause dropped. New title:
-  *PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based powder-diffraction structure inversion.*
+  *PXRD-Diff: diagnosing the lattice-recovery bottleneck in diffusion-based powder-diffraction structure inversion.*
   **Frank's call to revert**; the indexer is now framed as a control, so the old clause overstated it.
 
 ## Synopsis
