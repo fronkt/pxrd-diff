@@ -192,12 +192,37 @@ def score_cell(lat, Q_obs, rel_tol=0.015):
     return m20, frac
 
 
-# Lattice types searched when the crystal system is not supplied, cheapest first.
+# Lattice types searched when the crystal system is not supplied, highest
+# symmetry (fewest free parameters) first — the order TREOR/DICVOL use.
 # hexagonal and trigonal share one Q-form (see coeff_vector), so one search
 # covers both; triclinic is excluded (six free parameters, hypothesis-capped,
 # 0 % strict in the given-system benchmark).
 UNKNOWN_SYSTEM_ORDER = ["cubic", "tetragonal", "hexagonal", "orthorhombic", "monoclinic"]
 SYSTEM_FAMILY = {"trigonal": "hexagonal"}
+M20_ACCEPT = 10.0   # de Wolff (1968): M20 >= 10 with all lines indexed = probably correct
+
+
+def metric_system(lat, len_tol=0.005, ang_tol=0.5):
+    """Crystal system implied by the metric of a returned cell (a monoclinic-branch
+    solve with beta = 90.0 and a = c is metrically tetragonal, and is reported so)."""
+    a, b, c = lat.abc
+    al, be, ga = lat.angles
+    eq = lambda x, y: abs(x - y) <= len_tol * max(x, y)
+    is90 = lambda x: abs(x - 90.0) <= ang_tol
+    is120 = lambda x: abs(x - 120.0) <= ang_tol
+    if is90(al) and is90(be) and is90(ga):
+        if eq(a, b) and eq(b, c):
+            return "cubic"
+        if eq(a, b) or eq(b, c) or eq(a, c):
+            return "tetragonal"
+        return "orthorhombic"
+    if ((is90(al) and is90(be) and is120(ga) and eq(a, b))
+            or (is90(al) and is90(ga) and is120(be) and eq(a, c))
+            or (is90(be) and is90(ga) and is120(al) and eq(b, c))):
+        return "hexagonal"
+    if sum(is90(x) for x in (al, be, ga)) == 2:
+        return "monoclinic"
+    return "triclinic"
 
 
 def index_pattern(Q_obs, system, max_hyp=150000, topk=1):
@@ -391,9 +416,21 @@ def main():
     ap.add_argument("--system-mode", choices=["given", "unknown"], default="given",
                     help="'given' (default, as in hat5032 v1): the true crystal "
                          "system is supplied to the indexer. 'unknown': every "
-                         "supported lattice type is tried and the best M20 wins "
-                         "(JAC revision, referee 1 point 5iii). Triclinic is not "
-                         "searched in either mode (hypothesis-capped, 0 % in v1).")
+                         "supported lattice type is tried, highest symmetry first "
+                         "(JAC revision, referee 1 point 5iii; see --unknown-rule). "
+                         "Triclinic is not searched in either mode (hypothesis-"
+                         "capped, 0 % in v1).")
+    ap.add_argument("--unknown-rule", choices=["dewolff", "maxm20"], default="dewolff",
+                    help="Lattice-type selection when --system-mode unknown. "
+                         "'dewolff' (default): accept the first lattice type, in "
+                         "order of decreasing symmetry, whose best cell indexes "
+                         "every observed line with M20 >= --m20-min; otherwise the "
+                         "highest-M20 all-lines-indexed cell; the reported system "
+                         "is the metric symmetry of the cell. 'maxm20': highest "
+                         "M20 across lattice types (first-pass rule, 24.3 %% strict).")
+    ap.add_argument("--m20-min", type=float, default=M20_ACCEPT,
+                    help="Acceptance threshold for --unknown-rule dewolff "
+                         "(de Wolff 1968: M20 >= 10 = probably correct).")
     ap.add_argument("--use-gsas", action="store_true",
                     help="9.0.7 (experimental): route monoclinic/triclinic/trigonal "
                          "patterns through GSAS-II's DoIndexPeaks. Adapter is wired "
@@ -440,17 +477,26 @@ def main():
             continue
         peaks = extract_peaks(patterns[i], two_theta)
         pred_system = system
+        pred_branch = None
         if args.system_mode == "unknown":
             # JAC R1 revision (referee 1, point 5iii): the crystal system is NOT
-            # supplied. Every supported lattice type is tried and the cell with
-            # the highest de-Wolff M20 figure of merit wins; M20 already
-            # penalises dense Q-grids, so it acts as the parsimony prior that
-            # classical indexing programs use to rank candidate lattice types.
+            # supplied. Lattice types are searched highest symmetry first.
+            #   --unknown-rule dewolff (default): the classical acceptance rule of
+            #   TREOR/DICVOL — stop at the first lattice type whose best cell
+            #   indexes every observed line with M20 >= --m20-min; if none does,
+            #   take the highest-M20 cell among those indexing every line, then
+            #   among all. The reported system is the metric symmetry of the cell.
+            #   --unknown-rule maxm20: the first-pass rule (highest M20 across
+            #   lattice types, system = search branch). M20 carries no penalty
+            #   for free parameters, so with few, exact lines a 4-parameter
+            #   monoclinic sub-cell out-scores the true cubic cell; kept only to
+            #   reproduce that run.
             if peaks.size < 2:
                 per_system[system].append(None)
                 continue
             Q_obs = np.sort(two_theta_to_Q(peaks))
             best = None
+            cands = []
             for cand_sys in UNKNOWN_SYSTEM_ORDER:
                 if peaks.size < n_free(cand_sys) + 1:
                     continue
@@ -460,12 +506,23 @@ def main():
                 lat_c, frac_c, fom_c = res[0]
                 if lat_c is None or fom_c <= 0.0:
                     continue
-                if best is None or fom_c > best[2]:
-                    best = (lat_c, frac_c, fom_c, cand_sys)
+                cands.append((lat_c, frac_c, fom_c, cand_sys))
+                if (args.unknown_rule == "dewolff" and frac_c >= 0.999
+                        and fom_c >= args.m20_min):
+                    best = cands[-1]
+                    break
+            if best is None and cands:
+                if args.unknown_rule == "dewolff":
+                    full = [c for c in cands if c[1] >= 0.999]
+                    best = max(full if full else cands, key=lambda c: c[2])
+                else:
+                    best = max(cands, key=lambda c: c[2])
             if best is None:
                 per_system[system].append(None)
                 continue
-            pred_lat, frac, _, pred_system = best
+            pred_lat, frac, _, pred_branch = best
+            pred_system = (metric_system(pred_lat) if args.unknown_rule == "dewolff"
+                           else pred_branch)
             pred_lat = volume_correct(pred_lat, n_conv_atoms)
             cand_records = None
             use_gsas = False
@@ -509,6 +566,7 @@ def main():
         # small-index sub/super-cell of it (the unavoidable peak-position ambiguity)
         near_int = min(abs(ratio - k) for k in (1, 2, 3, 4, 6, 8))
         rec = dict(mid=mid, system=system, pred_system=pred_system,
+                   pred_branch=pred_branch,
                    system_correct=bool(SYSTEM_FAMILY.get(pred_system, pred_system)
                                        == SYSTEM_FAMILY.get(system, system)),
                    indexed_frac=round(frac, 3),
@@ -558,6 +616,8 @@ def main():
     consistent = [r for r in rows if r["consistent"]]
     overall = dict(
         n=n, n_indexed=len(rows), system_mode=args.system_mode,
+        unknown_rule=(args.unknown_rule if args.system_mode == "unknown" else None),
+        m20_min=(args.m20_min if args.system_mode == "unknown" else None),
         system_correct_pct=(round(100.0 * sum(r["system_correct"] for r in rows) / n, 1)
                             if rows else None),
         overall_strict_pct=round(100.0 * len(solved) / n, 1),
