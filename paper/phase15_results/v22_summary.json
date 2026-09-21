@@ -313,6 +313,43 @@
    },
    "pearson_mean": 0.077,
    "rwp_mean": 17.84
+  },
+  "indexer_unknown": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "match": {
+    "x": 42,
+    "n": 3000,
+    "rate": 1.4,
+    "ci": [
+     1.04,
+     1.89
+    ],
+    "per_seed": {
+     "0": "13/1000",
+     "1": "14/1000",
+     "2": "15/1000"
+    }
+   },
+   "all_correct": {
+    "x": 5,
+    "n": 3000,
+    "rate": 0.17,
+    "ci": [
+     0.07,
+     0.39
+    ],
+    "per_seed": {
+     "0": "2/1000",
+     "1": "2/1000",
+     "2": "1/1000"
+    }
+   },
+   "pearson_mean": 0.408,
+   "rwp_mean": 12.16
   }
  },
  "paired_v22": {
@@ -355,6 +392,22 @@
    "c_loss": 39,
    "chi2": 7.018,
    "p": 0.007508175534150202
+  },
+  "learned_vs_indexer_unknown": {
+   "n_pairs": 3000,
+   "both": 6,
+   "b_gain": 36,
+   "c_loss": 52,
+   "chi2": 2.557,
+   "p": 0.10929542977731425
+  },
+  "indexer_vs_indexer_unknown": {
+   "n_pairs": 3000,
+   "both": 42,
+   "b_gain": 0,
+   "c_loss": 6,
+   "chi2": 4.167,
+   "p": 0.03125
   }
  },
  "paired_v1_vs_v22": {
