@@ -75,8 +75,11 @@ citation awaiting verified metadata before it enters the References list.
 ## §3.5 Classical indexing
 - **R1.3, R2.3.** Heading "drop-in for" → "control for"; input (ii) now "the true crystal system of the target
   structure … prior information beyond the composition … optimistic control rather than a fair competitor".
-- **R1.5iii.** New paragraph "Without the crystal system": all lattice types searched, best M20 kept;
-  `[PENDING B2]` (indexing accuracy) and `[PENDING C3]` (downstream match, three seeds).
+- **R1.5iii.** New paragraph "Without the crystal system": lattice types searched highest symmetry first,
+  accepted by the de Wolff / TREOR / DICVOL rule (all lines indexed, M20 ≥ 10, system from metric symmetry);
+  43.4 % strict vs 48.8 % given, lattice type recovered 65.4 %, paired loss 65 / gain 9; the first-pass max-M20
+  rule (24.3 %) reported alongside. §1 sentence and §7 bullet (i) updated; refs de Wolff (1968) and Werner
+  et al. (1985) added. `[PENDING C3]` (downstream match, three seeds) remains.
 - **R3.3c.** Final paragraph: "drop-in in the strongest sense" → "in the mechanical sense"; unindexed
   patterns (39/1000) scored as misses; submitted version's fallback disclosed with pointer to §5.7.
 

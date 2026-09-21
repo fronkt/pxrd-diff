@@ -38,3 +38,7 @@ Communications papers), the Geneva open archive and search snippets. Publisher l
 - de la Flor 2023: database paper, not a Wyckoff discussion.
 - EXPO 2022: worked-examples paper.
 - FOX: second author is Černý (Crossref renders it wrongly).
+
+## Added 2026-09-21 (§3.5 unknown-system paragraph, §1) — Crossref-verified
+- de Wolff, P. M. (1968). *J. Appl. Cryst.* **1**, 108–113. DOI 10.1107/S002188986800508X — "A simplified criterion for the reliability of a powder pattern indexing". Verified.
+- Werner, P.-E., Eriksson, L. & Westdahl, M. (1985). *J. Appl. Cryst.* **18**, 367–370. DOI 10.1107/S0021889885010512 — TREOR. Verified.
