@@ -1,0 +1,22 @@
+[bench] indexing 50 test structures from row 150 (LAMBDA=1.54184 Cu-Ka, system_mode=unknown)
+  200/50  (481s)
+
+=== Phase 9.0 indexing benchmark — stratified by crystal system ===
+strict = recovered the conventional cell;  consistent = explains the
+pattern via the conventional cell OR a small-index sub/super-cell.
+
+system            n  strict%  consist%  len_MAE  ang_MAE expl_frac
+------------------------------------------------------------------
+cubic             4    50.0%     50.0%    1.018     3.80      0.96
+tetragonal       14    64.3%     78.6%    1.154     3.24      0.99
+hexagonal         5    40.0%     40.0%    1.999     6.00      0.96
+trigonal          2    50.0%     50.0%    2.341     8.72      0.90
+orthorhombic     10    40.0%     90.0%    1.706     1.00      1.00
+monoclinic       10    20.0%     50.0%    1.238    13.33      0.91
+triclinic         5    20.0%     20.0%    2.677     9.87      0.93
+------------------------------------------------------------------
+OVERALL: indexed 50/50, strict 42.0%, consistent 62.0%, len MAE 1.5547 A (v20 learned head ~1.37 A)
+
+[bench] wrote /workspace/unk/index_unknown_chunk03.json  (481s total)
+
+GO/NO-GO: classical indexing is viable if solved% materially beats the learned head (len MAE << 1.37 A) on at least the higher-symmetry systems.

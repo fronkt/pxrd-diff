@@ -1,0 +1,20 @@
+{
+ "n": 3000,
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "note": "gpu_v22_jac learned head, three seeds pooled (means over seeds; match = 58/3000)",
+ "composition_match_rate": 1.0,
+ "rmsd_mean": 0.20908938073490738,
+ "rmsd_median": 0.23227905618825553,
+ "match_rate (StructureMatcher)": 0.019333333333333334,
+ "rwp_mean": 17.0240455564132,
+ "pearson_mean": 0.17612563553797658,
+ "headline_all_correct": 0.0,
+ "sg_match@0.01": 0.015,
+ "sg_match@0.05": 0.014,
+ "sg_match@0.1": 0.014,
+ "sg_match@0.2": 0.010666666666666666
+}

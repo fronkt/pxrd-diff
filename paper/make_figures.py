@@ -343,23 +343,26 @@ def fig4_indexer_bench():
 
 
 def fig5_threeway_headline():
-    """Three-way head-to-head: ours (9.1.3) vs DiffractGPT (n=1000) vs PXRDnet (n=20).
+    """Three-way head-to-head: ours (v22 learned head, 3 seeds pooled) vs DiffractGPT (n=1000)
+    vs PXRDnet (n=20).
 
     Sources:
-      paper/phase9_results/p9_idxlat_n1000.json         (ours, n=1000)
+      paper/phase15_results/v22_learned_pooled.json     (ours: gpu_v22_jac, learned head,
+                                                          3 x 1000, JAC R1 retrain)
       paper/phase9_results/baseline_diffractgpt_n1000.json
       paper/phase9_results/baseline_pxrdnet_sinc100_n20.json
+    (The submitted version plotted phase9_results/p9_idxlat_n1000.json, the v21 indexer row.)
     """
     def load(name):
         return json.loads((ROOT / "phase9_results" / name).read_text())
 
-    ours = load("p9_idxlat_n1000.json")
+    ours = json.loads((ROOT / "phase15_results" / "v22_learned_pooled.json").read_text())
     dgpt = load("baseline_diffractgpt_n1000.json")
     pxnt = load("baseline_pxrdnet_sinc100_n20.json")
 
     # (display label, n-string, data, colour)
     systems = [
-        ("PXRD-Diff\n(ours)", "n = 1000", ours, CB["blue"]),
+        ("PXRD-Diff\n(ours)", "n = 3 × 1000", ours, CB["blue"]),
         ("DiffractGPT",       "n = 1000", dgpt, CB["orange"]),
         ("PXRDnet",           "n = 20",   pxnt, CB["green"]),
     ]
