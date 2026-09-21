@@ -1613,8 +1613,14 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
       `--unknown-rule dewolff` (default, T=10 = de Wolff's a-priori threshold; `maxm20`
       reproduces the 24.3 % run, archived as `analysis/index_unknown_maxm20/` and
       `phase15_results/*_maxm20.json`). RERUN 20 shards × 50 on the box CPUs
-      (`/workspace/unk/`, tmux `unk`, started 01:16 UTC) → merge → §3.5 reports BOTH
-      numbers (naive rule, then the standard rule) → ship cells to the box for C3.
+      (`/workspace/unk/`, tmux `unk`, 01:16–01:26 UTC, 10 min on 20 procs). RESULT
+      (dewolff, T=10): strict 43.4 % [40.4, 46.5] vs given 48.8 %; lattice type recovered
+      65.4 % (68.1 % of 961 paired); paired loss 65 / gain 9, McNemar p 1.4e-11; len MAE
+      1.67 Å (given 1.45). Per system given→unknown: cubic 52.9→49.2, hex 77.9→65.4,
+      trig 43.3→30.9, tet 52.8→46.7, orth 59.8→53.6, mono 18.9→19.6. §3.5 filled with
+      both rules (naive 24.3 % kept as the cautionary comparison); §1/§7 updated; refs
+      de Wolff 1968 + Werner 1985 added (Crossref-verified). Cells pushed + pulled on
+      the box (`paper/phase15_results/index_cells_test1000_unknown.json`) for C3.
 - [x] B3 given-system reproduction check on first 60 rows vs committed
       `index_cells_test1000.json`: 60/60 identical cells (rebuilt local cache = original).
 - NOTE 2026-09-20 ~17:45: the B2 shards (6 × `09_index_benchmark.py --system-mode unknown`,
