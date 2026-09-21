@@ -34,3 +34,33 @@ successful surprising approach. Use format:
   write the disclosure with the measured effect. Always ship per-sample flags with results
   so this recomputation is possible without a GPU.
 - Context: revision letters; disclosure paragraphs.
+
+## 2026-09-21 — A "best figure of merit" is not the classical rule
+- Pattern: the first unknown-crystal-system indexer kept the highest M20 across lattice types
+  and scored 24.3 % strict with cubic chosen for 12/238 cubic structures. M20 has no penalty for
+  free parameters, so a 4-parameter monoclinic sub-cell out-scores the true cubic cell on a few
+  exact lines. The TREOR/DICVOL acceptance rule (highest symmetry first, all lines indexed,
+  M20 ≥ 10, system from metric symmetry) gives 43.4 % on the same patterns.
+- Rule: when implementing a classical baseline, reproduce the program's decision rule, not just
+  its figure of merit; before reporting a negative result for a classical method, audit one
+  failing case by hand (a subagent replay of 110 structures settled it in 15 min).
+- Context: any "classical control" in an ML paper; referee 1's point 5(iii).
+
+## 2026-09-21 — Test the mechanism you wrote before a referee asks
+- Pattern: the paper's central reading (global pooling discards d-spacings) was withdrawn by a
+  2-hour frozen-encoder ablation on the laptop CPU; the retrain then erased the "indexer beats
+  learned head" claim (0 → 1.9 %, McNemar p 1.5e-8 → 0.35). Both were cheap to test before
+  submission.
+- Rule: every mechanistic sentence in an abstract needs a controlled test in the results, run
+  before submission; when a code defect touches training, re-measure every affected claim
+  rather than disclose-and-keep. Budget the GPU hour for it up front.
+- Context: diagnostic papers; §5.6 / §5.2 of hat5032.
+
+## 2026-09-21 — Do not share a 32 GB GPU between the sampler and a side job
+- Pattern: 03_sample.py held 26.6 GB; launching the 30-epoch head training beside it risked an
+  OOM that the pipeline would have recorded as a silent rc≠0 and skipped. Killed the side job
+  and queued it after PIPELINE DONE (12 min, no loss).
+- Rule: on a rented box, queue side jobs behind the pipeline unless nvidia-smi shows ≥ 2× the
+  side job's peak free; monitor filters must include "out of memory" (torch's text), not only
+  "OOM"; make pipeline stages fail loudly (status line with rc) so a skipped run is visible.
+- Context: vast.ai runs with a chained pipeline.sh.
