@@ -95,8 +95,12 @@ def main():
         if not rows:
             continue
         d = dict(seeds=sorted(rows), match=pooled(rows), all_correct=pooled(rows, "all_correct"))
-        if any(r.get("index_fallback_miss") is not None for rs in rows.values() for r in rs.values()):
+        if any(r.get("index_fallback_miss") for rs in rows.values() for r in rs.values()):
             d["match_covered_only"] = pooled(rows, covered_only=True)
+        aggs = [json.load(open(R15 / f"v22_{src}_s{s}.json")) for s in rows if (R15 / f"v22_{src}_s{s}.json").exists()]
+        if aggs:
+            d["pearson_mean"] = round(sum(a["pearson_mean"] for a in aggs) / len(aggs), 3)
+            d["rwp_mean"] = round(sum(a["rwp_mean"] for a in aggs) / len(aggs), 2)
         out["v22"][src] = d
 
     if v22["learned"]:
@@ -121,7 +125,7 @@ def main():
         a = out["v1"].get(src, {}).get("match")
         b = out["v22"].get(src, {})
         print(f"| {src} | {fmt(a)} | {fmt(b.get('match'))} | {fmt(b.get('all_correct'))} | "
-              f"{b.get('match', {}).get('per_seed', '') if b else ''} |")
+              f"{b.get('match', {}).get('per_seed', '') if b else ''} pearson {b.get('pearson_mean', '')} |")
         if b.get("match_covered_only"):
             print(f"| {src} (covered rows only) | | {fmt(b['match_covered_only'])} | | |")
     print("\nPaired McNemar (v22, match):")
