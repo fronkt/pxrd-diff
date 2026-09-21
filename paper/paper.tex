@@ -122,12 +122,12 @@
 \@ifundefined{xmpquote}{\newcommand{\xmpquote}[1]{#1}}{}
 \makeatother
 \hypersetup{
-  pdftitle={PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based powder-diffraction structure inversion},
+  pdftitle={PXRD-Diff: diagnosing the lattice-recovery bottleneck in diffusion-based powder-diffraction structure inversion},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 
-\title{PXRD-Diff: diagnosing the encoder bottleneck in diffusion-based
-powder-diffraction structure inversion}
+\title{PXRD-Diff: diagnosing the lattice-recovery bottleneck in
+diffusion-based powder-diffraction structure inversion}
 \author{}
 \date{}
 
@@ -145,12 +145,17 @@ Crystallography).}
 
 \textbf{Synopsis:} A deliberately small conditional diffusion model for
 powder-diffraction structure inversion is used as a diagnostic
-instrument. The evidence points to global pooling in the pattern encoder
-as the stage that discards the absolute d-spacing information lattice
-recovery needs. A classical autoindexer, supplied with the true crystal
-system, serves as a control; three external generative models are
-re-scored on one shared evaluation harness; and a code audit prompted by
-review corrects three implementation errors.
+instrument. A controlled ablation shows that restoring absolute peak
+positions to the lattice head, by position-aware pooling or by explicit
+d-spacings, does not reduce its \textasciitilde1.3 Å cell error; the
+evidence points to the regression formulation of lattice recovery, not
+to the pooling stage. A classical autoindexer, supplied with the true
+crystal system, serves as a control; three external generative models
+are re-scored on one shared evaluation harness; and a code audit
+prompted by review corrects three implementation errors. Retraining with
+the corrected loss lifts the learned head from 0 to 1.9 \%, level with
+the control, while the true-lattice oracle stays at 5.5 \%, so the gap
+to the oracle is the effect that replicates.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -165,32 +170,41 @@ model trained on the CDVAE MP-20 split, is kept deliberately small so
 that its failure modes are visible; it is not proposed as a competitive
 inversion tool. DiffractGPT, PXRDnet and deCIFer are re-scored through
 the same pymatgen StructureMatcher harness and reach 18.9 \%, 30.0 \%
-and 73.8 \% match respectively; PXRD-Diff reaches 1.6 \%. The central
+and 73.8 \% match respectively; PXRD-Diff reaches 1.9 \%. The central
 finding is mechanistic. The learned PXRD encoder reaches a 0.007
 normalised auxiliary lattice-regression loss in isolation, yet
 substituting that head's own lattice into the sampler recovers only 1.2
 \% of structures, because its \textasciitilde1.1 Å length error shifts
 every Bragg peak by \textasciitilde15 \%. Stronger, constrained
-supervision of the head does not reduce that error. The evidence
-therefore points to the global pooling that discards absolute peak
-positions, rather than to the denoiser alone {[}PENDING C2: one sentence
-with the controlled pooling-ablation outcome{]}. A perturbation study
-locates a sharp sensitivity knee at \textasciitilde0.5 Å cell error. A
-true-lattice oracle lifts match to 4.5 \% at n = 1000 (three seeds; 95
-\% Wilson confidence interval {[}3.8, 5.3{]}). As a classical control, a
-Q-space autoindexer that is supplied with the true crystal system
-replaces the learned lattice head and reaches 1.6 \% {[}1.2, 2.1{]}. A
-three-seed paired McNemar test shows the gain over the learned head is
-significant (p \textless{} 10⁻⁴; 27 fixed, none broken) and confined to
-the high-symmetry systems below the knee. A code audit prompted by
-review found and corrected three implementation errors, including an
-atomic form factor evaluated in the wrong convention. The corrected
-simulator agrees with pymatgen at a median Pearson correlation of 0.999
-over 1000 structures, and the affected runs were repeated {[}PENDING C1:
-one clause stating whether the retrained headline numbers changed{]}.
-The contributions are the encoder-bottleneck diagnosis, a four-item
-failure catalogue, the shared evaluation harness and the audited,
-released code.
+supervision of the head does not reduce that error. A controlled
+ablation on the frozen encoder shows that restoring absolute peak
+positions to the head, by position-aware attention pooling or by
+explicit d-spacing features, leaves the error unchanged (1.28--1.31 Å
+across three arms, against 1.32 Å for the checkpoint's own head), so the
+earlier reading that global pooling discards the d-spacings is
+withdrawn. The evidence now points to the regression formulation itself:
+a head handed the same d-spacings the autoindexer reads does not perform
+the peak-to-index assignment that turns them into a cell. A perturbation
+study locates a sharp sensitivity knee at \textasciitilde0.5 Å cell
+error. A true-lattice oracle lifts match to 5.5 \% at n = 1000 (three
+seeds; 95 \% Wilson confidence interval {[}4.7, 6.4{]}), against 1.9 \%
+{[}1.5, 2.5{]} for the learned head (paired McNemar p \textless{}
+10⁻¹⁷). As a classical control, a Q-space autoindexer that is supplied
+with the true crystal system replaces the learned lattice head and
+reaches 1.6 \% {[}1.2, 2.1{]} (1.4 \% without the crystal system); its
+cells are far closer to the truth (pattern Pearson 0.41 against 0.18),
+yet at three seeds it ties the learned head on match rate (42 fixed, 52
+broken, p = 0.35), fixing hexagonal and tetragonal structures and losing
+cubic ones. A code audit prompted by review found and corrected three
+implementation errors, including an atomic form factor evaluated in the
+wrong convention and a Debye loss evaluated on the wrong tensor. The
+corrected simulator agrees with pymatgen at a median Pearson correlation
+of 0.999 over 1000 structures. Retraining the production checkpoint with
+the corrections raised the learned head from 0 to 1.9 \% and removed the
+indexer's aggregate lead reported in the submitted version; the oracle
+gap is the result that replicates. The contributions are the
+lattice-recovery bottleneck diagnosis, a four-item failure catalogue,
+the shared evaluation harness and the audited, released code.
 
 \textbf{Keywords:} powder diffraction; autoindexing; crystal structure
 determination; conditional diffusion models; machine learning;
@@ -220,9 +234,9 @@ is hard} about PXRD inversion.
 
 We build a small reproducible conditional diffusion model
 (\textbf{PXRD-Diff}) and use it as a diagnostic instrument. Its size is
-a design choice: a 3.7 M-parameter model exposes an encoder bottleneck
-that capacity would hide. It is not proposed as an alternative to the
-larger systems it is compared with. Contributions:
+a design choice: a 3.7 M-parameter model exposes a lattice-recovery
+bottleneck that capacity would hide. It is not proposed as an
+alternative to the larger systems it is compared with. Contributions:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -235,30 +249,33 @@ larger systems it is compared with. Contributions:
   auxiliary pattern-matching loss. The port introduces no new physics
   (§3.3).
 \item
-  \textbf{Encoder-bottleneck diagnosis (the primary contribution).} A
-  perturbation study (§5.5) locates a sharp \textasciitilde0.5 Å
-  sensitivity knee. A true-lattice oracle lifts match to \textbf{4.5 \%}
-  at n = 1000 (three seeds; Wilson 95 \% CI {[}3.8, 5.3{]}). The encoder
-  reaches a 0.007 \emph{normalised} aux lattice loss in isolation, but
-  substituting that head's lattice into the sampler recovers only 1.2 \%
-  (§5.6). Its \textasciitilde1.1 Å error sits well above the knee. The
-  evidence points to the pooled encoding, not merely the denoiser, as
-  the stage that fails to deliver absolute d-spacings; a controlled
-  pooling ablation tests this directly (§5.6) {[}PENDING C2: one-line
-  outcome of the pooling ablation{]}. The 4.5 \% oracle ceiling shows
+  \textbf{Lattice-recovery bottleneck diagnosis (the primary
+  contribution).} A perturbation study (§5.5) locates a sharp
+  \textasciitilde0.5 Å sensitivity knee. A true-lattice oracle lifts
+  match to \textbf{5.5 \%} at n = 1000 (three seeds; Wilson 95 \% CI
+  {[}4.7, 6.4{]}) from 1.9 \% {[}1.5, 2.5{]} for the learned head
+  (paired McNemar p \textless{} 10⁻¹⁷). The encoder reaches a 0.007
+  \emph{normalised} aux lattice loss, yet its head's lattice recovers
+  only 1.2 \% end to end, a \textasciitilde1.1 Å error well above the
+  knee (§5.6). A controlled pooling ablation (§5.6) finds that neither
+  position-aware pooling nor explicit peak-position features reduce that
+  error, so the evidence points to the regression formulation rather
+  than to the pooled encoding. The 5.5 \% oracle ceiling shows
   coordinates remain a co-bottleneck.
 \item
   \textbf{A classical control.} A Q-space autoindexer, supplied with the
   true crystal system, replaces the learned lattice head at sampling
-  time and reaches 1.6 \% {[}1.2, 2.1{]} where the learned head recovers
-  nothing. A three-seed paired McNemar test confirms the difference (p
-  \textless{} 10⁻⁴; 27 fixed, 0 broken). The gain appears only where the
-  indexer's cell error falls below the 0.5 Å knee, i.e.~in the
-  high-symmetry systems (§5.2, §5.5). We treat this as a sanity check on
-  the diagnosis, not as a method: a fifty-year-old algorithm given extra
-  prior information is expected to beat the learned head. An indexer run
-  without the crystal system is reported alongside (§3.5) {[}PENDING C3:
-  one-line outcome of the unknown-system run{]}.
+  time and reaches 1.6 \% {[}1.2, 2.1{]}. With the submitted checkpoint
+  the learned head recovered nothing and the indexer's lead was
+  significant (27 fixed, 0 broken); with the checkpoint retrained under
+  the corrected loss the two tie at three seeds (42 fixed, 52 broken, p
+  = 0.35), the indexer winning the hexagonal and tetragonal structures
+  below the 0.5 Å knee and the learned head the cubic ones (§5.2). This
+  is a sanity check on the diagnosis, not a method: a fifty-year-old
+  algorithm given extra prior information is expected to match or beat
+  the learned head. Without the crystal system the indexer indexes 43.4
+  \% of cells against 48.8 \% and recovers 1.4 \% {[}1.0, 1.9{]}
+  downstream (§3.5).
 \item
   \textbf{Four-item failure catalogue.} Top-K Debye rerank,
   Debye-gradient DDIM guidance, Wyckoff-letter embeddings and a
@@ -277,8 +294,7 @@ larger systems it is compared with. Contributions:
   not a claim of competitiveness. A candidate divergence between match
   rate and space-group recovery across two baselines is raised in §5.3
   and §6 as a hypothesis that the n = 20 PXRDnet sample cannot
-  establish. Crystalyze's checkpoint download link is inactive; we cite
-  but cannot reproduce.
+  establish.
 \item
   \textbf{A code audit.} Review of the released code identified three
   implementation errors: the atomic form factor was evaluated in the
@@ -331,24 +347,24 @@ from the other side: XRDSol assumes an indexed cell, and the cell is
 exactly what our learned head fails to recover. Chitturi \emph{et al.}
 (2021) regress lattice parameters from simulated patterns with a
 convolutional network and analyse how impurities, noise and broadening
-degrade the prediction, a diagnostic aim close to ours. None of these is
-reproduced here. They are cited to place PXRD-Diff, a diagnostic
-instrument rather than a competing solver, within the range of current
-designs.
+degrade the prediction, a diagnostic aim close to ours. None is
+reproduced here; they place PXRD-Diff, a diagnostic instrument rather
+than a competing solver, within the range of current designs.
 
 \textbf{Classical structure solution from powder data.} Recovering a
 unit cell from peak positions is a solved sub-problem with a fifty-year
-toolchain: the de-Wolff dichotomy method, ITO, TREOR and DICVOL (Boultif
-\& Louër, 2004) index high-symmetry powder patterns in CPU milliseconds,
-with the difficulty concentrated in low-symmetry (monoclinic and
-triclinic) cells. Indexing is only the first stage of classical
-structure solution. Once the cell and space group are fixed,
-direct-space search, simulated annealing and charge flipping complete
-the structure, as implemented in programs such as FOX (Favre-Nicolin \&
-Černý, 2002) and EXPO (Cuocci \emph{et al.}, 2022). §3.5 reuses only the
-indexing stage, as a control for the learned lattice head. The indexer
-is given the true crystal system, which classical practice must itself
-infer. §5.2 and §5.5 show the resulting lift tracks the
+toolchain: ITO, TREOR (Werner \emph{et al.}, 1985) and DICVOL (Boultif
+\& Louër, 2004), ranking solutions with the de Wolff (1968) figure of
+merit M20, index high-symmetry powder patterns in CPU milliseconds, with
+the difficulty concentrated in low-symmetry (monoclinic and triclinic)
+cells. Indexing is only the first stage of classical structure solution.
+Once the cell and space group are fixed, direct-space search, simulated
+annealing and charge flipping complete the structure, as implemented in
+programs such as FOX (Favre-Nicolin \& Černý, 2002) and EXPO (Cuocci
+\emph{et al.}, 2022). §3.5 reuses only the indexing stage, as a control
+for the learned lattice head. The indexer is given the true crystal
+system, which classical practice must itself infer; §3.5 also reports
+the run without it. §5.2 and §5.5 show the resulting lift tracks the
 symmetry-dependent accuracy classical indexers have always had.
 
 \textbf{Differentiable physics.} Scattering-pattern losses date to
@@ -468,9 +484,11 @@ wrong element weighting: for silicon it returns \(f(0) = 5.8\) where the
 correct value is \(Z = 14\), and it decays too quickly with \(s\). Both
 referees who inspected the code identified the discrepancy. The module
 was corrected to the expression above and re-validated (below). The
-training runs that used the Debye loss were repeated with the corrected
-module {[}PENDING C1: state which runs were retrained and whether the
-numbers in Tables 1 and 2 changed, and by how much{]}.
+production checkpoint (v21) was retrained from scratch with the
+corrected module and the corrected x₀-mode loss of §3.4, under otherwise
+identical settings; the retrained checkpoint (v22) is the one behind
+Tables 2, 2a and 3 and Figs 4 and 5, and §5.2 and §5.7 give the effect.
+The exploratory Phase-4 rows of Table 1 were not retrained (§5.1).
 
 \textbf{Validation.} On the first 1000 MP-20 test structures we compute
 the Pearson correlation between the differentiable pattern and the
@@ -482,13 +500,11 @@ form factor the same structures give a mean of 0.952 and a median of
 every one of the 1000 structures. On the first 50 structures the means
 are 0.939 (submitted form factor) and 0.974 (corrected). The submitted
 version reported 0.962 on 50 structures with the validation script's
-default reflection range (\(|h|,|k|,|l| \le 10\)), which is wider than
-the training configuration (\(\le 5\)) used for the numbers above.
-Re-running that wider range reproduces the submitted value for the
-submitted expression (0.963 on the first 50 structures, 0.960 on all
-1000) and gives 0.999 for the corrected expression at both sizes
-(Appendix C). The wider range also removes most of the lower tail, which
-is therefore a truncation effect of the \(\le 5\) training grid on small
+default reflection range (\(|h|,|k|,|l| \le 10\)), wider than the
+\(\le 5\) training grid used above; Appendix C reproduces that value for
+the submitted expression (0.963 on the first 50, 0.960 on all 1000),
+gives 0.999 for the corrected expression at both sizes, and shows that
+the lower tail is a truncation effect of the \(\le 5\) grid on small
 cells rather than a property of the form factor. Gradients through the
 structure factor with respect to fractional coordinates were verified
 non-zero.
@@ -562,9 +578,12 @@ The submitted code evaluated it on the residual
 v14, v15, v16 and the Phase 9 checkpoint v21) the Debye term therefore
 compared the pattern of the wrong tensor with the target. The ε-mode
 runs v10 and v11 were unaffected, as were the coordinate and lattice
-losses and every evaluation-time number. The code is fixed. The affected
-runs were retrained with the corrected loss and the corrected simulator
-{[}PENDING C1: retrained numbers for the x₀-residual runs{]}.
+losses and every evaluation-time number. The code is fixed. The
+production checkpoint was retrained with the corrected loss and the
+corrected simulator (v22, §3.3); its final EMA loss fell from 0.726 to
+0.602, with the effect on the results in §5.2. The Phase-4 rows v13--v16
+were not retrained and remain labelled exploratory single-seed runs
+carrying this defect (§5.1).
 
 \emph{Lattice-head input.} The lattice head reads the noisy lattice
 \(\boldsymbol{\ell}^{(t)}\) as an explicit input feature. Without this,
@@ -587,26 +606,24 @@ head}\label{classical-indexing-as-a-control-for-the-learned-lattice-head}
 The lattice head described in §3.2 is the \emph{only} path by which the
 model encodes absolute d-spacings: every Bragg reflection 2θ position is
 set by the lattice through Bragg's law, so the lattice parameters are
-the absolute reference frame against which all peak positions in the
-input pattern must be interpreted. As §5.5 shows, the encoder + denoiser
-learns \emph{relative} d-spacing structure (Pearson 0.43 between
-predicted and target patterns at evaluation time, vs 0.97 between target
-and ground truth) but not the absolute scale. Classical autoindexing,
-which extracts peak positions, maps them to Q-space (Q = 4π sinθ/λ), and
-fits a unit cell by enumeration of (h,k,l) → Q²(h,k,l), has solved this
-sub-problem since the 1970s and runs on a CPU in milliseconds per
-pattern.
+the absolute reference frame for every peak position in the input
+pattern. As §5.5 shows, the encoder + denoiser learns \emph{relative}
+d-spacing structure (Pearson 0.43 between predicted and target patterns
+at evaluation time, vs 0.97 between target and ground truth) but not the
+absolute scale. Classical autoindexing, which extracts peak positions,
+maps them to Q-space (Q = 4π sinθ/λ), and fits a unit cell by
+enumeration of (h,k,l) → Q²(h,k,l), has solved this sub-problem since
+the 1970s and runs on a CPU in milliseconds per pattern.
 
 We implement a from-scratch Q-space autoindexer that takes (i) the same
 simulated PXRD pattern fed to the encoder and (ii) the true crystal
 system of the target structure, supplied as a Bravais code, and returns
 a candidate (a, b, c, α, β, γ). Item (ii) is prior information beyond
-the composition that the learned head receives. It makes the indexer an
-optimistic control rather than a fair competitor, and every indexer
-number in this paper should be read with that in mind (see also §7 and
-the unknown-system run below). Peak picking uses a 1D local-maximum
-filter with a relative-intensity floor; the candidate Q-vector is fit by
-least squares to the de-Wolff dichotomy parameter form for each Bravais
+the composition that the learned head receives; it makes the indexer an
+optimistic control rather than a fair competitor (§7; the unknown-system
+run below removes it). Peak picking uses a 1D local-maximum filter with
+a relative-intensity floor; the candidate Q-vector is fit by least
+squares to the de-Wolff dichotomy parameter form for each Bravais
 lattice. At sampling time we run the indexer first, substitute its
 output for the lattice channel of the diffusion sampler, and run DDIM
 only on the coordinate channel.
@@ -617,29 +634,55 @@ crystal system: hexagonal 77.9 \% / 0.53 Å, orthorhombic 59.8 \% / 0.96
 Å, trigonal 43.3 \% / 4.62 Å, monoclinic 18.9 \% / 1.76 Å, triclinic 0
 \%. The low-symmetry blowup (monoclinic and triclinic each have ≥ 4 free
 cell parameters and the de-Wolff search becomes hypothesis-capped) is
-the dominant remaining error. We ship a GSAS-II (Toby \& Von Dreele,
-2013) adapter (\texttt{src/pxrd\_diff/indexer\_gsas.py}) for the
-low-symmetry path behind a \texttt{-\/-use-gsas} opt-in flag; in
-practice \texttt{DoIndexPeaks} hangs on real MP-20 monoclinic/triclinic
-patterns inside \texttt{findBestCell} and is documented experimental
-rather than headline.
+the dominant remaining error. A GSAS-II (Toby \& Von Dreele, 2013)
+adapter (\texttt{src/pxrd\_diff/indexer\_gsas.py}) for the low-symmetry
+path ships behind a \texttt{-\/-use-gsas} opt-in flag; it hangs on real
+MP-20 monoclinic/triclinic patterns inside \texttt{findBestCell} and is
+experimental (§7).
 
 \textbf{Without the crystal system.} At a referee's request the indexer
 was also run with no crystal system supplied. Cubic, tetragonal,
-hexagonal/trigonal, orthorhombic and monoclinic cells are all searched,
-and the candidate with the highest de-Wolff M20 figure of merit is kept.
-{[}PENDING B2: per-system strict \% and length MAE, and the fraction of
-patterns whose lattice type is recovered, on the same n = 1000.{]}
-{[}PENDING C3: downstream match rate at three seeds when these cells
-replace the learned head.{]}
+hexagonal/trigonal, orthorhombic and monoclinic cells are searched in
+that order, highest symmetry first, and a lattice type is accepted by
+the rule the classical programs use (de Wolff, 1968; Werner \emph{et
+al.}, 1985; Boultif \& Louër, 2004): the first type whose best cell
+indexes every observed line with M20 ≥ 10 is kept; if none does, the
+highest-M20 cell among those indexing every line; the reported system is
+the metric symmetry of the returned cell. On the same n = 1 000 this
+reaches \textbf{43.4 \%} strict cell match {[}40.4, 46.5{]} with a 1.67
+Å mean cell-length MAE, against 48.8 \% {[}45.7, 51.9{]} and 1.45 Å with
+the system given, and it recovers the lattice type itself for 65.4 \% of
+the patterns (68.1 \% of the 961 that both modes index). Per crystal
+system, strict success with the system given → unknown: cubic 52.9 →
+49.2 \%, hexagonal 77.9 → 65.4 \%, trigonal 43.3 → 30.9 \%, tetragonal
+52.8 → 46.7 \%, orthorhombic 59.8 → 53.6 \%, monoclinic 18.9 → 19.6 \%.
+Paired on the same structures, removing the system loses 65 cells and
+gains 9 (McNemar p \textless{} 10⁻¹⁰): under ideal peak positions the
+crystal-system prior is worth about five percentage points to the
+indexer, not the difference between working and failing. A first
+implementation that simply kept the highest M20 across lattice types
+reached only 24.3 \%, choosing the correct system for 40.7 \% of
+patterns and cubic for 12 of the 238 cubic structures. M20 carries no
+penalty for free parameters, so on a pattern with a handful of exactly
+placed lines a four-parameter monoclinic sub-cell out-scores the true
+cubic cell (ScAlRh₂, mp-867922: M20 = 2 182 against 1 231, both indexing
+every line). That run is released beside the final one
+(\texttt{-\/-unknown-rule\ maxm20}) because the comparison is itself
+informative: the choice of acceptance rule (24.3 → 43.4 \%) matters more
+than the prior it replaces (43.4 → 48.8 \%). Substituted into the
+sampler at three seeds, these cells recover 1.4 \% {[}1.0, 1.9{]} (42 /
+3 000) against 1.6 \% {[}1.2, 2.1{]} with the system given: six
+structures lost and none gained on the same seeds (McNemar p = 0.03),
+with identical pattern Pearson (0.41), and no significant difference
+from the learned head's 1.9 \% (36 fixed, 52 broken, p = 0.11). Table 2
+carries this as its third row.
 
 The indexer is a drop-in in the mechanical sense: training is unchanged,
 and the diffusion sampler is unchanged except for the lattice-channel
 substitution at t = T. Patterns for which the indexer returns no cell
-(39 of the 1000 test patterns) are scored as misses. The submitted
-version had given them the true lattice; §5.7 reports the correction and
-its effect. The headline metric (§5.2) reports both with and without the
-indexer for direct comparison.
+(39 of the 1000 test patterns) are scored as misses; the submitted
+version had given them the true lattice (§5.7). §5.2 reports both with
+and without the indexer.
 
 \subsection{3.6 Sampling}\label{sampling}
 
@@ -689,10 +732,10 @@ indexer cannot index counts as a miss; it is never scored with the true
 lattice.
 
 \textbf{Implementation.} AdamW, learning rate \(10^{-3}\) (the value
-stored in the released v21 checkpoint; the submitted text gave
-\(5\times10^{-4}\), see §5.7(d)), cosine decay to zero over 100 k steps,
-WD \(10^{-4}\), grad-clip 1.0. Batch 64, \textasciitilde24 epochs,
-single RTX 5090 (\textasciitilde1.5--1.7 h/run). 3.7 M parameters;
+stored in the released v21 checkpoint; §5.7(d) on the submitted text's
+\(5\times10^{-4}\)), cosine decay to zero over 100 k steps, WD
+\(10^{-4}\), grad-clip 1.0. Batch 64, \textasciitilde24 epochs, single
+RTX 5090 (\textasciitilde1.5--1.7 h/run). 3.7 M parameters;
 \(L=5, d=384\) (\textasciitilde10 M) gave no benefit (§5.2). VP-SDE with
 \(t \sim U(0,1)\). Total compute: \textasciitilde35 GPU-hours,
 \textasciitilde USD 25 on Vast.ai (Phase 4 ablation + Phase 9 v21
@@ -705,7 +748,7 @@ evaluation).
 
 Order: Phase 4 architectural ablation (§5.1) → Phase 9 indexer drop-in
 (§5.2) → reproduced baselines (§5.3) → failure catalogue (§5.4) →
-encoder-bottleneck perturbation study (§5.5).
+lattice-perturbation study (§5.5).
 
 \subsection{5.1 Phase 4: architectural ablation (true-lattice
 setting)}\label{phase-4-architectural-ablation-true-lattice-setting}
@@ -716,9 +759,11 @@ x₀-residual, and two extensions (Wyckoff, distance loss), all on n = 1
 training seed. The table is exploratory: it guided the design, and only
 the ε-vs-x₀-residual contrast was later replicated across seeds (§7).
 Runs v11 and v13--v16 were trained with the submitted version's
-simulator, and v13--v16 with the x₀-mode Debye defect (§3.3, §3.4)
-{[}PENDING C1: retrained rows, or a statement of which rows were
-retrained{]}.
+simulator, and v13--v16 with the x₀-mode Debye defect (§3.3, §3.4).
+These rows were not retrained: only the production checkpoint was (v22,
+§5.2), and Table 1 is retained as the exploratory, single-seed record it
+always was, with the defects it carries stated here rather than
+corrected.
 
 \textbf{Table 1.} Phase 4 coordinate-only ablation, MP-20 test (n = 1
 000, true lattice substituted). Single seed per row; exploratory.
@@ -785,42 +830,42 @@ the head input. A second, apparent lift did \textbf{not} survive
 replication: switching from \textbf{ε to x₀-residual} at fixed Debye λ =
 1 (v11 → v13) lifted single-seed match 0.9 \% → 2.5 \%, but a multi-seed
 checkpoint sweep (two seeds × five checkpoints, 20k--100k) found ε and
-x₀-residual indistinguishable on match rate (1.20 \% vs 1.35 \% pooled;
-x₀ never exceeds 1.5 \% at any checkpoint, including the 80 k one
-matching the original's 79.5 k, §7), so the 3.5× match lift was a
-single-seed fluctuation. The x₀-residual parameterisation does, however,
-reproducibly improve pattern-Pearson (0.36 → 0.40), which is the part of
-the Phase-4 signal that survives. Capacity is not the bottleneck: a 10.1
+x₀-residual indistinguishable on match rate (§7), so the 3.5× match lift
+was a single-seed fluctuation. The x₀-residual parameterisation does
+reproducibly improve pattern-Pearson (0.36 → 0.40), the part of the
+Phase-4 signal that survives. Capacity is not the bottleneck: a 10.1
 M-parameter run (\(d=384\), \(L=5\), \texttt{gpu\_v12}) stayed at the
 same \textasciitilde1.0 coord-loss plateau as v10. Under the full
 pipeline (sampled lattice), v13 drops to 1.2 \% at n = 256; the Phase 9
-v21 checkpoint reaches 4.5 \% under oracle (three seeds; an earlier
-single-seed snapshot read 5.6 \%) but only 1.0 \% under full pipeline.
-§5.2 attacks that gap.
+checkpoint reaches 5.5 \% under oracle (v22, three seeds; the submitted
+v21 gave 4.5 \%) but only 1.9 \% under the full pipeline. §5.2 attacks
+that gap.
 
 \subsection{5.2 Phase 9: classical indexer
 control}\label{phase-9-classical-indexer-control}
 
-Table 2: three rows on the same n = 1 000 with the v21 checkpoint (Phase
-9 retrain, Phase 4 fixes + retuned encoder); they differ only in which
-lattice the sampler conditions on. The indexer row is a control with
-extra prior information: the indexer is supplied with the true crystal
-system (§3.5).
+Table 2 compares four lattice sources on the same n = 1 000 at three
+seeds with the v22 checkpoint (the v21 configuration retrained under the
+corrected simulator and x₀-mode Debye loss, §3.3, §3.4, §5.7); the rows
+differ only in the lattice the sampler conditions on. The indexer rows
+are controls with extra prior information (§3.5). The submitted
+version's v21 numbers are retained in §5.7.
 
 \textbf{Table 2.} Phase 9 lattice-source comparison (n = 1 000 MP-20
-test, v21 checkpoint, single-seed snapshot). The indexer receives the
-true crystal system. Match \% with 95 \% Wilson CI; the three-seed
-paired analysis follows below. {[}PENDING C1: replace with the
-retrained-v21 snapshot if the retrain changes these rows.{]}
+test × three seeds, 3 000 structure-seeds pooled, v22 checkpoint). The
+indexer receives the true crystal system; the 117 structure-seeds it
+cannot index are scored as misses. Match \% with 95 \% Wilson CI; the
+other columns are means over seeds.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.4234}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1712}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1351}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.0901}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1261}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.0541}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.3917}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1583}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.0833}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1167}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.0500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.0750}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Lattice source
@@ -834,48 +879,39 @@ sg@0.1 \%
 RMSD med (Å)
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 R\_wp
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Pearson
 \end{minipage} \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Learned head only (full pipeline) & 1.0 {[}0.5, 1.8{]} & 0.0 & 1.4 & n/a
-& 11.7 \\
+Learned head only (full pipeline) & 1.9 {[}1.5, 2.5{]} & 0.0 & 1.4 &
+0.232 & 17.0 & 0.18 \\
 \textbf{Classical Q-space autoindexer (§3.5), crystal system given} &
-\textbf{1.6 {[}1.0, 2.6{]}} & \textbf{0.1} & \textbf{1.4} &
-\textbf{0.125} & 11.5 \\
-Ground-truth lattice (oracle) & 5.6 {[}4.3, 7.2{]} & 0.6 & 1.7 & 0.106 &
-5.6 \\
+\textbf{1.6 {[}1.2, 2.1{]}} & \textbf{0.2} & \textbf{0.3} &
+\textbf{0.035} & 11.4 & 0.41 \\
+Classical Q-space autoindexer, crystal system unknown & 1.4 {[}1.0,
+1.9{]} & 0.2 & 1.6 & 0.038 & 12.2 & 0.41 \\
+Ground-truth lattice (oracle) & 5.5 {[}4.7, 6.4{]} & 0.8 & 2.2 & 0.044 &
+5.1 & 0.71 \\
 \end{longtable}
 }
 
-\textbf{The lift is real: a three-seed paired test.} The single-seed
-snapshot alone does not establish a genuine improvement: its Wilson CIs
-overlap and an unpaired two-proportion test gives p = 0.24. To resolve
-it we reran \emph{both} lattice sources at three seeds (n = 1 000 each),
-differing only in the lattice channel, and applied a paired McNemar test
-on the per-structure outcomes, the correct test, because the two arms
-see the same materials. The result is unambiguous. The two arms are
-scored on the same materials per seed, but the learned-head arm yields
-fewer \emph{evaluable} cells: its diffusion-sampled lattices are
-frequently degenerate and hang \texttt{StructureMatcher}/\texttt{spglib}
-(C calls that a Python signal cannot interrupt), so we run
-structure-domain scoring in a spawn worker hard-killed at 30 s and count
-overruns as misses. This leaves \textbf{1 949} learned-head structures
-scored across the three seeds. The indexer arm scores 2 883
-structure-seeds: 39 patterns per seed, 117 in total, could not be
-indexed and are counted as misses (the submitted version had given them
-the true lattice; none of them matched under it, §5.7). The paired test
-runs on the 1 949-structure intersection (every learned-head row has a
-matched indexer row); 86 of these are unindexed patterns, which enter as
-concordant misses and do not affect the discordant cells. On that paired
-set the indexer recovers \textbf{27} structures the learned head misses
-and the learned head recovers \textbf{none} the indexer misses (the
-explicit 2×2 below).
+\textbf{A three-seed paired test.} Because both arms see the same
+materials, a paired McNemar test on per-structure outcomes, not
+overlapping Wilson intervals, decides whether two lattice sources
+differ. Every source was run at three seeds (n = 1 000 each), differing
+only in the lattice channel; with v22 every arm scores all 3 000
+structure-seeds (the submitted v21 checkpoint sampled degenerate cells
+that hung \texttt{StructureMatcher}/\texttt{spglib}, leaving 1 949
+scorable learned-head rows). The indexer recovers \textbf{42} structures
+the learned head misses and the learned head recovers \textbf{52} the
+indexer misses (Table 2a).
 
 \textbf{Table 2a.} Paired per-structure outcomes, learned head vs
-indexer drop-in (three seeds pooled; match = \texttt{StructureMatcher}
-hit).
+indexer control (v22, three seeds pooled; match =
+\texttt{StructureMatcher} hit).
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}llll@{}}
@@ -885,52 +921,60 @@ hit).
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\textbf{learned match} & 0 & 0 & 0 \\
-\textbf{learned miss} & 27 & 1 922 & 1 949 \\
-\textbf{col total} & 27 & 1 922 & 1 949 \\
+\textbf{learned match} & 6 & 52 & 58 \\
+\textbf{learned miss} & 42 & 2 900 & 2 942 \\
+\textbf{col total} & 48 & 2 952 & 3 000 \\
 \end{longtable}
 }
 
-The discordant cells are \emph{b} = 27 (indexer fixes), \emph{c} = 0
-(indexer breaks); an exact two-sided McNemar test gives \textbf{p = 1.5
-× 10⁻⁸}. (Marginal match counts differ: indexer 46 / 2 883, learned 0 /
-1 949, because 19 further indexer matches fall on structures the learned
-arm could not score; these do not enter the paired test.) The
-single-seed 1.0 \% learned-head figure in Table 2 is within run-to-run
-noise of zero; across three fresh seeds the learned lattice head matched
-nothing. The gain does \textbf{not} carry to the stricter all-correct
-metric: there the discordant cells are \emph{b} = 4, \emph{c} = 0 (exact
-McNemar \textbf{p = 0.13}): the indexer fixes the cell but not the space
-group. So the control reproducibly improves match rate over the learned
-lattice head. This is the expected outcome for a classical algorithm
-handed the crystal system, and we read it as a sanity check on the
-diagnosis rather than as a result about PXRD inversion. The
-\emph{mechanism} (§5.5, §5.6) is that its gains come entirely from
-high-symmetry systems where the indexer's cell error falls below the 0.5
-Å sensitivity knee, with low-symmetry contributing nothing.
+The discordant cells are \emph{b} = 42 (indexer fixes), \emph{c} = 52
+(indexer breaks); a two-sided McNemar test gives \textbf{p = 0.35}: the
+two lattice sources tie on match rate. The submitted version reported
+the opposite: with v21 the learned head matched 0 of 1 949 scored
+structure-seeds against the indexer's 46 of 2 883, 27 fixed and none
+broken (p = 1.5 × 10⁻⁸). That lead was a property of the defective
+checkpoint (§3.4): paired on the same seeds, the retrain gains 32
+learned-head structures and loses none (p = 4.7 × 10⁻¹⁰), while the
+indexer arm moves by 12 gained and 10 lost (p = 0.83). The claim that
+the control improves on the learned head is withdrawn as a general
+statement. What survives is the per-system pattern: the indexer still
+fixes hexagonal (16 fixed, 0 broken) and tetragonal (7, 2) structures,
+the systems where its cell error sits below the 0.5 Å knee (§5.5), but
+the corrected learned head wins the cubic cases (18 fixed, 47 broken;
+learned 52 / 714, indexer 23 / 714, oracle 96 / 714). The indexer's
+cells remain far closer to the truth where the match rates tie (pattern
+Pearson 0.41 against 0.18; RMSD median 0.035 against 0.232 Å), so in the
+cubic cases the match rate saturates on coordinate decoding rather than
+on the cell. On the stricter all-correct metric the indexer fixes 6 and
+breaks 0 (p = 0.03).
 
-What the indexer does \emph{not} do is close the gap to the oracle. We
-re-ran the oracle at three seeds, firming the single-seed 5.6 \% to
-\textbf{4.5 \% {[}3.8, 5.3{]}} (135 / 3 000 pooled), still disjoint from
-the indexer's 1.6 \% {[}1.2, 2.1{]}. The indexer → oracle gap (1.6 → 4.5
-\%) is itself significant (disjoint CIs) and isolates the
-lattice-attributable error: even with a perfect lattice, match caps at
-4.5 \%, so coordinate prediction is the dominant limiter while lattice
-error explains the 1.6 → 4.5 \% shortfall. The indexer's per-system MAE
-(1.45 Å overall, dominated by mono 1.76 Å and triclinic NaN) sits above
-the 0.5 Å knee; closing the rest requires fixing the low-symmetry path
-(GSAS-II remains experimental).
+What neither lattice source does is close the gap to the oracle:
+\textbf{5.5 \% {[}4.7, 6.4{]}} at three seeds (165 / 3 000; 4.5 \%
+{[}3.8, 5.3{]} with the submitted checkpoint, unpaired p = 0.08). Paired
+against the learned head it fixes 134 structures and breaks 27 (p = 3 ×
+10⁻¹⁸), and against the indexer the interval is disjoint. This is the
+effect that replicates across checkpoints and seeds: even with a perfect
+lattice, match caps at 5.5 \%, so coordinate prediction is the dominant
+limiter while lattice error explains the 1.9 → 5.5 \% shortfall. The
+indexer's per-system MAE (1.45 Å overall, dominated by mono 1.76 Å and
+triclinic NaN) sits above the 0.5 Å knee; closing the rest requires
+fixing the low-symmetry path (GSAS-II remains experimental).
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 3. Per-system indexer performance. Strict and consistent indexing rates (a) and length MAE (b) on n = 1 000. High-symmetry systems (hex, ortho) sit below the 0.5 Å knee; trig and mono blow up; triclinic is unindexable in this implementation. The overall 1.45 Å MAE hides two regimes, and explains why the indexer's significant match-rate gain (§5.2) is concentrated entirely in the high-symmetry systems.}]{fig4_indexer_bench.pdf}}
-\caption{\textbf{Figure 3. Per-system indexer performance.} Strict and
-consistent indexing rates (a) and length MAE (b) on n = 1 000.
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 3. Per-system indexer performance. (a) Strict indexing rate with the crystal system given (blue) and with the system unknown (orange; acceptance rule of §3.5), and the consistent rate with the system given (light blue), on n = 1 000; dashed line, overall strict rate given / unknown. (b) Length MAE with the system given. High-symmetry systems (hex, ortho) sit below the 0.5 Å knee; trig and mono blow up; triclinic is unindexable in this implementation. Removing the crystal system costs a few points in every system except monoclinic and never changes the regime. The overall 1.45 Å MAE hides two regimes, and explains why the indexer's paired gains over the learned head (§5.2) are confined to the hexagonal and tetragonal systems.}]{fig4_indexer_bench.pdf}}
+\caption{\textbf{Figure 3. Per-system indexer performance.} (a) Strict
+indexing rate with the crystal system given (blue) and with the system
+unknown (orange; acceptance rule of §3.5), and the consistent rate with
+the system given (light blue), on n = 1 000; dashed line, overall strict
+rate given / unknown. (b) Length MAE with the system given.
 High-symmetry systems (hex, ortho) sit below the 0.5 Å knee; trig and
-mono blow up; triclinic is unindexable in this implementation. The
-overall 1.45 Å MAE hides two regimes, and explains why the indexer's
-significant match-rate gain (§5.2) is concentrated entirely in the
-high-symmetry systems.}\label{fig:indexer}
+mono blow up; triclinic is unindexable in this implementation. Removing
+the crystal system costs a few points in every system except monoclinic
+and never changes the regime. The overall 1.45 Å MAE hides two regimes,
+and explains why the indexer's paired gains over the learned head (§5.2)
+are confined to the hexagonal and tetragonal
+systems.}\label{fig:indexer}
 \end{figure}
 
 \subsection{5.3 Head-to-head with external
@@ -944,10 +988,12 @@ conditioned on XRD + composition) at n = 300 re-scored on \emph{our}
 checkpoint download is inactive; cite-but-not-reproduced.
 
 \textbf{Table 3.} Reproduced head-to-head on MP-20 test
-(StructureMatcher ltol 0.2, stol 0.3, angle\_tol 5°). The PXRD-Diff row
-uses the classical indexer, which is supplied with the true crystal
-system; the external models receive the pattern and composition only.
-The rows set the scale of the diagnostic model and are not a
+(StructureMatcher ltol 0.2, stol 0.3, angle\_tol 5°). The first
+PXRD-Diff row is the learned head, which receives the pattern and
+composition only, the same information as the external models; the
+second is the classical-indexer control, which is additionally supplied
+with the true crystal system. Both are the v22 checkpoint at three seeds
+(§5.2). The rows set the scale of the diagnostic model and are not a
 competitiveness claim.
 
 {\def\LTcaptype{none} % do not increment counter
@@ -976,8 +1022,11 @@ RMSD med (Å)
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-PXRD-Diff (v21 + indexer control, crystal system given) & 1 000 & 1.6
-{[}1.0, 2.6{]} & 0.1 {[}0.0, 0.6{]} & 1.4 & 0.125 \\
+PXRD-Diff (v22, learned head; three seeds pooled) & 3 000 & 1.9 {[}1.5,
+2.5{]} & 0.0 {[}0.0, 0.1{]} & 1.4 & 0.232 \\
+PXRD-Diff + indexer control, crystal system given (v22; three seeds
+pooled) & 3 000 & 1.6 {[}1.2, 2.1{]} & 0.2 {[}0.1, 0.4{]} & 0.3 &
+0.035 \\
 DiffractGPT (Choudhary, 2025) & 1 000 & 18.9 {[}16.6, 21.4{]} & 15.9
 {[}13.8, 18.3{]} & 21.3 & 0.001 \\
 PXRDnet sinc100 (Guo \emph{et al.}, 2025) & 20 & 30.0 {[}14.5, 51.9{]} &
@@ -990,67 +1039,60 @@ deCIFer (Johansen \emph{et al.}, 2025) & 298 & 73.8 {[}68.6, 78.5{]} &
 \textbf{Match rate} ranks deCIFer ≫ PXRDnet \textgreater{} DGpt
 \textgreater{} PXRD-Diff. deCIFer, a concurrent autoregressive CIF-token
 model conditioned on XRD + composition, is the strongest external
-reference at 73.8 \% match / 69.5 \% all-correct (n = 300). Its
-all-correct nearly equals its match: when it recovers structure it
-almost always recovers the space group too, the same CIF-token signature
-seen in DGpt. PXRDnet's lead over DGpt is consistent with its 35 k-op
-latent optimisation, whereas DGpt is one forward pass. PXRD-Diff, at 1.6
-\%, sits an order of magnitude below all three, as expected for a 3.7
-M-parameter diagnostic model. A more interesting pattern is that the
-\emph{all-correct} ordering need not follow match rate: DGpt's
-all-correct (15.9 \% {[}13.8, 18.3{]}) exceeds its space-group-loose
-match by little, while PXRDnet's drops from 30 \% match to 5 \%
+reference at 73.8 \% match / 69.5 \% all-correct (n = 300); its
+all-correct nearly equals its match, the same CIF-token signature seen
+in DGpt. PXRDnet's lead over DGpt is consistent with its 35 k-op latent
+optimisation, whereas DGpt is one forward pass. PXRD-Diff, at 1.9 \%,
+sits an order of magnitude below all three, as expected for a 3.7
+M-parameter diagnostic model. The \emph{all-correct} ordering need not
+follow match rate: DGpt's all-correct (15.9 \% {[}13.8, 18.3{]}) sits
+close to its match, while PXRDnet's drops from 30 \% match to 5 \%
 all-correct, i.e.~PXRDnet matches structure under loose tolerances but
 rarely recovers the space group, whereas DGpt's CIF-token output appears
 to encode symmetry. \textbf{We flag this as a hypothesis, not a
 finding.} At n = 20 the PXRDnet all-correct estimate (1/20) carries a 95
-\% CI of {[}0.9, 23.6{]}, which overlaps DGpt's {[}13.8, 18.3{]}; the
-apparent ``reversal'' is \emph{not} statistically established and would
-require n ≈ 100--200 to confirm. If it holds, the implication is
-consequential: published single-number ``match rates'' would conflate
-structure recovery with symmetry recovery, which is precisely why we
-surface it despite the underpowered sample, and why §6 frames it as
-motivation for future measurement rather than a claim. \textbf{RMSD} is
-heavy-tailed for us and tight-near-zero for both baselines, suggesting
-our matches are tolerance-stretch rather than coordinate recovery.
+\% CI of {[}0.9, 23.6{]}, which overlaps DGpt's {[}13.8, 18.3{]};
+confirming the reversal would require n ≈ 100--200. §6 says why it would
+matter. \textbf{RMSD} is heavy-tailed for us and tight-near-zero for
+both baselines, suggesting our matches are tolerance-stretch rather than
+coordinate recovery.
 
 \textbf{What the gap does and does not reflect.} All four systems are
-given the composition (§3.1). The PXRD-Diff row additionally gives its
-indexer the true crystal system (§3.5), so on prior information
-PXRD-Diff is favoured, not handicapped. On the pattern itself the
-asymmetry runs the other way. DiffractGPT is conditioned on a
-\textbf{coarse 300-bin pattern} (2θ ∈ {[}0, 90°{]}, 0.3° bins, rendered
-as a \texttt{;}-separated string), an order of magnitude lower
-resolution than PXRD-Diff's 4 251-bin 0.02° input, yet it still reaches
-18.9 \%. So the external models do not win by seeing more of the
-pattern. The differences that matter are \textbf{capacity} (DiffractGPT
-is a 7 B-parameter LLM; PXRD-Diff is 3.7 M, three orders of magnitude)
-and \textbf{inference compute} (PXRDnet's \textasciitilde35 k-op latent
-optimisation vs our single DDIM pass). Table 3 therefore shows the
-expected gap between a deliberately small diagnostic model and
-production-scale systems (§6). It is reported to set the scale, not to
-rank PXRD-Diff among them.
+given the composition (§3.1). The learned-head row of PXRD-Diff receives
+nothing else; the indexer-control row additionally gives its indexer the
+true crystal system (§3.5), so on prior information that row is
+favoured. On the pattern itself the asymmetry runs the other way:
+DiffractGPT is conditioned on a \textbf{coarse 300-bin pattern} (2θ ∈
+{[}0, 90°{]}, 0.3° bins, rendered as a \texttt{;}-separated string), an
+order of magnitude lower resolution than PXRD-Diff's 4 251-bin 0.02°
+input, yet it still reaches 18.9 \%, so the external models do not win
+by seeing more of the pattern. The differences that matter are
+\textbf{capacity} (DiffractGPT is a 7 B-parameter LLM; PXRD-Diff is 3.7
+M, three orders of magnitude) and \textbf{inference compute} (PXRDnet's
+\textasciitilde35 k-op latent optimisation vs our single DDIM pass).
+Table 3 shows the expected gap between a deliberately small diagnostic
+model and production-scale systems; it sets the scale and does not rank
+PXRD-Diff among them (§6).
 
 \begin{figure}
 \centering
-\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 4. Three-way headline comparison. Match rate, all-correct, and pattern-Pearson on the same MP-20 test materials scored through our StructureMatcher harness, with 95 \% Wilson CIs. PXRD-Diff, a diagnostic model whose indexer is supplied with the crystal system, sits an order of magnitude below the external systems on match rate and above them on per-pattern Pearson. Note the wide PXRDnet (n = 20) intervals: the DGpt \textgreater{} PXRDnet all-correct ordering is a hypothesis, not an established result (§5.3, §6).}]{fig5_threeway_headline.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 4. Three-way headline comparison. Match rate, all-correct, and pattern-Pearson on the same MP-20 test materials scored through our StructureMatcher harness, with 95 \% Wilson CIs. PXRD-Diff is the corrected v22 checkpoint with its learned lattice head, no prior beyond composition, three seeds pooled (n = 3 × 1 000); its indexer control reaches 1.6 \% and its true-lattice oracle 5.5 \% (§5.2). It sits an order of magnitude below the external systems on match rate and above them on per-pattern Pearson (0.18 against 0.02 and 0.16). Note the wide PXRDnet (n = 20) intervals: the DGpt \textgreater{} PXRDnet all-correct ordering is a hypothesis, not an established result (§5.3, §6).}]{fig5_threeway_headline.pdf}}
 \caption{\textbf{Figure 4. Three-way headline comparison.} Match rate,
 all-correct, and pattern-Pearson on the same MP-20 test materials scored
 through \emph{our} \protect\texttt{StructureMatcher} harness, with 95 \%
-Wilson CIs. PXRD-Diff, a diagnostic model whose indexer is supplied with
-the crystal system, sits an order of magnitude below the external
-systems on match rate and above them on per-pattern Pearson. Note the
-wide PXRDnet (n = 20) intervals: the DGpt \textgreater{} PXRDnet
-all-correct ordering is a hypothesis, not an established result (§5.3,
-§6).}\label{fig:threeway}
+Wilson CIs. PXRD-Diff is the corrected v22 checkpoint with its learned
+lattice head, no prior beyond composition, three seeds pooled (n = 3 × 1
+000); its indexer control reaches 1.6 \% and its true-lattice oracle 5.5
+\% (§5.2). It sits an order of magnitude below the external systems on
+match rate and above them on per-pattern Pearson (0.18 against 0.02 and
+0.16). Note the wide PXRDnet (n = 20) intervals: the DGpt \textgreater{}
+PXRDnet all-correct ordering is a hypothesis, not an established result
+(§5.3, §6).}\label{fig:threeway}
 \end{figure}
 
-\emph{Caveats.} PXRDnet n = 20 has a 95 \% Wilson CI of roughly ±20 pp
-on every rate; n = 200 would need \textasciitilde33 days of RTX 5090
-rental at \textasciitilde4 GPU-hr/material. Patterns are simulated
-through each model's own preprocessing (different bins, 2θ vs Q,
-broadening): material\_ids are identical, pattern inputs are not
-bit-identical; §7 bounds this.
+\emph{Caveats.} PXRDnet's n = 20 intervals (roughly ±20 pp) and the
+preprocessing differences between the three pipelines (identical
+material\_ids, pattern inputs not bit-identical) are bounded in §7.
 
 \subsection{\texorpdfstring{5.4 What did \emph{not}
 work}{5.4 What did not work}}\label{what-did-not-work}
@@ -1076,19 +1118,17 @@ an \texttt{nn.Embedding(27,\ 256)} token for its
 \texttt{spglib}-assigned Wyckoff letter. A Wyckoff letter is meaningful
 only within a given space group: the same letter denotes different
 multiplicities, site symmetries and coordinate constraints in different
-groups (Dauter \& Jaskolski, 2010; de la Flor \emph{et al.}, 2023). The
-embedding therefore carried a label, not a constraint. Atomic
-coordinates were still generated freely, and nothing in the loss or the
-sampler enforced the fixed or symmetry-related coordinates that a
+groups (Dauter \& Jaskolski, 2010; de la Flor \emph{et al.}, 2023), so
+the embedding carried a label, not a constraint, and nothing in the loss
+or the sampler enforced the fixed or symmetry-related coordinates a
 Wyckoff position implies. The embedding learns (5 404 of 6 912 entries
 non-zero), but match drops from 2.5 \% to 2.1 \% and lattice prediction
 destabilises (lattice loss \textasciitilde0.6 vs \textasciitilde0.02;
-Figure 5). We suspect the inflated atom-feature norm shifts the
-lattice-pool input distribution. The negative result is narrow. It shows
-that a space-group-agnostic label token does not help and may hurt
-training dynamics. It says nothing about whether symmetry information
-imposed as a constraint, on the coordinates or on the space group, would
-help; that experiment was not run.
+Figure 5), presumably because the inflated atom-feature norm shifts the
+lattice-pool input distribution. The negative result is narrow: a
+space-group-agnostic label token does not help and may hurt training
+dynamics; whether symmetry imposed as a constraint, on the coordinates
+or on the space group, would help was not tested.
 
 \begin{figure}
 \centering
@@ -1113,8 +1153,8 @@ diffusion needs.
 to 0.8 \%, below the bare ε baseline; the two interact destructively, no
 clean theoretical explanation.
 
-\subsection{5.5 Encoder-bottleneck perturbation
-study}\label{encoder-bottleneck-perturbation-study}
+\subsection{5.5 Lattice-perturbation
+study}\label{lattice-perturbation-study}
 
 Best predicted-vs-target Pearson is 0.43; the same model with
 \emph{correct} coordinates plugged into the differentiable simulator
@@ -1124,22 +1164,22 @@ only) reaches a 0.007 \emph{normalised} lattice-regression loss, but
 that figure is a relative fit that does \textbf{not} survive conversion
 to absolute scale: when the aux head's own lattice is substituted into
 the sampler it recovers only 1.2 \% (§5.6), because its 1.1 Å length MAE
-shifts every Bragg reflection by \textasciitilde15 \%. So the global
-encoding carries crystal-system and relative-spacing structure but not
+shifts every Bragg reflection by \textasciitilde15 \%. So the lattice
+head delivers crystal-system and relative-spacing structure but not
 absolute d-spacings at the \textless0.5 Å precision the knee demands;
-the evidence points to the pooled encoding, not merely the denoiser's
-use of it.
+§5.6 shows that giving the head the peak positions does not repair this.
 
 Perturbing the sampler-supplied lattice by Å of cell-length error, v21
 at n = 200: match decays 5.6 \% (Δ=0) → 2.0 \% (0.5 Å) → 0.5 \% (1.0 Å)
 → 0 \% (≥1.5 Å), steeper than linear with a knee at \textasciitilde0.5
 Å. This matches the indexer's per-system MAE: high-symmetry systems
 (hex, ortho; MAE ≤ 1.0 Å) lift; low-symmetry (mono, tri; MAE ≥ 1.5 Å) do
-not. §5.2's indexer lift is \emph{predictable}: it works where it can.
+not. §5.2's per-system indexer gains are \emph{predictable}: they occur
+where the cell error is below the knee.
 
-\subsection{5.6 Why the learned lattice fails: a pooling bottleneck, not
-a head
-bottleneck}\label{why-the-learned-lattice-fails-a-pooling-bottleneck-not-a-head-bottleneck}
+\subsection{5.6 Why the learned lattice fails: neither the head nor the
+pooling repairs the
+scale}\label{why-the-learned-lattice-fails-neither-the-head-nor-the-pooling-repairs-the-scale}
 
 The natural reading of the 0.007 aux loss, that the lattice is already
 recoverable from the encoder and only the denoiser is at fault, is
@@ -1163,36 +1203,33 @@ so the simulated pattern no longer overlaps the target.
 \textbf{Stronger, constrained supervision (retrain).} Bounding the head
 (softplus lengths, sigmoid-scaled angles), raising the aux weight 0.5 →
 5.0, and warm-starting 30 k further steps leaves the MAE essentially
-unchanged (a ≈ 1.11 Å, α ≈ 14°). The error behaves like a property of
-the \emph{pooled global encoding} rather than of the head: the
-\texttt{AdaptiveAvgPool1d(1)} collapse that §3.2 already identified for
-coordinates would discard the peak-position fidelity Bragg's-law
-decoding needs to fix absolute lengths, and no head reading
-\(\mathbf{g}\) recovers it. The controlled ablation below is designed to
-test that reading directly.
+unchanged (a ≈ 1.11 Å, α ≈ 14°). No head reading \(\mathbf{g}\) recovers
+the absolute scale. The submitted version read this as a property of the
+\emph{pooled global encoding}, on the grounds that the
+\texttt{AdaptiveAvgPool1d(1)} collapse §3.2 identified for coordinates
+would also discard the peak-position fidelity Bragg's-law decoding
+needs; the controlled ablation below tests that reading and does not
+support it.
 
 This reconciles the diagnosis with the indexer result. The 0.007
 normalised aux loss is a \emph{relative} fit, enough to place the
 crystal system (a space-group head on the same encoder reaches 39 \%
 top-1 / 71 \% top-5 across 230 classes, released under
-\texttt{phase5b6\_results/}) but not the absolute scale. The classical
-autoindexer succeeds exactly where the encoder fails because it reads
-peak \emph{positions} directly rather than a pooled summary; this is why
-§5.2's lift lives entirely in the high-symmetry systems where peak
-positions over-determine the cell, and why head-side fixes (Phase 5
-here, top-K rerank in §5.4) cannot substitute for it. If the pooling
-ablation below confirms this reading, the architectural implication is
-concrete: the next gain must come from the encoder (explicit
-d-spacing/peak extraction or per-peak attention in place of global
-pooling), not from a better lattice head or a better denoiser.
+\texttt{phase5b6\_results/}) but not the absolute scale. The autoindexer
+succeeds where every learned head fails because it assigns Miller
+indices to peak \emph{positions} by explicit search rather than
+regressing six numbers from a summary, which is why its paired gains in
+§5.2 lie in the high-symmetry systems where peak positions
+over-determine the cell, and why head-side fixes (Phase 5 here, top-K
+rerank in §5.4) cannot substitute for it. The ablation below asks
+whether it is the summary, rather than the regression, that fails.
 
 \textbf{Controlled pooling ablation.} The two experiments above vary the
-head and its supervision while holding the encoder fixed. They show that
-no head reading \(\mathbf{g}\) recovers the absolute scale. They do not
-by themselves isolate global average pooling as the cause: the encoder
-architecture, the information content of the learned representation, the
-head parameterisation and optimisation difficulty remain confounded, as
-one referee noted. To separate them, a controlled ablation holds the
+head and its supervision with the encoder fixed; they do not by
+themselves isolate global average pooling as the cause, since the
+encoder, the information content of its representation, the head
+parameterisation and optimisation difficulty remain confounded, as one
+referee noted. To separate them, a controlled ablation holds the
 encoder, the denoiser, the training objective and the schedule fixed and
 changes only how the auxiliary head reads the encoder: (i) the global
 average pool \(\mathbf{g}\) of the submitted version; (ii) a
@@ -1200,12 +1237,108 @@ position-aware pooling that retains the 2θ coordinate of each feature;
 (iii) explicit peak-position features extracted from the input pattern
 and concatenated to \(\mathbf{g}\). If absolute d-spacings are lost at
 the pooling stage, variants (ii) and (iii) should reduce the
-\textasciitilde1.1 Å length error while (i) does not. {[}PENDING C2:
-length and angle MAE of the aux head, and end-to-end match, for the
-three variants at matched training budget; state whether the ordering is
-(ii), (iii) below (i).{]} Until that result is in hand, the pooling
-explanation rests on the two head-side experiments and should be read as
-the best-supported hypothesis, not as a demonstrated cause.
+\textasciitilde1.1 Å length error while (i) does not. Table 4 gives the
+result on both encoders.
+
+\textbf{Table 4.} Controlled pooling ablation (n = 1 000 MP-20 test).
+Three heads trained under an identical loss, AdamW 10⁻³, batch 64,
+sigmoid-bounded outputs, on a frozen encoder: the submitted v21 encoder
+at three epochs and the retrained v22 encoder (§5.2) at ten. Length and
+angle MAE are means over (a, b, c) and (α, β, γ); ``\textless{} 0.5 Å''
+is the fraction of structures whose mean length error lies below the
+knee of §5.5; the last column substitutes the head's cells into the
+sampler at three seeds (n = 3 000 structure-seeds; the full pipeline
+reaches 1.9 \% and the indexer 1.6 \%, Table 2). The checkpoint rows are
+the head trained jointly for 100 k steps, without retraining.
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1250}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Head
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Params
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Encoder, epochs
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Length MAE / Å
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Angle MAE / °
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Median length error / Å
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textless{} 0.5 Å
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+End-to-end match \% {[}95 \% CI{]}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Checkpoint aux head & -- & v21, -- & 1.32 & 15.6 & 0.90 & 0.33 & -- \\
+(i) global average pool \(\mathbf{g}\) & 67 k & v21, 3 & 1.29 & 16.0 &
+0.87 & 0.29 & -- \\
+(ii) position-aware attention pooling & 531 k & v21, 3 & 1.31 & 16.4 &
+0.94 & 0.24 & -- \\
+(iii) explicit peak features + \(\mathbf{g}\) & 209 k & v21, 3 & 1.28 &
+16.1 & 0.88 & 0.28 & -- \\
+Checkpoint aux head & -- & v22, -- & 1.28 & 15.0 & 0.90 & 0.31 & -- \\
+(i) global average pool \(\mathbf{g}\) & 67 k & v22, 10 & 1.29 & 15.5 &
+0.91 & 0.28 & 0.7 {[}0.5, 1.1{]} \\
+(ii) position-aware attention pooling & 531 k & v22, 10 & 1.21 & 15.4 &
+0.88 & 0.29 & 0.5 {[}0.3, 0.9{]} \\
+(ii) position-aware attention pooling & 531 k & v22, 30 & 1.12 & 14.6 &
+0.75 & 0.36 & 0.8 {[}0.5, 1.2{]} \\
+(iii) explicit peak features + \(\mathbf{g}\) & 209 k & v22, 10 & 1.28 &
+15.4 & 0.90 & 0.30 & 1.2 {[}0.9, 1.7{]} \\
+\end{longtable}
+}
+
+The prediction is not borne out on either encoder. On v21 the three arms
+lie within 0.03 Å of one another (\textasciitilde2 \% of the error). On
+v22, with ten epochs, arms (i) and (iii) converge by the sixth epoch to
+1.29 and 1.28 Å, and arm (ii) reaches 1.21 Å at ten epochs and 1.12 Å at
+thirty, where it is converged (flat over the last six epochs), a 13 \%
+reduction. Every arm sits more than 2.2× above the 0.5 Å knee, and arm
+(i) reproduces the checkpoint head on both encoders, so the budget
+suffices to match the baseline. End to end, the substituted cells
+recover 0.7 \%, 0.5 \% and 1.2 \% for (i), (ii) and (iii), each below
+the 1.9 \% of the full pipeline (paired McNemar p = 7 × 10⁻⁷, 3 × 10⁻⁹
+and 8 × 10⁻³) and the indexer's 1.6 \%, with pattern Pearson 0.08 in
+every arm; the head-level gain of arm (ii) does not carry through: its
+converged thirty-epoch cells recover 0.8 \% {[}0.5, 1.2{]} (24 / 3 000,
+22 of them cubic), level with arm (i). Every match obtained through a
+regression head is a cubic structure (18, 16 and 34 of the 22, 16 and
+37), the one-parameter case; none is hexagonal or tetragonal, where the
+indexer's search succeeds (§5.2). Restoring absolute peak positions to
+the head does not repair the absolute scale, and the submitted reading
+that global pooling discards the d-spacing information is withdrawn. Arm
+(iii) is decisive: it receives the same peak positions the autoindexer
+reads, yet a head trained to regress six cell parameters does not turn
+them into a cell, because that requires assigning Miller indices to
+peaks, a combinatorial step the autoindexer performs by explicit search
+and a pointwise-loss regressor does not learn here. This revised reading
+is the best-supported one, not a demonstrated cause; it accounts for
+every head-side failure (the two experiments above, the top-K rerank of
+§5.4), for the space-group head's success on relative features, and for
+the indexer succeeding exactly where the assignment is over-determined
+(§5.2). The next gain must come from obtaining the cell by search, or
+from a model that performs the peak-to-index assignment explicitly, not
+from a different pooling, a better head or a better denoiser. Two
+caveats remain: the encoder is frozen, so an encoder trained from
+scratch under position-aware pooling could behave differently (not run);
+and the heads are trained on the frozen encoder's features rather than
+jointly, so a jointly trained position-aware head is untested. Runs:
+\texttt{paper/phase15\_results/pooling\_ablation\_v21/},
+\texttt{pooling\_ablation\_v22/}, \texttt{v22\_pool\_*}.
 
 \subsection{5.7 Code audit and
 corrections}\label{code-audit-and-corrections}
@@ -1227,9 +1360,16 @@ this paper.
   predicted structures; the indexer; the oracle; the perturbation study;
   the aux-head substitution of §5.6; and the external baselines. The
   module was corrected and re-validated (mean Pearson 0.952 → 0.988 over
-  1000 structures). The affected runs were retrained {[}PENDING C1:
-  which runs, and the resulting changes to Tables 1 and 2 and to
-  §5.4{]}.
+  1000 structures). The production checkpoint was retrained from scratch
+  with the corrected module and the fix of (b), under otherwise
+  identical settings (v22; final EMA loss 0.602 against 0.726); Tables
+  2, 2a and 3 and Figs 4 and 5 now report it at three seeds, and §5.2
+  gives the paired before/after accounting (learned head 0 / 1 949 → 58
+  / 3 000, indexer 46 / 2 883 → 48 / 3 000, oracle 135 → 165 / 3 000;
+  the indexer's lead became a tie). The Phase-4 rows of Table 1 and the
+  §5.4 experiments were not rerun (\textasciitilde18 GPU-hours for the
+  six configurations at three seeds); they keep their exploratory
+  labels.
 \item
   \emph{Debye loss in x₀-residual mode.} The loss was evaluated on the
   residual tensor rather than on the clean-coordinate estimate (§3.4).
@@ -1242,14 +1382,16 @@ this paper.
   scored as if indexed. This affected 39 of the 1000 test patterns in
   every indexer run, 117 structure-seeds over three seeds. Recomputing
   from the released per-structure records, none of the 117 fallback
-  structure-seeds matched, so the published McNemar cells (27 fixed, 0
-  broken) and the all-correct cells (4, 0) are unchanged. The match rate
-  is now reported on the 2 883 indexed structure-seeds only: 46 / 2 883
-  = 1.6 \% {[}1.2, 2.1{]}, in place of 46 / 3 000 = 1.5 \% {[}1.2,
-  2.0{]}. The script now scores unindexed patterns as misses and records
-  their count. The top-K rerank experiment of §5.4 used the same
-  fallback; because the fallback rows did not match, its 1.0 \% result
-  can only be lower, and its conclusion (no improvement) stands.
+  structure-seeds matched, so the submitted McNemar cells (27 fixed, 0
+  broken) and the all-correct cells (4, 0) were unchanged by the
+  fallback; the submitted match rate becomes 46 / 2 883 = 1.6 \% {[}1.2,
+  2.1{]} on the indexed structure-seeds, in place of 46 / 3 000 = 1.5 \%
+  {[}1.2, 2.0{]}. (Those v21 cells are superseded by the v22 retrain of
+  (a), which is what §5.2 now reports.) The script now scores unindexed
+  patterns as misses and records their count. The top-K rerank
+  experiment of §5.4 used the same fallback; because the fallback rows
+  did not match, its 1.0 \% result can only be lower, and its conclusion
+  (no improvement) stands.
 \item
   \emph{Reported learning rate.} The submitted §4 gave the learning rate
   as \(5\times10^{-4}\). The arguments stored in the released v21
@@ -1268,23 +1410,25 @@ released repository.
 
 \section{6. Discussion}\label{discussion}
 
-\textbf{Encoder bottleneck (the robust result).} A 0.007
+\textbf{Lattice-recovery bottleneck (the robust result).} A 0.007
 \emph{normalised} aux loss shows \(\mathbf{g}\) carries
 lattice-\emph{relevant} structure, but it is a relative fit: feeding the
 aux head's own lattice to the sampler recovers only 1.2 \% (§5.6), and
-stronger constrained-head supervision does not move its
-\textasciitilde1.1 Å error. The evidence therefore points to the global
-pooling that discards absolute peak-position fidelity, rather than to
-the denoiser's use of an otherwise-adequate signal; the controlled
-ablation of §5.6 tests this directly {[}PENDING C2: one clause with its
-outcome{]}. The disjoint oracle-vs-indexer CIs (§5.2) make the lattice's
-role the paper's statistically firmest claim. The Q-space autoindexer,
-which reads peak positions directly, recovers part of the 4.5 \% oracle
-ceiling on the high-symmetry subset; top-K rerank and gradient guidance
-fail because they operate \emph{after} the encoder commits to a bad
-lattice prior, while the indexer bypasses that decision. (The oracle
-ceiling is itself only 4.5 \%, so even a perfect lattice leaves
-coordinates as a co-limiter; see §8.)
+neither stronger constrained supervision nor restoring absolute peak
+positions to the head moves its \textasciitilde1.1 Å error, so the
+pooling reading of the submitted version is withdrawn in favour of the
+regression formulation (§5.6). The paired oracle-vs-learned-head test
+(134 fixed, 27 broken, p = 3 × 10⁻¹⁸; §5.2) is the paper's statistically
+firmest claim and the one result that replicates across the submitted
+and the corrected checkpoint. The Q-space autoindexer, which reads peak
+positions directly, recovers part of the 5.5 \% oracle ceiling on the
+hexagonal and tetragonal subset; with the corrected checkpoint it no
+longer leads the learned head in aggregate, but its cells stay far
+closer to the truth (Pearson 0.41 against 0.18). Top-K rerank and
+gradient guidance fail because they operate \emph{after} the encoder
+commits to a bad lattice prior, while the indexer bypasses that
+decision. The oracle ceiling is itself only 5.5 \%, so even a perfect
+lattice leaves coordinates as a co-limiter (§8).
 
 \textbf{Per-atom anchoring is hard.} PXRD is permutation-invariant; our
 denoiser is permutation-equivariant; there is no symmetry-breaking
@@ -1299,26 +1443,23 @@ capabilities.} PXRDnet's 30 \% match / 5 \% all-correct vs DGpt's 18.9
 \% / 15.9 \% (Table 3) suggests the two systems recover \emph{structure}
 at broadly comparable rates while differing sharply in \emph{symmetry}
 recovery: DGpt's CIF-token output appears to encode space group in a way
-PXRDnet's coordinate decode does not. We stress that the underlying
-numbers cannot yet support this: PXRDnet's all-correct CI {[}0.9,
-23.6{]} at n = 20 overlaps DGpt's, so the ordering is unconfirmed. We
-raise it as a \emph{measurement hypothesis} worth testing at adequate n,
-because if true it has a concrete consequence for the field: a single
-``match rate'' reported under inconsistent tolerances would conflate
-structure recovery with symmetry recovery, and downstream
-crystallography (where the space group matters as much as the
-coordinates) would be mis-served by it. The contribution here is the
-shared harness that makes such a test possible, not the (underpowered)
-comparison itself.
+PXRDnet's coordinate decode does not. The numbers cannot yet support
+this (PXRDnet's all-correct CI {[}0.9, 23.6{]} at n = 20 overlaps
+DGpt's), so we raise it as a \emph{measurement hypothesis} worth testing
+at adequate n.~If true, a single ``match rate'' reported under
+inconsistent tolerances would conflate structure recovery with symmetry
+recovery, and downstream crystallography, where the space group matters
+as much as the coordinates, would be mis-served by it. The contribution
+here is the shared harness that makes such a test possible, not the
+underpowered comparison itself.
 
-\textbf{Niche for small reproducible models.} At 1.6 \% PXRD-Diff sits
+\textbf{Niche for small reproducible models.} At 1.9 \% PXRD-Diff sits
 an order of magnitude below much larger systems, and that is the point
-of its size. Small models make the encoder bottleneck visible (capacity
-hides it) and make the indexer control trivial to wire in (larger models
-would need architecture-level surgery). The model is a diagnostic
-instrument, not a candidate solver. The recipe (encoder + Phase 4 fixes
-+ Phase 9 indexer control) is 3.7 M parameters and runs inference in
-seconds.
+of its size. Small models make the lattice-recovery bottleneck visible
+(capacity hides it) and make the indexer control trivial to wire in
+(larger models would need architecture-level surgery). The recipe
+(encoder + Phase 4 fixes + Phase 9 indexer control) is 3.7 M parameters
+and runs inference in seconds.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -1343,12 +1484,12 @@ seconds.
   is the pattern-Pearson improvement (ε 0.359 vs x₀ 0.403, with disjoint
   ranges across both seeds), consistent with Table 1. The lattice-input
   fix remains load-bearing as a training-dynamics result (lattice loss
-  1.0 → 0.02), and the oracle-vs-indexer gap has disjoint CIs. The
-  indexer-vs-learned-head comparison was rerun at three seeds and the
-  lift confirmed significant by a paired McNemar test (p \textless{}
-  10⁻⁴; §5.2), superseding the earlier underpowered unpaired test (p =
-  0.24). The oracle has since been multi-seeded: three seeds give 4.5 \%
-  {[}3.8, 5.3{]} pooled, firming the single-seed 5.6 \%.
+  1.0 → 0.02), and the oracle-vs-learned-head gap is the effect that
+  replicates (§5.2). The indexer-vs-learned-head comparison is the
+  cautionary case: significant with the submitted checkpoint (27 fixed,
+  0 broken), a tie with the corrected one (42, 52; p = 0.35), so a
+  paired test at three seeds protects against seed noise but not against
+  a training defect that moves one arm (§5.2, §5.7).
 \item
   \textbf{Baselines.} PXRDnet n = 20 has a 95 \% Wilson CI of ≈ ±20 pp;
   the DGpt \textgreater{} PXRDnet all-correct ordering (§5.3/§6) is
@@ -1362,34 +1503,33 @@ seconds.
   subset is the natural check.
 \item
   \textbf{Indexer realism.} Two assumptions make the indexer's accuracy
-  an optimistic ceiling. (i) \emph{Crystal system is given.} The
-  de-Wolff fit (§3.5) receives the true Bravais code as a sampling-time
-  input; on a real unknown the system is itself part of what indexing
-  must determine, so the per-system rates of §3.5 are conditional on
-  knowing the system. (ii) \emph{Patterns are ideal.} All patterns are
-  clean \texttt{pymatgen} simulations with no zero-point shift,
+  an optimistic ceiling. (i) \emph{Crystal system.} The main runs supply
+  the true Bravais code to the de-Wolff fit (§3.5); the unknown-system
+  run removes it at a cost of about five percentage points at the
+  indexing stage (48.8 → 43.4 \% strict) and six of 48 downstream
+  matches (1.4 \% against 1.6 \%), so the assumption changes little at
+  either stage. (ii) \emph{Patterns are ideal.} All patterns are clean
+  \texttt{pymatgen} simulations with no zero-point shift,
   sample-displacement error, or peak asymmetry, precisely the
   perturbations that drive real-world indexing failure. The 48.8 \%
   native-indexer match and the downstream 1.6 \% should be read as upper
-  bounds under ideal peak positions and a known crystal system; the
-  unknown-system run of §3.5 removes the second assumption {[}PENDING
-  C3: one clause with its outcome{]}. A zero-shift/displacement
+  bounds under ideal peak positions. A zero-shift/displacement
   robustness sweep (n = 300) confirms the concern: the indexer's
   length-MAE rises from 1.24 Å on clean patterns past the v20 learned
   head's 1.37 Å once displacement or zero-shift exceeds
-  \textasciitilde0.10°, so the indexer's advantage over the learned head
-  holds only for well-calibrated input.
+  \textasciitilde0.10°, so the indexer's cell-accuracy advantage over
+  the learned head (§5.2) holds only for well-calibrated input.
 \item
   \textbf{Idealised conditions and the bottleneck conclusion.} Every
   pattern is an ideal simulation. Instrument profile, zero shift, sample
   displacement, preferred orientation and background all move or reshape
   peaks. Each would further degrade an encoder that already fails to fix
-  absolute d-spacings on clean input. The encoder-bottleneck diagnosis
-  is therefore a lower bound on the difficulty of real data, not an
-  estimate of it. The 0.5 Å knee is a property of the sampler under
-  clean cells; under real peak shifts its position may move, and the
-  indexer's own degradation past \textasciitilde0.10° suggests the whole
-  curve shifts towards smaller tolerable errors.
+  absolute d-spacings on clean input. The lattice-recovery bottleneck
+  diagnosis is therefore a lower bound on the difficulty of real data,
+  not an estimate of it. The 0.5 Å knee is a property of the sampler
+  under clean cells; under real peak shifts its position may move, and
+  the indexer's own degradation past \textasciitilde0.10° suggests the
+  whole curve shifts towards smaller tolerable errors.
 \item
   \textbf{Indexer (low-symmetry path).} GSAS-II low-symmetry path hangs
   in \texttt{findBestCell} on real MP-20 mono/tri patterns; shipped
@@ -1404,32 +1544,36 @@ seconds.
 \section{8. Conclusion}\label{conclusion}
 
 A 3.7 M-parameter conditional diffusion model, used as a diagnostic
-instrument, locates the dominant accessible failure in PXRD inversion at
-the pattern encoder. The encoder's pooled representation supports a
-0.007 normalised lattice-regression loss yet delivers a
-\textasciitilde1.1 Å absolute cell error that no head reading it,
-however constrained, reduces. The evidence points to global pooling as
-the stage that discards absolute d-spacings {[}PENDING C2: one clause
-with the pooling-ablation outcome{]}. A true-lattice oracle caps match
-at 4.5 \% {[}3.8, 5.3{]} (three seeds), so coordinate prediction remains
-a co-limiter. A classical Q-space autoindexer, supplied with the true
-crystal system, serves as a control: it reaches 1.6 \% {[}1.2, 2.1{]}
-where the learned head recovers nothing (three-seed paired McNemar p
-\textless{} 10⁻⁴), and only in the high-symmetry systems below the 0.5 Å
-knee. Re-scored on one \texttt{StructureMatcher} harness, deCIFer
-reaches 73.8 \% / 69.5 \%, DGpt 18.9 \% / 15.9 \% and PXRDnet 30.0 \% /
-5.0 \% (match / all-correct). These set the scale of the diagnostic
-model and are not a ranking claim. The apparent divergence in their
-space-group recovery is a measurement hypothesis the n = 20 PXRDnet
-sample cannot yet confirm, but the shared harness now makes it testable.
-A code audit corrected three implementation errors, and every affected
-number was recomputed or re-run {[}PENDING C1: one clause on whether the
-retrained numbers changed{]}. The lattice-input fix is load-bearing; the
-x₀-residual switch improves pattern-Pearson but its single-seed
-match-rate lift did not replicate (§7); the remaining interventions are
-documented as failures, with the Wyckoff-letter result now read
-narrowly. Code, checkpoints, all per-phase JSONs, per-structure records,
-both indexer paths and the differentiable Bragg module are released.
+instrument, locates the dominant accessible failure in PXRD inversion in
+the recovery of the unit cell from the pattern, upstream of the
+denoiser. The encoder's pooled representation supports a 0.007
+normalised lattice-regression loss yet delivers a \textasciitilde1.1 Å
+absolute cell error that no head reading it reduces, whether
+constrained, position-aware or handed explicit peak positions; the
+pooling reading is withdrawn and the evidence points to the regression
+formulation, which leaves the peak-to-index assignment unsolved. A
+true-lattice oracle caps match at 5.5 \% {[}4.7, 6.4{]} (three seeds)
+against 1.9 \% {[}1.5, 2.5{]} for the learned head (paired McNemar p = 3
+× 10⁻¹⁸), so coordinate prediction remains a co-limiter. A classical
+Q-space autoindexer, supplied with the true crystal system, serves as a
+control: it reaches 1.6 \% {[}1.2, 2.1{]} and, with the corrected
+checkpoint, ties the learned head at three seeds (42 fixed, 52 broken, p
+= 0.35), its gains confined to the hexagonal and tetragonal systems
+below the 0.5 Å knee. Re-scored on one \texttt{StructureMatcher}
+harness, deCIFer reaches 73.8 \% / 69.5 \%, DGpt 18.9 \% / 15.9 \% and
+PXRDnet 30.0 \% / 5.0 \% (match / all-correct); these set the scale of
+the diagnostic model and are not a ranking claim, and the apparent
+divergence in their space-group recovery is a measurement hypothesis the
+n = 20 PXRDnet sample cannot yet confirm. A code audit corrected three
+implementation errors; retraining the production checkpoint under the
+corrected loss raised the learned head from 0 to 1.9 \% and removed the
+indexer's aggregate lead of the submitted version, leaving the oracle
+gap as the result that replicates. The lattice-input fix is
+load-bearing; the x₀-residual switch improves pattern-Pearson but its
+single-seed match-rate lift did not replicate (§7); the remaining
+interventions are documented as failures. Code, checkpoints, all
+per-phase JSONs, per-structure records, both indexer paths and the
+differentiable Bragg module are released.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -1516,6 +1660,9 @@ de la Flor, G., Kroumova, E., Hanson, R. M. \& Aroyo, M. I. (2023).
 \emph{J. Appl. Cryst.} \textbf{56}, 1824--1840. DOI:
 10.1107/S1600576723009068.
 
+de Wolff, P. M. (1968). \emph{J. Appl. Cryst.} \textbf{1}, 108--113.
+DOI: 10.1107/S002188986800508X.
+
 Favre-Nicolin, V. \& Černý, R. (2002). \emph{J. Appl. Cryst.}
 \textbf{35}, 734--743. DOI: 10.1107/S0021889802015236.
 
@@ -1577,6 +1724,9 @@ models. \emph{International Conference on Learning Representations}.
 Toby, B. H. \& Von Dreele, R. B. (2013). \emph{J. Appl. Cryst.}
 \textbf{46}, 544--549. Code:
 \texttt{github.com/AdvancedPhotonSource/GSAS-II}.
+
+Werner, P.-E., Eriksson, L. \& Westdahl, M. (1985). \emph{J. Appl.
+Cryst.} \textbf{18}, 367--370. DOI: 10.1107/S0021889885010512.
 
 Xie, T., Fu, X., Ganea, O.-E., Barzilay, R. \& Jaakkola, T. (2022).
 Crystal diffusion variational autoencoder for periodic material
@@ -1658,9 +1808,14 @@ unchanged (a ≈ 1.11 Å); SG head 39 \% top-1 & §5.6 \\
 v18 -- v20 & 3.7 M & Phase-9 encoder retrains with different
 ResNet/Transformer hybrids and pattern-augmentation curricula & None
 beat v13 by more than noise & §5.1 \\
-\textbf{v21} & \textbf{3.7 M} & Phase 9 final: v13 architecture + Phase
-9 retrain + indexer drop-in support & \textbf{1.6 \% match (no-true-lat,
-indexer); 4.5 \% (true-lat oracle, 3-seed)} & Tables 2, 3 \\
+v21 & 3.7 M & Phase 9 final: v13 architecture + Phase 9 retrain +
+indexer drop-in support (submitted version; trained with the §5.7 (a)
+and (b) defects) & 0 \% (learned head), 1.6 \% (indexer, crystal system
+given), 4.5 \% (true-lat oracle), all 3-seed & §5.7 \\
+\textbf{v22} & \textbf{3.7 M} & v21 configuration retrained from scratch
+with the corrected form factor and the corrected x₀-mode Debye loss
+(§5.7) & \textbf{1.9 \% (learned head), 1.6 \% (indexer, crystal system
+given), 5.5 \% (true-lat oracle), all 3-seed} & Tables 2, 2a, 3 \\
 \end{longtable}
 }
 

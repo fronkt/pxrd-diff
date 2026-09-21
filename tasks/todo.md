@@ -1684,6 +1684,18 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
       D6 §5.4 Wyckoff reinterpretation · D7 §5.6 pooling ablation [PENDING C2] · D8 §7
       limitations (idealised conditions) · D9 new "Code audit" subsection · D10 related work
       additions (verified refs only) · D11 readability pass · D12 Fig. 1 regenerated.
-- [ ] E1 point-by-point response letter `paper/submissions/JAC-R1/response_to_referees.md`.
-- [ ] E2 rebuild pdf/docx; tracked-changes not required by IUCr but list changes.
+- [x] E1 letter complete (all tags resolved 2026-09-21; gitignored, public repo).
+- [x] E2 pdf (28 pp)/docx rebuilt 2026-09-21 from the final paper.md (12.8 k words).
 - [ ] E3 HUMAN: upload at submission.iucr.org before 2026-10-16; send the ack email.
+
+**Review — Phase 15 (2026-09-21 06:40 UTC).** Box 51833313 destroyed after 5 h 45 min; spend
+**$2.87** (credit 6.35 → 3.48). What the GPU changed: (1) the retrain repaired the learned head
+(0 → 1.9 %) and erased the submitted "indexer beats learned head" result (27/0, p 1.5e-8 →
+42/52, p 0.35): withdrawn; the per-system pattern survives with opposite signs (indexer fixes
+hex/tet, learned head wins cubic); (2) the oracle gap replicates (5.5 % vs 1.9 %, p 3e-18) and is
+now the paper's robust result; (3) the pooling reading is withdrawn on both encoders — the
+converged position-aware head cuts the cell error 13 % (1.12 Å) but recovers 0.8 % end to
+end, level with global pooling; every regression-head match is cubic; (4) without the crystal
+system the indexer keeps 43.4 % of cells (48.8 % given) and 1.4 % downstream (1.6 %). Tags:
+none left in paper.md; letter final. OPEN for Frank: title ("lattice-recovery bottleneck"),
+AI-use wording, send the ack draft, upload. Not run: C4 (declined, letter says so).
