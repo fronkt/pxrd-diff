@@ -11,8 +11,10 @@ citation awaiting verified metadata before it enters the References list.
   **Frank's call to revert**; the indexer is now framed as a control, so the old clause overstated it.
 
 ## Synopsis
-- **R1.1, R2.2, R2.3, R3.3.** Rewritten: diagnostic instrument; "evidence points to global pooling" (was
-  "destroys"); indexer "supplied with the true crystal system, serves as a control"; code audit mentioned.
+- **R1.1, R2.2, R2.3, R3.3.** Rewritten: diagnostic instrument; pooling claim (was "destroys") replaced by
+  the ablation outcome: "restoring absolute peak positions to the lattice head … does not reduce its ~1.3 Å
+  cell error; the evidence points to the regression formulation … not to the pooling stage"; indexer
+  "supplied with the true crystal system, serves as a control"; code audit mentioned.
 
 ## Abstract
 - **R1.1, R1.5i.** Opens with "This paper is a diagnostic study"; model "kept deliberately small"; "not
@@ -20,8 +22,9 @@ citation awaiting verified metadata before it enters the References list.
 - **R1.4.** DiffractGPT-vs-PXRDnet all-correct ordering removed from the abstract (stays in §5.3/§6 as a
   hypothesis).
 - **R1.1.** "leaving PXRD-Diff 12–46 times behind" → external rates given once as scale, PXRD-Diff 1.6 %.
-- **R2.2.** "The limiter is the global pooling" → "The evidence therefore points to the global pooling …
-  [PENDING C2]".
+- **R2.2.** "The limiter is the global pooling" → the ablation outcome ("leaves the error unchanged
+  (1.28–1.31 Å across three arms …) so the earlier reading that global pooling discards the d-spacings is
+  withdrawn") and the revised reading (regression head does not perform the peak-to-index assignment).
 - **R2.3, R1.3.** Indexer sentence now says "supplied with the true crystal system" and "classical control".
 - **R3.3c.** "1.5 % [1.2, 2.0]" → "1.6 % [1.2, 2.1]" (46/2883, unindexed patterns scored as misses).
 - **R2.1, R3.3a.** New sentences on the code audit and the re-validated simulator (median 0.999, n = 1000)
@@ -32,8 +35,10 @@ citation awaiting verified metadata before it enters the References list.
 - **R1.1, R1.5i.** Framing paragraph: "use it as a diagnostic instrument … not proposed as an alternative".
 - **R1.2.** Contribution 1: simulator described as "a PyTorch port of the pymatgen structure-factor
   calculation … introduces no new physics"; the "Pearson 0.96 on 50 references" claim removed.
-- **R2.2.** Contribution 2: "so the pooled encoding … fails" → "The evidence points to the pooled encoding
-  … a controlled pooling ablation tests this directly [PENDING C2]"; indexer CI updated to [1.2, 2.1].
+- **R2.2.** Contribution 2: "so the pooled encoding … fails" → "A controlled pooling ablation (§5.6) finds
+  that neither position-aware pooling nor explicit peak-position features reduce that error … so the pooled
+  encoding is not the stage at fault; the evidence points instead to the regression formulation"; indexer
+  CI updated to [1.2, 2.1].
 - **R1.3, R2.3, R1.5iii.** Contribution 3 retitled "A classical control": crystal system supplied; "sanity
   check on the diagnosis, not a method"; unknown-system run announced `[PENDING C3]`.
 - **R3.2.** Contribution 4: "Wyckoff-site" → "Wyckoff-letter"; "read narrowly: label, not a constraint".
@@ -113,14 +118,23 @@ citation awaiting verified metadata before it enters the References list.
   negative result "narrow": label token does not help; says nothing about symmetry imposed as a constraint.
 
 ## §5.5 Perturbation study
-- **R2.2.** "the limiter is the pooled encoding" → "the evidence points to the pooled encoding".
+- **R2.2.** "the limiter is the pooled encoding" → "§5.6 shows this is not repaired by giving the head the
+  peak positions, and reads it as a failure of the regression formulation rather than of the pooled encoding
+  or the denoiser".
 
 ## §5.6 Pooling bottleneck
-- **R2.2.** "The error is a property of the pooled global encoding" → "behaves like a property of …";
-  "The architectural implication is concrete" → conditional on the ablation.
-- **R2.2.** New paragraph "Controlled pooling ablation": design (i) global average pool, (ii) position-aware
-  pooling, (iii) explicit peak-position features, all else fixed; `[PENDING C2]`; until then "best-supported
-  hypothesis, not a demonstrated cause".
+- **R2.2.** Retitled "Why the learned lattice fails: neither the head nor the pooling repairs the scale".
+- **R2.2.** "The error is a property of the pooled global encoding" → "The submitted version read this as a
+  property of the pooled global encoding … the controlled ablation below tests that reading directly and
+  does not support it"; the indexer reconciliation now says it "assigns Miller indices to peak positions by
+  explicit search rather than regressing six numbers"; "The architectural implication is concrete" removed.
+- **R2.2.** New paragraph "Controlled pooling ablation" + **new Table 4**: design (i) global average pool,
+  (ii) position-aware attention pooling, (iii) explicit peak-position features, all else fixed; result on the
+  frozen v21 encoder (mean length MAE 1.29 / 1.31 / 1.28 Å vs 1.32 Å for the checkpoint head; spread 0.03 Å;
+  all ~2.5× above the 0.5 Å knee); pooling reading withdrawn; revised reading = regression formulation does
+  not perform the peak-to-index assignment; three caveats (frozen encoder, arm (ii) not converged, v1
+  encoder trained with the R3.3(b) Debye term); `[PENDING C2-box]` for the 10-epoch rerun on the retrained
+  checkpoint and the end-to-end match.
 
 ## §5.7 Code audit and corrections (NEW)
 - **R3.3a/b/c, R2.1.** Lists the three errors, what each affected and did not affect, the re-validation
@@ -128,8 +142,9 @@ citation awaiting verified metadata before it enters the References list.
   the top-K rerank consequence (can only be lower; conclusion stands), `[PENDING C1]` for retrains.
 
 ## §6 Discussion
-- **R2.2.** "The limiter is therefore the global pooling" → "The evidence therefore points to …; the
-  controlled ablation of §5.6 tests this directly `[PENDING C2]`".
+- **R2.2.** "The limiter is therefore the global pooling" → "The controlled ablation of §5.6 shows that
+  restoring absolute peak positions to the head does not move it either, so the pooling reading of the
+  submitted version is withdrawn; the evidence now points to the regression formulation".
 - **R3.2.** Wyckoff sentence: "with a label rather than a constraint".
 - **R1.1.** "Niche": "12–19× behind" removed; "that is the point of its size"; "diagnostic instrument, not a
   candidate solver"; "indexer drop-in" → "indexer control".
@@ -141,8 +156,9 @@ citation awaiting verified metadata before it enters the References list.
   orientation, background would degrade the encoder further; diagnosis is a lower bound; knee may move.
 
 ## §8 Conclusion
-- **R1.1, R2.2, R2.3, R3.3.** Rewritten: diagnostic instrument; "evidence points to global pooling
-  `[PENDING C2]`"; indexer as control with crystal system given, 1.6 % [1.2, 2.1]; external rates "set the
+- **R1.1, R2.2, R2.3, R3.3.** Rewritten: diagnostic instrument; "neither position-aware pooling nor explicit
+  peak-position features reduce that error, so the pooling reading is withdrawn; the evidence points instead
+  to the regression formulation"; indexer as control with crystal system given, 1.6 % [1.2, 2.1]; external rates "set the
   scale … not a ranking claim"; code audit sentence `[PENDING C1]`; Wyckoff "read narrowly"; "12–46×" and
   "classical-autoindexer drop-in are load-bearing" removed.
 
