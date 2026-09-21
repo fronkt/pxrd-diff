@@ -160,6 +160,9 @@ citation awaiting verified metadata before it enters the References list.
   or the denoiser".
 
 ## §5.6 Pooling bottleneck
+- **R2.2 (C2 on the box).** Table 4 restructured to carry both encoders (v21 at 3 epochs, v22 at 10) and an
+  end-to-end column (0.7 / 0.5 / 1.2 % for (i)/(ii)/(iii) vs 1.9 % full pipeline); every regression-head match is
+  cubic; pooling reading stays withdrawn; caveats reduced to two.
 - **R2.2.** Retitled "Why the learned lattice fails: neither the head nor the pooling repairs the scale".
 - **R2.2.** "The error is a property of the pooled global encoding" → "The submitted version read this as a
   property of the pooled global encoding … the controlled ablation below tests that reading directly and
