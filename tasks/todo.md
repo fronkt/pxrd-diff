@@ -1648,7 +1648,7 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
   peaks 1.281 / 16.1°. Spread 0.025 Å → restoring peak positions does NOT reduce the
   error; pooling reading withdrawn, regression-vs-indexing reading offered instead
   (paper §5.6 / letter R2.2 rewritten).
-- [~] C1 Retrain v21 with corrected simulator + fixed x0 Debye loss (R2.1 / R3.3): same
+- [x] C1 Retrain v21 with corrected simulator + fixed x0 Debye loss (R2.1 / R3.3): same
       config, 100 k steps; eval oracle / learned / indexer at 3 seeds with
       `--index-fallback miss`. Report next to the v1 numbers; whatever moves, moves.
       TRAIN DONE 2026-09-21 03:03 UTC: `gpu_v22_jac`, 6 896 s wall on the 5090, final EMA
@@ -1663,15 +1663,17 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
       +18/−47 (learned now wins cubic), hex +16/−0, tet +7/−2, trig +1/−2. Pearson
       0.18 / 0.41 / 0.71. No eval hangs (3000/3000 per arm). Files committed
       (`paper/phase15_results/v22_*`, `v22_summary.json`); paper/letter rewrite by fork.
-- [ ] C2 Pooling ablation (R2.2): same encoder, same denoiser, same training; ONLY the
-      aux-head input changes: (a) global-avg-pool g (as now) (b) position-aware pooling
-      (learned-position attention over the multi-resolution map) (c) explicit peak-position
-      features (peak_features already exist: `--peak-aug-lat-head`). Report aux-head
-      lattice MAE and end-to-end match with that head's lattice. 3 runs × ~1.5 h.
-- [ ] C3 Sample with unknown-system indexer cells (B2) at 3 seeds → "no prior beyond
-      composition" row for Table 2.
-- [ ] C4 (optional, R1.5ii) Phase 4 ablation at 3 seeds: 6 configs × 2 extra seeds.
-      If not run, Table 1 is labelled single-seed/exploratory (already done in text).
+- [x] C2 Pooling ablation (R2.2) DONE on the box 2026-09-21: heads on the frozen v22 encoder
+      at 10 epochs — ckpt head 1.28 Å, gpool 1.29, attnpool 1.21 (still falling), peaks 1.28;
+      end-to-end at 3 seeds: gpool 22/3000 = 0.7 %, attnpool 16 = 0.5 %, peaks 37 = 1.2 %
+      (full pipeline 1.9 %, indexer 1.6 %); every regression-head match is cubic. Table 4
+      now carries v21 (3 ep) + v22 (10 ep) rows and the end-to-end column. Extra: attnpool
+      30 epochs (`pooling_ablation_v22_attn30/`) + its 3 end-to-end runs — see below.
+- [x] C3 Sample with unknown-system indexer cells (B2, dewolff rule) at 3 seeds DONE
+      2026-09-21: 42/3000 = 1.4 % [1.0, 1.9] vs 48 = 1.6 % given (0 gained / 6 lost, p 0.03;
+      vs learned p 0.11; Pearson 0.41 both). Third row of Table 2; abstract/§1/§3.5/§7 filled.
+- [ ] C4 (optional, R1.5ii) Phase 4 ablation at 3 seeds — DECLINED (budget, ~18 GPU-h);
+      Table 1 stays single-seed/exploratory; letter says so (R1.5ii, declined list).
 - DECLINED with reasons in the letter: PXRDnet n=200 (~33 GPU-days); ordering claim removed
   from abstract instead.
 

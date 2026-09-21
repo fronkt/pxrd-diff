@@ -90,3 +90,21 @@ supported has been removed from the abstract instead; §5.3/§6 keep it as a hyp
 ## After the box
 Copy `paper/phase15_results/` back, commit it, destroy the instance, record spend in
 tasks/todo.md Phase 15, then replace every `[PENDING C*]` tag in paper.md.
+
+## Actuals (run 2026-09-21, vast.ai instance 51833313, RTX 5090 at $0.518/h)
+- Box: 32 vCPU offer (cgroup quota 30.7), 456/370 Mbit/s, image pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime.
+  Rented 00:55 UTC; setup 00:57–01:05 (clone, pip, MP-20 pull, 45 k patterns simulated at 24 workers in 2 min,
+  form-factor tests green). The v1 checkpoint was NOT uploaded (E: drive unmounted locally), so the optional
+  v1 determinism re-check was skipped; the v22 checkpoint was pulled back to `runs/gpu_v22_jac/` (md5-verified).
+- Everything ran from one box-side `pipeline.sh` in tmux (idempotent; status file with rc per run; all 22 runs rc=0).
+- C1: train 01:05–03:03 (6 896 s, final EMA 0.602 vs v21 0.726); nine evals 03:03–04:09 (~7.4 min each, no
+  StructureMatcher hangs, 3 000/3 000 scored per arm). Result: learned 1.9 %, indexer 1.6 %, oracle 5.5 %;
+  learned-vs-indexer McNemar p = 0.35 (submitted 27/0, p = 1.5e-8 does not survive the fix); oracle p = 3e-18.
+- C2: heads at 10 epochs (not 3: arm (ii) was unconverged locally) 04:09–04:17; nine end-to-end runs 04:17–05:25
+  (0.7 / 0.5 / 1.2 % for gpool / attnpool / peaks; every match cubic). Extra: attnpool at 30 epochs after the
+  pipeline (a concurrent launch was stopped: the sampler holds 26.6 GB of the 32 GB card).
+- C3: the unknown-system cells were recomputed ON THE BOX CPUs during training (20 shards × 50, 01:16–01:26)
+  after a subagent audit showed the first max-M20 rule (24.3 %) was naive; the de Wolff/TREOR acceptance rule gives
+  43.4 % strict vs 48.8 % given. Three end-to-end runs 05:25–05:48: 1.4 % vs 1.6 % (0 gained / 6 lost).
+- C4: declined (budget: $6.35 credit at rent).
+- Wall time ≈ 5.5 h through the pipeline; cost recorded in tasks/todo.md Phase 15 at teardown.
