@@ -1648,9 +1648,13 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
   peaks 1.281 / 16.1°. Spread 0.025 Å → restoring peak positions does NOT reduce the
   error; pooling reading withdrawn, regression-vs-indexing reading offered instead
   (paper §5.6 / letter R2.2 rewritten).
-- [ ] C1 Retrain v21 with corrected simulator + fixed x0 Debye loss (R2.1 / R3.3): same
+- [~] C1 Retrain v21 with corrected simulator + fixed x0 Debye loss (R2.1 / R3.3): same
       config, 100 k steps; eval oracle / learned / indexer at 3 seeds with
       `--index-fallback miss`. Report next to the v1 numbers; whatever moves, moves.
+      TRAIN DONE 2026-09-21 03:03 UTC: `gpu_v22_jac`, 6 896 s wall on the 5090, final EMA
+      loss 0.602 (v21 0.726), coord 0.071 (v21 0.075), lat 0.07, aux 0.06, debye 0.47.
+      ckpt copied to local `runs/gpu_v22_jac/ckpt_final.pt` (45 MB, gitignored; E: was
+      unmounted). Evals started 03:03 UTC (learned/indexer/oracle × s0–2).
 - [ ] C2 Pooling ablation (R2.2): same encoder, same denoiser, same training; ONLY the
       aux-head input changes: (a) global-avg-pool g (as now) (b) position-aware pooling
       (learned-position attention over the multi-resolution map) (c) explicit peak-position
