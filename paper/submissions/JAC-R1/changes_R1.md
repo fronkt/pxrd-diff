@@ -79,7 +79,8 @@ citation awaiting verified metadata before it enters the References list.
   accepted by the de Wolff / TREOR / DICVOL rule (all lines indexed, M20 ≥ 10, system from metric symmetry);
   43.4 % strict vs 48.8 % given, lattice type recovered 65.4 %, paired loss 65 / gain 9; the first-pass max-M20
   rule (24.3 %) reported alongside. §1 sentence and §7 bullet (i) updated; refs de Wolff (1968) and Werner
-  et al. (1985) added. `[PENDING C3]` (downstream match, three seeds) remains.
+  et al. (1985) added. `[PENDING C3]` (downstream match, three seeds) remains. Fig. 3 (fig4_indexer_bench)
+  panel (a) gains the system-unknown strict bars and the dual overall line; caption updated.
 - **R3.3c.** Final paragraph: "drop-in in the strongest sense" → "in the mechanical sense"; unindexed
   patterns (39/1000) scored as misses; submitted version's fallback disclosed with pointer to §5.7.
 

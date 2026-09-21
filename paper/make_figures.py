@@ -263,11 +263,15 @@ def fig4_indexer_bench():
     """
     d = json.loads((ROOT / "phase9_results" / "index_benchmark_v2_native.json").read_text())
     ps = d["per_system"]
+    # JAC R1 (referee 1, 5iii): the same benchmark with the crystal system NOT supplied
+    du = json.loads((ROOT / "phase15_results" / "index_cells_test1000_unknown.json").read_text())
+    psu = du["per_system"]
     order = ["cubic", "tetragonal", "hexagonal", "trigonal",
              "orthorhombic", "monoclinic", "triclinic"]
     abbr = ["Cubic", "Tetrag.", "Hexag.", "Trigon.", "Orthor.", "Monocl.", "Tricl."]
     ns = [ps[s]["n"] for s in order]
     strict = [ps[s]["strict_pct"] for s in order]
+    strict_unk = [psu[s]["strict_pct"] if s in psu else 0.0 for s in order]
     consist = [ps[s]["consistent_pct"] for s in order]
     lenmae = [ps[s]["len_mae"] for s in order]
     lenmae_plot = [(v if v == v else 0.0) for v in lenmae]  # NaN (triclinic) -> 0
@@ -277,26 +281,30 @@ def fig4_indexer_bench():
 
     fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.3), constrained_layout=True)
     x = np.arange(len(order))
-    width = 0.4
+    width = 0.27
 
-    # (a) strict / consistent match rate
+    # (a) strict (system given / unknown) and consistent match rate
     ax = axes[0]
-    ax.bar(x - width / 2, strict, width, color=CB["blue"], edgecolor="white",
-           linewidth=0.6, label="Strict", zorder=3)
-    ax.bar(x + width / 2, consist, width, color=CB["skyblue"], edgecolor="white",
-           linewidth=0.6, label="Consistent", zorder=3)
+    ax.bar(x - width, strict, width, color=CB["blue"], edgecolor="white",
+           linewidth=0.6, label="Strict, system given", zorder=3)
+    ax.bar(x, strict_unk, width, color=CB["orange"], edgecolor="white",
+           linewidth=0.6, label="Strict, system unknown", zorder=3)
+    ax.bar(x + width, consist, width, color=CB["skyblue"], edgecolor="white",
+           linewidth=0.6, label="Consistent, system given", zorder=3)
     ax.axhline(overall["overall_strict_pct"], color=CB["red"], lw=1.0, ls="--", zorder=2,
-               label=f"overall strict = {overall['overall_strict_pct']:.1f}%")
+               label=f"overall strict = {overall['overall_strict_pct']:.1f}% / "
+                     f"{du['overall']['overall_strict_pct']:.1f}%")
     ax.set_xticks(x)
     ax.set_xticklabels(ticklabels, fontsize=7)
     ax.set_ylabel("Indexing accuracy (%)")
     ax.set_title("(a) Per-system match rate", loc="left")
-    ax.set_ylim(0, 100)
+    ax.set_ylim(0, 128)          # headroom so the legend clears the hexagonal bars
+    ax.set_yticks([0, 20, 40, 60, 80, 100])
     _ygrid(ax)
-    ax.legend(loc="upper right", borderaxespad=0.3)
-    for i, v in enumerate(strict):
-        ax.text(i - width / 2, v + 1.8, f"{v:.0f}", ha="center", fontsize=6.5,
-                color="#222222")
+    ax.legend(loc="upper right", borderaxespad=0.3, fontsize=7)
+    for i, (v, u) in enumerate(zip(strict, strict_unk)):
+        ax.text(i - width, v + 1.8, f"{v:.0f}", ha="center", fontsize=6, color="#222222")
+        ax.text(i, u + 1.8, f"{u:.0f}", ha="center", fontsize=6, color="#222222")
 
     # (b) lattice-length MAE (Å)
     ax = axes[1]
