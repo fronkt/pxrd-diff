@@ -88,6 +88,9 @@ citation awaiting verified metadata before it enters the References list.
   checkpoint retrained (v22: EMA loss 0.726 → 0.602, learned head 0 → 1.9 %); v13–v16 not retrained, labelled.
 
 ## §3.5 Classical indexing
+- **R1.5iii (C3 on the box).** Unknown-system cells substituted at three seeds: 1.4 % [1.0, 1.9] vs 1.6 % given
+  (0 gained / 6 lost, p = 0.03; vs learned head p = 0.11). New third row of Table 2; abstract, §1 contribution 2
+  and §7 bullet (i) carry the number.
 - **R1.3, R2.3.** Heading "drop-in for" → "control for"; input (ii) now "the true crystal system of the target
   structure … prior information beyond the composition … optimistic control rather than a fair competitor".
 - **R1.5iii.** New paragraph "Without the crystal system": lattice types searched highest symmetry first,
