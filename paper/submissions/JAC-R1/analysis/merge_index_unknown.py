@@ -110,7 +110,8 @@ for s in SYSTEMS:
     if s not in u_sys and s not in g_sys:
         continue
     g = g_sys.get(s, {}); u = u_sys.get(s, {})
-    print(f"{s:<13}{counts[s]:>5}{g.get('strict_pct', float('nan')):>15}{u.get('strict_pct', float('nan')):>17}"
-          f"{u.get('system_correct_pct', float('nan')):>14}{g.get('len_mae', float('nan')):>14}{u.get('len_mae', float('nan')):>12}")
+    v = lambda d, k: d.get(k) if d.get(k) is not None else float("nan")
+    print(f"{s:<13}{counts[s]:>5}{v(g, 'strict_pct'):>15}{v(u, 'strict_pct'):>17}"
+          f"{v(u, 'system_correct_pct'):>14}{v(g, 'len_mae'):>14}{v(u, 'len_mae'):>12}")
 print(f"OVERALL   given strict {g_overall['overall_strict_pct']} %  unknown strict {u_overall['overall_strict_pct']} %  "
       f"unknown indexed {u_overall['n_indexed']}/{N_TOTAL}")

@@ -1594,10 +1594,16 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
 
 **B. CPU experiments (local, no GPU):**
 - [x] B1 simulator re-validation (A1).
-- [~] B2 indexer with crystal system UNKNOWN (R1.5iii): `09_index_benchmark.py
+- [x] B2 indexer with crystal system UNKNOWN (R1.5iii): `09_index_benchmark.py
       --system-mode unknown`, best-M20 over cubic/tetragonal/hexagonal/orthorhombic/
-      monoclinic. Sharded 6× in `analysis/index_unknown_chunk*.json`; merge → per-system
-      strict %, system-correct %, len MAE. Then Phase C3 samples with those cells.
+      monoclinic. Six shards merged 2026-09-20 → `paper/phase15_results/
+      index_cells_test1000_unknown.json` + `index_unknown_vs_given.json`.
+      RESULT: strict 24.3 % (given-system 48.8 %); M20 picks the true system 40.7 %
+      (cubic 12/238 — mostly sent to orthorhombic/monoclinic sub-cells, e.g. mp-867922
+      vol_ratio 16); paired: unknown gains 8 / loses 254 vs given. Per system strict %
+      given→unknown: cubic 52.9→0.4, hex 77.9→37.5, trig 43.3→16.5, tet 52.8→35.0,
+      orth 59.8→47.4, mono 18.9→20.9. M20 system-selection audited by subagent before
+      the number goes in the paper (sub-cell pathology vs bug).
 - [x] B3 given-system reproduction check on first 60 rows vs committed
       `index_cells_test1000.json`: 60/60 identical cells (rebuilt local cache = original).
 - NOTE 2026-09-20 ~17:45: the B2 shards (6 × `09_index_benchmark.py --system-mode unknown`,
@@ -1610,7 +1616,21 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
       `[PENDING C2]` (end-to-end match still needs the GPU). Neither has been checked since.
 
 **C. GPU experiments (rented RTX 5090, ~$10–20; runbook
-`paper/submissions/JAC-R1/compute-runbook.md`) — FRANK'S CALL to rent:**
+`paper/submissions/JAC-R1/compute-runbook.md`) — Frank said "Run the GPU rents" 2026-09-20 evening:**
+- RENTED 2026-09-21 00:55 UTC: vast.ai instance 51833313, RTX 5090, $0.52/h,
+  `ssh -p 33312 root@ssh4.vast.ai`, credit $6.35 at start (C4 is out of budget).
+  Box-side `/workspace/pipeline.sh` (tmux `pipe`, status file `/workspace/logs/pipeline.status`)
+  chains C1 train (100 k steps, same v21 flags, pymatgen form factor) → 9 evals
+  (learned/indexer/oracle × seeds 0–2, `--index-fallback miss`) → C2 heads on the v22 ckpt
+  at 10 epochs → 9 end-to-end pool runs → C3 (3 seeds) once
+  `paper/phase15_results/index_cells_test1000_unknown.json` is on the box. Outputs
+  `paper/phase15_results/v22_*.json|.per_sample.jsonl`. E: drive was NOT mounted, so the
+  optional v1-ckpt determinism re-check is skipped.
+- C2 head-level on the FROZEN v1 encoder (local CPU, 3 epochs, done 2026-09-20 19:27):
+  ckpt head 1.316 Å / 15.6°; gpool 1.287 / 16.0°; attnpool 1.306 / 16.4° (still improving);
+  peaks 1.281 / 16.1°. Spread 0.025 Å → restoring peak positions does NOT reduce the
+  error; pooling reading withdrawn, regression-vs-indexing reading offered instead
+  (paper §5.6 / letter R2.2 rewritten).
 - [ ] C1 Retrain v21 with corrected simulator + fixed x0 Debye loss (R2.1 / R3.3): same
       config, 100 k steps; eval oracle / learned / indexer at 3 seeds with
       `--index-fallback miss`. Report next to the v1 numbers; whatever moves, moves.
