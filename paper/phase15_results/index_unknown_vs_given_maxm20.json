@@ -1,0 +1,160 @@
+{
+ "n_paired": 961,
+ "strict_given": 488,
+ "strict_unknown": 242,
+ "unknown_gains": 8,
+ "unknown_losses": 254,
+ "system_correct_pct": 42.4,
+ "given": {
+  "overall": {
+   "n": 1000,
+   "n_indexed": 961,
+   "overall_strict_pct": 48.8,
+   "overall_consistent_pct": 56.2,
+   "overall_len_mae": 1.4484,
+   "system_correct_pct": 96.1,
+   "system_mode": "given"
+  },
+  "per_system": {
+   "cubic": {
+    "n": 238,
+    "n_indexed": 238,
+    "strict_pct": 52.9,
+    "consistent_pct": 59.2,
+    "len_mae": 1.1364,
+    "ang_mae": 0.0,
+    "system_correct_pct": 100.0
+   },
+   "hexagonal": {
+    "n": 104,
+    "n_indexed": 104,
+    "strict_pct": 77.9,
+    "consistent_pct": 85.6,
+    "len_mae": 0.5287,
+    "ang_mae": 0.0,
+    "system_correct_pct": 100.0
+   },
+   "trigonal": {
+    "n": 97,
+    "n_indexed": 97,
+    "strict_pct": 43.3,
+    "consistent_pct": 46.4,
+    "len_mae": 4.617,
+    "ang_mae": 0.0,
+    "system_correct_pct": 100.0
+   },
+   "tetragonal": {
+    "n": 180,
+    "n_indexed": 180,
+    "strict_pct": 52.8,
+    "consistent_pct": 65.0,
+    "len_mae": 0.9561,
+    "ang_mae": 0.0,
+    "system_correct_pct": 100.0
+   },
+   "orthorhombic": {
+    "n": 194,
+    "n_indexed": 194,
+    "strict_pct": 59.8,
+    "consistent_pct": 66.0,
+    "len_mae": 0.9571,
+    "ang_mae": 0.0,
+    "system_correct_pct": 100.0
+   },
+   "monoclinic": {
+    "n": 148,
+    "n_indexed": 148,
+    "strict_pct": 18.9,
+    "consistent_pct": 28.4,
+    "len_mae": 1.7624,
+    "ang_mae": 15.413,
+    "system_correct_pct": 100.0
+   },
+   "triclinic": {
+    "n": 39,
+    "n_indexed": 0,
+    "strict_pct": 0.0,
+    "consistent_pct": 0.0,
+    "len_mae": null,
+    "ang_mae": null,
+    "system_correct_pct": 0.0
+   }
+  }
+ },
+ "unknown": {
+  "overall": {
+   "n": 1000,
+   "n_indexed": 1000,
+   "overall_strict_pct": 24.3,
+   "overall_consistent_pct": 38.0,
+   "overall_len_mae": 1.9546,
+   "system_correct_pct": 40.7,
+   "system_mode": "unknown"
+  },
+  "per_system": {
+   "cubic": {
+    "n": 238,
+    "n_indexed": 238,
+    "strict_pct": 0.4,
+    "consistent_pct": 2.5,
+    "len_mae": 2.6714,
+    "ang_mae": 3.702,
+    "system_correct_pct": 5.0
+   },
+   "hexagonal": {
+    "n": 104,
+    "n_indexed": 104,
+    "strict_pct": 37.5,
+    "consistent_pct": 71.2,
+    "len_mae": 1.0731,
+    "ang_mae": 5.652,
+    "system_correct_pct": 49.0
+   },
+   "trigonal": {
+    "n": 97,
+    "n_indexed": 97,
+    "strict_pct": 16.5,
+    "consistent_pct": 39.2,
+    "len_mae": 4.6131,
+    "ang_mae": 11.613,
+    "system_correct_pct": 26.8
+   },
+   "tetragonal": {
+    "n": 180,
+    "n_indexed": 180,
+    "strict_pct": 35.0,
+    "consistent_pct": 47.2,
+    "len_mae": 1.2605,
+    "ang_mae": 2.696,
+    "system_correct_pct": 47.8
+   },
+   "orthorhombic": {
+    "n": 194,
+    "n_indexed": 194,
+    "strict_pct": 47.4,
+    "consistent_pct": 64.9,
+    "len_mae": 1.2021,
+    "ang_mae": 3.46,
+    "system_correct_pct": 63.9
+   },
+   "monoclinic": {
+    "n": 148,
+    "n_indexed": 148,
+    "strict_pct": 20.9,
+    "consistent_pct": 31.1,
+    "len_mae": 1.5686,
+    "ang_mae": 12.418,
+    "system_correct_pct": 73.0
+   },
+   "triclinic": {
+    "n": 39,
+    "n_indexed": 39,
+    "strict_pct": 2.6,
+    "consistent_pct": 12.8,
+    "len_mae": 1.7313,
+    "ang_mae": 15.123,
+    "system_correct_pct": 0.0
+   }
+  }
+ }
+}
