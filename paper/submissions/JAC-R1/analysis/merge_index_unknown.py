@@ -20,11 +20,14 @@ OUT.mkdir(parents=True, exist_ok=True)
 SYSTEMS = ["cubic", "hexagonal", "trigonal", "tetragonal", "orthorhombic", "monoclinic", "triclinic"]
 N_TOTAL = 1000
 
-rows, n_seen = [], 0
+rows, n_seen, rules = [], 0, set()
 for f in sorted(glob.glob(str(A / "index_unknown_chunk*.json"))):
     d = json.load(open(f))
     rows += d["rows"]
     n_seen += d["overall"]["n"]
+    rules.add((d["overall"].get("unknown_rule"), d["overall"].get("m20_min")))
+assert len(rules) == 1, f"chunks were run under different rules: {rules}"
+(unknown_rule, m20_min), = rules
 assert n_seen == N_TOTAL, f"chunks cover {n_seen} rows, expected {N_TOTAL}"
 mids = [r["mid"] for r in rows]
 assert len(set(mids)) == len(mids), "duplicate mids across chunks"
@@ -76,6 +79,8 @@ for r in given["rows"] + rows:
 u_overall, u_sys = summarise(rows, N_TOTAL, counts)
 g_overall, g_sys = summarise(given["rows"], N_TOTAL, counts)
 u_overall["system_mode"] = "unknown"
+u_overall["unknown_rule"] = unknown_rule
+u_overall["m20_min"] = m20_min
 g_overall["system_mode"] = "given"
 
 json.dump(dict(overall=u_overall, per_system=u_sys, rows=rows), open(OUT / "index_cells_test1000_unknown.json", "w"), indent=1)
@@ -103,6 +108,7 @@ cmp = dict(
 )
 json.dump(cmp, open(OUT / "index_unknown_vs_given.json", "w"), indent=1)
 
+print(f"rule={unknown_rule} m20_min={m20_min}")
 print(f"paired {len(paired)}; strict given {cmp['strict_given']} vs unknown {cmp['strict_unknown']} "
       f"(unknown gains {b}, losses {c}); system correct {cmp['system_correct_pct']} %")
 print(f"{'system':<13}{'n':>5}{'given strict%':>15}{'unknown strict%':>17}{'sys-correct%':>14}{'lenMAE given':>14}{'lenMAE unk':>12}")
