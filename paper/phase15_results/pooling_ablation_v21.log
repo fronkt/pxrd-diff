@@ -1,0 +1,233 @@
+Device: cpu
+
+Frozen encoder from E:/gpu_v21_p9/ckpt_final.pt (run gpu_v21_p9, step 100000)
+
+
+Peak features train:   0%|          | 1/27136 [00:03<29:55:36,  3.97s/it]
+                                                                            
+
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+
+
+  x1 = float("inf") if self.X != self.X else self.X
+
+C:\Users\frank\AppData\Local\Programs\Python\Python312\Lib\site-packages\pymatgen\core\composition.py:328: UserWarning: No Pauling electronegativity for He. Setting to NaN. This has no physical meaning, and is mainly done to avoid errors caused by the code expecting a float.
+
+  return sum((el.X * abs(amt) for el, amt in self.items())) / self.num_atoms
+
+C:\Users\frank\AppData\Local\Programs\Python\Python312\Lib\site-packages\pymatgen\core\periodic_table.py:253: UserWarning: No Pauling electronegativity for He. Setting to NaN. This has no physical meaning, and is mainly done to avoid errors caused by the code expecting a float.
+
+  if not hasattr(other, "X") or not hasattr(other, "symbol"):
+
+C:\Users\frank\AppData\Local\Programs\Python\Python312\Lib\site-packages\pymatgen\core\periodic_table.py:256: UserWarning: No Pauling electronegativity for He. Setting to NaN. This has no physical meaning, and is mainly done to avoid errors caused by the code expecting a float.
+
+  x2 = float("inf") if other.X != other.X else other.X
+
+
+                                                                         
+
+                                                                        
+
+                                                                     
+[ckpt_aux] test MAE len 1.3155 A, ang 15.567 deg
+
+
+
+=== arm gpool: 67,334 head params, 1272 steps ===
+
+  ep 0 step 50/1272 loss 0.9996 (97s)
+
+  ep 0 step 100/1272 loss 0.5738 (194s)
+
+  ep 0 step 150/1272 loss 0.4694 (287s)
+
+  ep 0 step 200/1272 loss 0.3879 (373s)
+
+  ep 0 step 250/1272 loss 0.3857 (457s)
+
+  ep 0 step 300/1272 loss 0.3420 (541s)
+
+  ep 0 step 350/1272 loss 0.3013 (626s)
+
+  ep 0 step 400/1272 loss 0.2939 (711s)
+
+  [gpool] epoch 0: test MAE len 1.3442 A (abc [1.2559, 1.1615, 1.6153]), ang 16.106 deg, frac<0.5A 0.252
+
+  ep 1 step 450/1272 loss 0.1362 (821s)
+
+  ep 1 step 500/1272 loss 0.2626 (906s)
+
+  ep 1 step 550/1272 loss 0.2591 (992s)
+
+  ep 1 step 600/1272 loss 0.2452 (1077s)
+
+  ep 1 step 650/1272 loss 0.2439 (1161s)
+
+  ep 1 step 700/1272 loss 0.2231 (1246s)
+
+  ep 1 step 750/1272 loss 0.2269 (1331s)
+
+  ep 1 step 800/1272 loss 0.2153 (1418s)
+
+  [gpool] epoch 1: test MAE len 1.2905 A (abc [1.217, 1.1061, 1.5484]), ang 16.022 deg, frac<0.5A 0.28
+
+  ep 2 step 850/1272 loss 0.0076 (1541s)
+
+  ep 2 step 900/1272 loss 0.2034 (1623s)
+
+  ep 2 step 950/1272 loss 0.2150 (1698s)
+
+  ep 2 step 1000/1272 loss 0.1976 (1771s)
+
+  ep 2 step 1050/1272 loss 0.2034 (1846s)
+
+  ep 2 step 1100/1272 loss 0.2021 (1923s)
+
+  ep 2 step 1150/1272 loss 0.1909 (1989s)
+
+  ep 2 step 1200/1272 loss 0.2159 (2053s)
+
+  ep 2 step 1250/1272 loss 0.2103 (2117s)
+
+  [gpool] epoch 2: test MAE len 1.2865 A (abc [1.2109, 1.1033, 1.5452]), ang 16.026 deg, frac<0.5A 0.286
+
+
+
+=== arm attnpool: 530,694 head params, 1272 steps ===
+
+  ep 0 step 50/1272 loss 0.9732 (185s)
+
+  ep 0 step 100/1272 loss 0.9294 (374s)
+
+  ep 0 step 150/1272 loss 0.8413 (570s)
+
+  ep 0 step 200/1272 loss 0.8302 (771s)
+
+  ep 0 step 250/1272 loss 0.8381 (952s)
+
+  ep 0 step 300/1272 loss 0.8013 (1112s)
+
+  ep 0 step 350/1272 loss 0.8675 (1230s)
+
+  ep 0 step 400/1272 loss 0.8495 (1348s)
+
+  [attnpool] epoch 0: test MAE len 1.3535 A (abc [1.293, 1.18, 1.5874]), ang 16.992 deg, frac<0.5A 0.228
+
+  ep 1 step 450/1272 loss 0.4215 (1476s)
+
+  ep 1 step 500/1272 loss 0.7893 (1586s)
+
+  ep 1 step 550/1272 loss 0.8215 (1775s)
+
+  ep 1 step 600/1272 loss 0.8262 (1894s)
+
+  ep 1 step 650/1272 loss 0.7741 (2009s)
+
+  ep 1 step 700/1272 loss 0.7716 (2128s)
+
+  ep 1 step 750/1272 loss 0.7508 (2242s)
+
+  ep 1 step 800/1272 loss 0.7534 (2355s)
+
+  [attnpool] epoch 1: test MAE len 1.3374 A (abc [1.2586, 1.1584, 1.5952]), ang 16.392 deg, frac<0.5A 0.228
+
+  ep 2 step 850/1272 loss 0.0257 (2488s)
+
+  ep 2 step 900/1272 loss 0.6716 (2601s)
+
+  ep 2 step 950/1272 loss 0.7684 (2713s)
+
+  ep 2 step 1000/1272 loss 0.7703 (2832s)
+
+  ep 2 step 1050/1272 loss 0.7764 (2951s)
+
+  ep 2 step 1100/1272 loss 0.6933 (3066s)
+
+  ep 2 step 1150/1272 loss 0.7688 (3182s)
+
+  ep 2 step 1200/1272 loss 0.7046 (3304s)
+
+  ep 2 step 1250/1272 loss 0.7743 (3417s)
+
+  [attnpool] epoch 2: test MAE len 1.3062 A (abc [1.222, 1.1263, 1.5702]), ang 16.401 deg, frac<0.5A 0.243
+
+
+
+=== arm peaks: 209,158 head params, 1272 steps ===
+
+  ep 0 step 50/1272 loss 0.9291 (35s)
+
+  ep 0 step 100/1272 loss 0.6065 (70s)
+
+  ep 0 step 150/1272 loss 0.4851 (103s)
+
+  ep 0 step 200/1272 loss 0.4139 (136s)
+
+  ep 0 step 250/1272 loss 0.3568 (172s)
+
+  ep 0 step 300/1272 loss 0.3131 (205s)
+
+  ep 0 step 350/1272 loss 0.3055 (240s)
+
+  ep 0 step 400/1272 loss 0.2913 (273s)
+
+  [peaks] epoch 0: test MAE len 1.3005 A (abc [1.2165, 1.1121, 1.573]), ang 16.007 deg, frac<0.5A 0.264
+
+  ep 1 step 450/1272 loss 0.1437 (317s)
+
+  ep 1 step 500/1272 loss 0.2425 (352s)
+
+  ep 1 step 550/1272 loss 0.2442 (386s)
+
+  ep 1 step 600/1272 loss 0.2370 (420s)
+
+  ep 1 step 650/1272 loss 0.2474 (454s)
+
+  ep 1 step 700/1272 loss 0.2255 (487s)
+
+  ep 1 step 750/1272 loss 0.2248 (520s)
+
+  ep 1 step 800/1272 loss 0.1977 (554s)
+
+  [peaks] epoch 1: test MAE len 1.2867 A (abc [1.2025, 1.1048, 1.5527]), ang 16.155 deg, frac<0.5A 0.276
+
+  ep 2 step 850/1272 loss 0.0087 (599s)
+
+  ep 2 step 900/1272 loss 0.1891 (633s)
+
+  ep 2 step 950/1272 loss 0.2006 (666s)
+
+  ep 2 step 1000/1272 loss 0.1974 (700s)
+
+  ep 2 step 1050/1272 loss 0.2108 (733s)
+
+  ep 2 step 1100/1272 loss 0.1941 (766s)
+
+  ep 2 step 1150/1272 loss 0.2033 (799s)
+
+  ep 2 step 1200/1272 loss 0.1836 (832s)
+
+  ep 2 step 1250/1272 loss 0.1948 (866s)
+
+  [peaks] epoch 2: test MAE len 1.2806 A (abc [1.1958, 1.0992, 1.5468]), ang 16.058 deg, frac<0.5A 0.281
+
+
+
+=== summary (test, final epoch) ===
+
+ckpt_aux   len MAE 1.315 A  ang MAE 15.57 deg  frac<0.5A 0.325
+
+gpool      len MAE 1.286 A  ang MAE 16.03 deg  frac<0.5A 0.286
+
+attnpool   len MAE 1.306 A  ang MAE 16.40 deg  frac<0.5A 0.243
+
+peaks      len MAE 1.281 A  ang MAE 16.06 deg  frac<0.5A 0.281
+
+wrote paper\phase15_results\pooling_ablation_v21\pooling_ablation.json
+
