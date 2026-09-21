@@ -1602,8 +1602,19 @@ Receipt acknowledgement DRAFTED in Gmail (not sent; Frank sends).
       (cubic 12/238 — mostly sent to orthorhombic/monoclinic sub-cells, e.g. mp-867922
       vol_ratio 16); paired: unknown gains 8 / loses 254 vs given. Per system strict %
       given→unknown: cubic 52.9→0.4, hex 77.9→37.5, trig 43.3→16.5, tet 52.8→35.0,
-      orth 59.8→47.4, mono 18.9→20.9. M20 system-selection audited by subagent before
-      the number goes in the paper (sub-cell pathology vs bug).
+      orth 59.8→47.4, mono 18.9→20.9. AUDIT (subagent, 2026-09-21): not a bug — the
+      max-M20-across-systems rule is naive: M20 has no free-parameter penalty, so with
+      few exact lines a 4-parameter monoclinic sub-cell beats the true cubic cell
+      (mp-867922: cubic M20 1231 vs monoclinic 2182, both frac 1); the MIN_FRAC 0.8 gate
+      let cells skipping 1–3 lines compete; pred_system was the branch, not the metric
+      symmetry. Replay of the TREOR/DICVOL rule (highest symmetry first, accept the
+      first type indexing ALL lines with M20 ≥ T, system from metric symmetry): strict
+      46.4 % (T=20) / 45.5 % (T=10), sys-correct ~72 %. IMPLEMENTED as
+      `--unknown-rule dewolff` (default, T=10 = de Wolff's a-priori threshold; `maxm20`
+      reproduces the 24.3 % run, archived as `analysis/index_unknown_maxm20/` and
+      `phase15_results/*_maxm20.json`). RERUN 20 shards × 50 on the box CPUs
+      (`/workspace/unk/`, tmux `unk`, started 01:16 UTC) → merge → §3.5 reports BOTH
+      numbers (naive rule, then the standard rule) → ship cells to the box for C3.
 - [x] B3 given-system reproduction check on first 60 rows vs committed
       `index_cells_test1000.json`: 60/60 identical cells (rebuilt local cache = original).
 - NOTE 2026-09-20 ~17:45: the B2 shards (6 × `09_index_benchmark.py --system-mode unknown`,
