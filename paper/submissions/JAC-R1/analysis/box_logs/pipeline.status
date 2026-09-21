@@ -46,3 +46,7 @@
 == 2026-09-21T05:40:49Z start v22_indexer_unknown_s2
 == 2026-09-21T05:48:41Z end v22_indexer_unknown_s2 rc=0
 == 2026-09-21T05:48:41Z PIPELINE DONE
+== 2026-09-21T06:10:02Z end attnpool30_s0 rc=0
+== 2026-09-21T06:17:38Z end attnpool30_s1 rc=0
+== 2026-09-21T06:25:31Z end attnpool30_s2 rc=0
+== 2026-09-21T06:25:31Z ATTN30 E2E DONE
