@@ -1,0 +1,79 @@
+Loaded checkpoint: step=100000, d_model=256, predict_x0=True, lat_head=Aux, sg_head=False
+Phase 4.1: ensemble n_samples=20, eta=0.0
+Phase 4.2: Rietveld refinement steps=200, lr=0.001, refine_lattice=False
+
+  val = self.func(instance)
+
+  val = self.func(instance)
+
+                                                                       
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=1.239  b=1.076  c=1.538  α=13.68  β=12.36  γ=18.98
+Aux-head lattice validity: 997/1000 (99.7%)
+Phase 9.1: indexed-cell lattice — 1000/1000 covered (100.0%); 0 uncovered scored as MISS
+  indexed-cell MAE vs true (covered rows): a=1.238 b=1.095 c=1.551  α=14.07 β=12.79 γ=19.70
+Ensemble: 1000 patterns x 20 candidates in chunks of 32 (32 chunks)
+Refinement: 200 Adam steps @ lr=0.001, refine_lattice=False
+  chunk 3/32 done (sample=17.0s  select=1.3s  refine=4.7s)
+  chunk 6/32 done (sample=33.8s  select=2.5s  refine=7.8s)
+  chunk 9/32 done (sample=50.6s  select=3.7s  refine=11.6s)
+  chunk 12/32 done (sample=67.7s  select=5.0s  refine=14.9s)
+  chunk 15/32 done (sample=84.5s  select=6.2s  refine=18.0s)
+  chunk 18/32 done (sample=101.4s  select=7.4s  refine=21.2s)
+  chunk 21/32 done (sample=118.2s  select=8.6s  refine=24.2s)
+  chunk 24/32 done (sample=135.1s  select=9.9s  refine=27.4s)
+  chunk 27/32 done (sample=151.9s  select=11.1s  refine=31.0s)
+  chunk 30/32 done (sample=168.8s  select=12.3s  refine=34.2s)
+  chunk 32/32 done (sample=175.8s  select=12.8s  refine=36.3s)
+Total: sample=175.8s  select=12.8s  refine=36.3s
+Selected-candidate pearson: mean=0.076 median=0.023
+Refinement loss avg first->last: 0.9254 -> 0.7282
+/opt/conda/lib/python3.11/site-packages/pymatgen/core/lattice.py:1109: RuntimeWarning: invalid value encountered in divide
+  u[s - 1, : (s - 1)] = np.dot(a[:, s - 1].T, b[:, : (s - 1)]) / m[: (s - 1)]
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.765  pearson=-0.019  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=26.040  pearson=0.049  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=0.289  rwp=27.071  pearson=-0.007  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=30.431  pearson=0.294  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.432  pearson=0.113  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=8.182  pearson=0.094  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.958  pearson=0.044  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.893  pearson=0.079  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.727  pearson=0.152  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=8.882  pearson=0.030  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=20.018  pearson=0.119  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.819  pearson=-0.021  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=5.486  pearson=0.029  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=24.544  pearson=0.037  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=18.789  pearson=-0.002  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.428  pearson=-0.011  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=29.460  pearson=0.066  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=24.496  pearson=0.016  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.834  pearson=0.111  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=18.273  pearson=-0.008  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=23.356  pearson=0.214  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=24.528  pearson=0.033  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.556  pearson=0.177  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.148  pearson=0.041  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.951  pearson=0.189  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=27.771  pearson=-0.011  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=26.903  pearson=-0.016  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.988  pearson=0.000  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=19.011  pearson=0.051  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.161  pearson=0.101  all=N
+Wrote per-sample flags to paper/phase15_results/v22_pool_gpool_s0.per_sample.jsonl
+
+--- Aggregate Metrics ---
+                               n: 1000
+          composition_match_rate: 1.0000
+                       rmsd_mean: 0.2257
+                     rmsd_median: 0.2453
+   match_rate (StructureMatcher): 0.0090
+                        rwp_mean: 18.0805
+                    pearson_mean: 0.0747
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0150
+                   sg_match@0.05: 0.0120
+                    sg_match@0.1: 0.0110
+                    sg_match@0.2: 0.0090
+
+Wrote aggregate metrics to paper/phase15_results/v22_pool_gpool_s0.json

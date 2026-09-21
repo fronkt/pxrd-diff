@@ -1,0 +1,36 @@
+== Mon Sep 21 00:57:09 UTC 2026 setup start
+Cloning into 'pxrd-diff'...
+8a12ed7 todo: Phase 15 status note (B3 reproduced 60/60; B2 shards and C2 head ablation left running unwatched)
+torch 2.8.0+cu128 cuda True NVIDIA GeForce RTX 5090
+  DEPRECATION: Building 'bibtexparser' using the legacy setup.py bdist_wheel mechanism, which will be removed in a future version. pip 25.3 will enforce this behaviour change. A possible replacement is to use the standardized build interface by setting the `--use-pep517` option, (possibly combined with `--no-build-isolation`), or adding a `pyproject.toml` file to the source tree of 'bibtexparser'. Discussion can be found at https://github.com/pypa/pip/issues/6334
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[get ] https://raw.githubusercontent.com/txie-93/cdvae/main/data/mp_20/train.csv
+[ok  ] wrote train.csv (34,975,028 bytes)
+[verify] train.csv: rows=27,136 sha1=154c70db9345 cols=['Unnamed: 0', 'material_id', 'formation_energy_per_atom', 'band_gap', 'pretty_formula', 'e_above_hull', 'elements', 'cif', 'spacegroup.number']
+[get ] https://raw.githubusercontent.com/txie-93/cdvae/main/data/mp_20/val.csv
+[ok  ] wrote val.csv (11,617,279 bytes)
+[verify] val.csv: rows=9,047 sha1=079710c2d936 cols=['Unnamed: 0', 'material_id', 'formation_energy_per_atom', 'band_gap', 'pretty_formula', 'e_above_hull', 'elements', 'cif', 'spacegroup.number']
+[get ] https://raw.githubusercontent.com/txie-93/cdvae/main/data/mp_20/test.csv
+[ok  ] wrote test.csv (11,599,133 bytes)
+[verify] test.csv: rows=9,046 sha1=d79ed96594ec cols=['Unnamed: 0', 'material_id', 'formation_energy_per_atom', 'band_gap', 'pretty_formula', 'e_above_hull', 'elements', 'cif', 'spacegroup.number']
+
+All MP-20 splits downloaded and verified.
+cpu.max: 3071999 100000; nproc 256
+[test] 9,046 structures, n_workers=24, n_bins=4251
+
+test:   0%|          | 1/9046 [00:01<4:01:11,  1.60s/it]
+[test] simulated in 20.1s; fail=0
+[test] wrote /workspace/pxrd-diff/data/cache/test.npz (76.1 MB)
+[val] 9,047 structures, n_workers=24, n_bins=4251
+
+val:   0%|          | 1/9047 [00:02<7:03:47,  2.81s/it]
+[val] simulated in 20.1s; fail=0
+[val] wrote /workspace/pxrd-diff/data/cache/val.npz (76.6 MB)
+[train] 27,136 structures, n_workers=24, n_bins=4251
+
+train:   0%|          | 1/27136 [00:01<12:15:34,  1.63s/it]
+[train] simulated in 58.5s; fail=0
+[train] wrote /workspace/pxrd-diff/data/cache/train.npz (231.2 MB)
+..........                                                               [100%]
+== Mon Sep 21 01:04:49 UTC 2026 setup done

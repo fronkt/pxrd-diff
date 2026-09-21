@@ -1,0 +1,48 @@
+== 2026-09-21T01:04:56Z setup done; starting C1 train
+== 2026-09-21T03:03:38Z train done
+== 2026-09-21T03:03:38Z start v22_learned_s0
+== 2026-09-21T03:10:55Z end v22_learned_s0 rc=0
+== 2026-09-21T03:10:55Z start v22_indexer_s0
+== 2026-09-21T03:18:21Z end v22_indexer_s0 rc=0
+== 2026-09-21T03:18:21Z start v22_oracle_s0
+== 2026-09-21T03:25:28Z end v22_oracle_s0 rc=0
+== 2026-09-21T03:25:28Z start v22_learned_s1
+== 2026-09-21T03:32:44Z end v22_learned_s1 rc=0
+== 2026-09-21T03:32:44Z start v22_indexer_s1
+== 2026-09-21T03:40:22Z end v22_indexer_s1 rc=0
+== 2026-09-21T03:40:22Z start v22_oracle_s1
+== 2026-09-21T03:47:28Z end v22_oracle_s1 rc=0
+== 2026-09-21T03:47:28Z start v22_learned_s2
+== 2026-09-21T03:54:43Z end v22_learned_s2 rc=0
+== 2026-09-21T03:54:43Z start v22_indexer_s2
+== 2026-09-21T04:02:09Z end v22_indexer_s2 rc=0
+== 2026-09-21T04:02:09Z start v22_oracle_s2
+== 2026-09-21T04:09:19Z end v22_oracle_s2 rc=0
+== 2026-09-21T04:09:19Z C1 evals done
+== 2026-09-21T04:17:29Z pool heads rc=0
+== 2026-09-21T04:17:29Z start v22_pool_gpool_s0
+== 2026-09-21T04:24:54Z end v22_pool_gpool_s0 rc=0
+== 2026-09-21T04:24:54Z start v22_pool_gpool_s1
+== 2026-09-21T04:32:23Z end v22_pool_gpool_s1 rc=0
+== 2026-09-21T04:32:23Z start v22_pool_gpool_s2
+== 2026-09-21T04:39:58Z end v22_pool_gpool_s2 rc=0
+== 2026-09-21T04:39:58Z start v22_pool_attnpool_s0
+== 2026-09-21T04:47:38Z end v22_pool_attnpool_s0 rc=0
+== 2026-09-21T04:47:38Z start v22_pool_attnpool_s1
+== 2026-09-21T04:55:28Z end v22_pool_attnpool_s1 rc=0
+== 2026-09-21T04:55:29Z start v22_pool_attnpool_s2
+== 2026-09-21T05:03:16Z end v22_pool_attnpool_s2 rc=0
+== 2026-09-21T05:03:16Z start v22_pool_peaks_s0
+== 2026-09-21T05:10:44Z end v22_pool_peaks_s0 rc=0
+== 2026-09-21T05:10:44Z start v22_pool_peaks_s1
+== 2026-09-21T05:18:10Z end v22_pool_peaks_s1 rc=0
+== 2026-09-21T05:18:10Z start v22_pool_peaks_s2
+== 2026-09-21T05:25:25Z end v22_pool_peaks_s2 rc=0
+== 2026-09-21T05:25:25Z C2 done
+== 2026-09-21T05:25:25Z start v22_indexer_unknown_s0
+== 2026-09-21T05:33:15Z end v22_indexer_unknown_s0 rc=0
+== 2026-09-21T05:33:15Z start v22_indexer_unknown_s1
+== 2026-09-21T05:40:49Z end v22_indexer_unknown_s1 rc=0
+== 2026-09-21T05:40:49Z start v22_indexer_unknown_s2
+== 2026-09-21T05:48:41Z end v22_indexer_unknown_s2 rc=0
+== 2026-09-21T05:48:41Z PIPELINE DONE
