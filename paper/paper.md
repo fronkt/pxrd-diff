@@ -328,7 +328,7 @@ A 3.7 M-parameter conditional diffusion model, used as a diagnostic instrument, 
 
 *Use of AI tools.* The author used a large language model (Claude, Anthropic) as a coding and writing assistant throughout this work, for drafting and editing text and code under the author's direction. The author reviewed all code, analyses and text, and takes full responsibility for their content.
 
-We thank the maintainers of `pymatgen`, `spglib`, the CDVAE benchmark, GSAS-II, and the upstream maintainers of DiffractGPT (`atomgptlab/atomgpt`) and PXRDnet (`gabeguo/cdvae_xrd`) for releasing checkpoints and code that made the head-to-head reproduction in §5.3 possible. Compute was rented from Vast.ai; total spend was approximately USD 25 across roughly 30 GPU-hours on RTX 5090 instances (Phase 4 ablation, Phase 9 retrain + indexer sweeps, DiffractGPT n = 1 000 inference, and PXRDnet n = 20 inference).
+We thank the maintainers of `pymatgen`, `spglib`, the CDVAE benchmark, GSAS-II, and the upstream maintainers of DiffractGPT (`atomgptlab/atomgpt`) and PXRDnet (`gabeguo/cdvae_xrd`) for releasing checkpoints and code that made the head-to-head reproduction in §5.3 possible. Compute was rented from Vast.ai; total spend was approximately USD 28 across roughly 35 GPU-hours on RTX 5090 instances (Phase 4 ablation, Phase 9 retrain + indexer sweeps, DiffractGPT n = 1 000 inference, PXRDnet n = 20 inference, and the revision's retrain, pooling-ablation and unknown-system runs of §5.2, §5.6 and §3.5, about 5.5 GPU-hours).
 
 ## Author Contributions (CRediT)
 

@@ -235,6 +235,11 @@ citation awaiting verified metadata before it enters the References list.
 ## Data and Code Availability
 - **R3.3.** Added: corrected simulator, audit scripts of §5.7 and per-structure records behind Table 2a.
 
+## Acknowledgments
+- Compute sentence updated for the revision runs: about USD 28 across roughly 35 GPU-hours (the retrain,
+  pooling ablation and unknown-system runs of §5.2, §5.6 and §3.5 added about 5.5 GPU-hours).
+- A *Use of AI tools* paragraph was added (not present in the submitted version).
+
 ## Not changed
 - Table 1 numbers (rows not retrained; labels updated); §3.1, §3.2, §3.6; §5.4 experiments (not rerun; the
   fallback consequence is stated). References list markers resolved (see references_verified.md).
