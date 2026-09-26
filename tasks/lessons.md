@@ -64,3 +64,22 @@ successful surprising approach. Use format:
   side job's peak free; monitor filters must include "out of memory" (torch's text), not only
   "OOM"; make pipeline stages fail loudly (status line with rc) so a skipped run is visible.
 - Context: vast.ai runs with a chained pipeline.sh.
+
+## 2026-09-26 — pre-upload audit of the JAC revision
+- **Every quoted result must be traced to a released file before upload, not just the new ones.** The four review agents
+  recomputed all revision numbers (all matched) but the most-cited number in the paper (the "0.5 Å knee", §5.5) came from
+  the submitted version and matched no record (n = 200 / 5.6 % vs the record's n = 300 / 2.0 %). Rule: before any upload,
+  grep every percentage/count in paper.md and map each to a JSON/log path; anything unmapped is a defect to disclose.
+- **Captions are claims.** Three captions described figures that were not the ones shipped (CIs not drawn, "seven runs" for
+  six, "below the knee" for 0.53–0.96 Å bars) and one in-figure title carried a withdrawn claim. Rule: after regenerating
+  figures, read each PNG and check every clause of its caption against it; never keep suptitles inside figure files.
+- **"Three seeds" needs its noun.** Sampling seeds on one training run are not training seeds; say which, once, in the
+  abstract and in every table caption that pools them.
+- **Hedge consistently across sections.** A hypothesis labelled as such in §5.6 was stated as the finding in the synopsis,
+  abstract and §8. Rule: grep the abstract/synopsis/conclusion for every causal verb and confirm the body uses the same
+  strength.
+- **Public-surface actions are Frank's.** Zenodo publish was (rightly) blocked by the classifier; prepare the draft fully and
+  hand over the publish click, and cite the reserved DOI so the paper does not need a second edit.
+- **A file open in Word blocks the docx rebuild.** Close that one document through the Word COM object (Documents by
+  FullName) rather than killing WINWORD — other documents were open.
+
