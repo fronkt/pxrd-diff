@@ -1699,3 +1699,25 @@ end, level with global pooling; every regression-head match is cubic; (4) withou
 system the indexer keeps 43.4 % of cells (48.8 % given) and 1.4 % downstream (1.6 %). Tags:
 none left in paper.md; letter final. OPEN for Frank: title ("lattice-recovery bottleneck"),
 AI-use wording, send the ack draft, upload. Not run: C4 (declined, letter says so).
+
+## Phase 16 — pre-upload audit (2026-09-26): four read-only review agents (referee coverage, overclaim, consistency, recomputation)
+Recomputation: every headline number in Tables 2/2a/3/4 and §3.5 reproduces from the released files. Fixes to make before upload:
+- [x] A1 §5.4: Debye guidance + top-K rerank ran on the submitted simulator/fallback and were not rerun — say so in §5.4, §1 item 4, §8; fix letter L170
+- [x] A2 §5.6 line 279 "Every match ... cubic (18, 16, 34 of 22, 16, 37)" self-contradiction (+ one tetragonal match in the 30-epoch arm); letter L114
+- [x] A3 "Figs 4 and 5" -> "Fig. 4" (86, 285, letter L170); cite Figs 1-3 in the text
+- [x] A4 compute: §4 line 153 (USD 25 / 35 GPU-h) vs Acknowledgements (USD 28 / "35") -> 40 GPU-h incl. revision; changes_R1
+- [x] A5 §5.2 line 203 + §7 312: v21/v22 are one training run each; the three seeds are sampling seeds
+- [x] A6 abstract/synopsis: regression-formulation reading hedged as in §5.6; "leaves the error unchanged" -> at best 13 % (1.12 Å at 30 ep)
+- [x] A7 Fig. 1 caption lower-tail explanation (texture) contradicts §3.3/App C (truncation)
+- [x] A8 Fig. 4: caption claims Wilson CIs the figure does not draw; "above them on Pearson" false for deCIFer (0.55)
+- [x] A9 Fig. 3 caption: hex/ortho "below the 0.5 Å knee" false (0.53/0.96 Å); triclinic 5.1 % unknown bar; "consistent rate" undefined; dotted v20 line
+- [x] A10 make_figures.py: drop in-figure suptitles (one states the withdrawn "wins" claim); Fig. 2 caption "seven runs"/two panels vs six rows/three panels
+- [x] A11 n: DiffractGPT 990 scored of 1000; deCIFer 298 (300 requested) everywhere
+- [x] A12 arithmetic: "3.5x match lift" (2.51/0.90 = 2.8x); "~24 epochs" (100k x 64 / 27 136 = 236)
+- [x] A13 §5.7 line 285 mixed denominators 46/2883 -> 48/3000; count "three errors" + (d) hyperparameter; describe the sweep; Appendix D stale (§4.x, single seed)
+- [x] A14 letter: stale quotes (L46, L146), "Wyckoff-site" at §3.4 121, R3.2 changes line (§8), L7 preamble, L98 regression test, L187 figures list, "Both done" out of declined list, cover note on presentation-efficiency votes, R1.5(ii) reason
+- [x] A15 style: Segal 2025->2026 (34); 153 §5.2->§5.1; 159 order + "drop-in"; App A status refs; line 424 stranded note; "learned head" vs "auxiliary head" defined once; ~1.1 vs ~1.3 Å; p form; British spellings; Toby DOI; deCIFer thanks; acronyms; four-digit numbers closed up
+- [x] A16 abstract cut to 270 words (was 463; IUCr may want fewer); split the longest sentences (17, 88, 131, 263, 279, 289, 299, 312, 323); remove restatements (Fig. 3 caption, 251/261, Table 3 caption, 225, 86/117)
+- [ ] B Zenodo new version (source at final commit + v22 checkpoint + head .pt) -> Data availability DOI -> rebuild
+- [ ] C portal: figures, response letter (docx) as supporting information, DOI link; manuscript upload + regenerate + submit = Frank
+- Also found and fixed in this pass (not in the agents' lists): §5.5 perturbation numbers did not match the released record (n = 300 per level, 6/1/1/0 matches) — corrected, disclosed as §5.7(e), 'knee' → 'working tolerance' everywhere; StructureMatcher scale=True stated (§4, §7); regression reading dropped from the abstract, hedged elsewhere; Fig. 4 redrawn with Wilson bars + deCIFer. Built: pdf 29 pp, 0 LaTeX errors; 13.6 k words (grew ~0.8 k from the caveats).

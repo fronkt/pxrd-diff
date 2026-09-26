@@ -235,8 +235,51 @@ citation awaiting verified metadata before it enters the References list.
 ## Data and Code Availability
 - **R3.3.** Added: corrected simulator, audit scripts of §5.7 and per-structure records behind Table 2a.
 
-## Acknowledgments
-- Compute sentence updated for the revision runs: about USD 28 across roughly 35 GPU-hours (the retrain,
+## Pre-upload audit (2026-09-26)
+Four independent read-only checks (referee coverage, overclaiming, internal consistency, recomputation of every headline
+number from the released files) were run on the built revision. Every number in Tables 2, 2a, 3 and 4 and in §3.5
+reproduced; the edits below fix what did not.
+- **§5.5 / §5.7(e).** The perturbation paragraph quoted 5.6 → 2.0 → 0.5 → 0 % at n = 200; the released record is n = 300
+  per level with 6, 1, 1, 0 matches (Pearson 0.52 → 0.05 by 0.4 Å). §5.5 rewritten to the record; "knee" → "working
+  tolerance" in the abstract, §1, §5.2, §5.5, §5.6 (Table 4 caption), §7, §8 and the Fig. 3 caption; new §5.7(e).
+- **§5.4.** Opens by stating that rerank and gradient guidance ran with the submitted simulator (and rerank with the
+  fallback) and were not rerun; §1 item 4 and §8 say "did not improve match rate under the conditions tested".
+- **Seeds.** Abstract, §1, Table 2 caption, §5.2 and §7 state that the three seeds are sampling seeds on a single training
+  run per checkpoint, and that the v21 → v22 attribution does not separate the correction from training-seed variance.
+- **Hedging.** The regression-formulation reading is labelled a hypothesis in the synopsis, §1, §6 and §8 and dropped from the abstract (it
+  already was in §5.6); §5.6 adds the generalisation-gap alternative (training-batch aux loss vs 1.3 Å test error) and the
+  measurement that would separate them; "unchanged"/"does not reduce" → "by at most 13 %"; "far closer to the truth" →
+  the per-system statement; "Arm (iii) is decisive" → "informative"; "the next gain must come from" → "the more
+  promising route on this evidence"; capacity claims (§1, §5.1, §6) softened to what the stopped v12 run supports.
+- **§5.6 wording.** "Every match … cubic (18, 16 and 34 of 22, 16 and 37)" → "nearly every … (18 of 22, 16 of 16, 34 of
+  37); none hexagonal and one tetragonal".
+- **Figures.** Fig. 1 caption: lower-tail explanation aligned with §3.3/Appendix C (truncation, not texture). Fig. 2
+  caption: six runs, three panels. Fig. 3 caption: per-system errors as drawn (nothing below 0.5 Å), triclinic
+  unknown-mode bar, "consistent" defined, dotted v20 line named. Fig. 4 redrawn with Wilson intervals and the deCIFer
+  bar; caption corrected (Pearson 0.18 lies between 0.02 and 0.55). Fig. 5 caption names v14. In-figure titles removed
+  from all five figures (one carried the withdrawn "wins on high-symmetry" claim). "Figs 4 and 5" → "Fig. 4" in §3.3,
+  §5.7; Figs 1–4 now cited in the running text.
+- **n.** DiffractGPT n = 990 scored (10 unparseable of 1000), deCIFer 298 (of 300), stated in Table 3 and §5.3; §7 notes
+  that external parse failures are excluded while PXRD-Diff's unindexed patterns count as misses.
+- **Arithmetic.** "3.5×" → "2.8×" (2.51 / 0.90) in §3.4, §5.1, §7; "~24 epochs" → "~236" (100 k × 64 / 27 136); training
+  time ~1.9 h; §5.7(a) accounting on like denominators (46 / 3000 → 48 / 3000).
+- **§5.3 / §6.** "PXRDnet's lead over DGpt" → not separated at n = 20; symprec = 0.2 counter-evidence added to the
+  measurement hypothesis; "differences that matter" → "most conspicuous differences", with training data and possible
+  train/test overlap listed as uncontrolled; §6 rerank explanation corrected (rerank acts on indexer candidates).
+- **§4 / §7.** `StructureMatcher(scale=True)` stated: match is invariant to uniform cell scaling. New §7 bullets on the
+  perturbation study, single-seed ablation heads, the training-batch aux loss and the match metric.
+- **Compute.** §4 now says "before the revision" (USD 25 / 35 GPU-h); Acknowledgements USD 28 / ~40 GPU-h incl. the
+  revision's 5.5 h.
+- **Housekeeping.** Segal et al. 2025 → 2026 (§1); §4 "(§5.2)" → "(§5.1)"; §5 order line lists §5.6–§5.7 and says
+  "control"; Appendix A status column corrected (v6–v9, v10, v12, v18–v20); stranded "Author note" after the references
+  removed; "learned head" vs "auxiliary head" defined once in §3.2; Appendix D checklist updated (§4 sub-references,
+  seeds); Toby & Von Dreele DOI; deCIFer thanked; British spellings; acronyms (CIF, MLP, VP-SDE, EMA, MAE, RMSD, DDIM,
+  LoRA, LLM, CDVAE) expanded at first use; four-digit numbers closed up; "Wyckoff-site" → "Wyckoff-letter" in §3.4.
+- **Length.** Abstract 463 → 270 words; synopsis 132 → two sentences; restatements removed (§5.3 last sentence,
+  §5.5 aux-loss sentences, "differing only in the lattice channel" duplicate, Fig. 3 caption last sentence).
+
+## Acknowledgements
+- Compute sentence updated for the revision runs: about USD 28 across roughly 40 GPU-hours (the retrain,
   pooling ablation and unknown-system runs of §5.2, §5.6 and §3.5 added about 5.5 GPU-hours).
 - A *Use of AI tools* paragraph was added (not present in the submitted version).
 

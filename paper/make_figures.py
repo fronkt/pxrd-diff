@@ -121,8 +121,7 @@ def fig1_ablation():
     ]
     fig.legend(handles=legend_handles, loc="outside lower center", ncol=4,
                handlelength=1.2, columnspacing=1.6, borderaxespad=0.2)
-    fig.suptitle("Ablation on MP-20 test (n=1000, true lattice, coord-only)",
-                 fontsize=10.5, fontweight="bold")
+    # JAC R1: no in-figure titles; the caption carries the description
     _save(fig, "fig1_ablation")
 
 
@@ -215,8 +214,6 @@ def fig2_training_curves():
     # one shared legend below — keeps it off the busy curves
     fig.legend(handles, labels, loc="outside lower center", ncol=3,
                handlelength=1.6, columnspacing=2.0, borderaxespad=0.2)
-    fig.suptitle("Wyckoff embedding destabilises lattice prediction",
-                 fontsize=10.5, fontweight="bold")
     _save(fig, "fig2_training_curves")
 
 
@@ -337,20 +334,31 @@ def fig4_indexer_bench():
     ax.legend(handles=ax.get_legend_handles_labels()[0] + band_handles,
               loc="upper left", borderaxespad=0.3, ncol=1)
 
-    fig.suptitle("Classical Q-space indexer: wins on high-symmetry, fails on low-symmetry",
-                 fontsize=10.5, fontweight="bold")
     _save(fig, "fig4_indexer_bench")
 
 
+def _wilson(k, n, z=1.959964):
+    """Wilson 95 % interval for k successes in n trials, as percentages."""
+    if n == 0:
+        return 0.0, 0.0
+    p = k / n
+    den = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / den
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    return 100 * (centre - half), 100 * (centre + half)
+
+
 def fig5_threeway_headline():
-    """Three-way head-to-head: ours (v22 learned head, 3 seeds pooled) vs DiffractGPT (n=1000)
-    vs PXRDnet (n=20).
+    """Head-to-head on one harness: ours (v22 learned head, 3 sampling seeds pooled) vs
+    DiffractGPT (n = 990 scored of 1000), PXRDnet (n = 20) and deCIFer (n = 298 scored of 300),
+    with 95 % Wilson intervals on the rate panels (JAC R1 pre-upload audit).
 
     Sources:
       paper/phase15_results/v22_learned_pooled.json     (ours: gpu_v22_jac, learned head,
                                                           3 x 1000, JAC R1 retrain)
       paper/phase9_results/baseline_diffractgpt_n1000.json
       paper/phase9_results/baseline_pxrdnet_sinc100_n20.json
+      paper/phase13_results/baselines/decifer_n300.json
     (The submitted version plotted phase9_results/p9_idxlat_n1000.json, the v21 indexer row.)
     """
     def load(name):
@@ -359,16 +367,19 @@ def fig5_threeway_headline():
     ours = json.loads((ROOT / "phase15_results" / "v22_learned_pooled.json").read_text())
     dgpt = load("baseline_diffractgpt_n1000.json")
     pxnt = load("baseline_pxrdnet_sinc100_n20.json")
+    dcif = json.loads((ROOT / "phase13_results" / "baselines" / "decifer_n300.json").read_text())
 
     # (display label, n-string, data, colour)
-    systems = [
-        ("PXRD-Diff\n(ours)", "n = 3 × 1000", ours, CB["blue"]),
-        ("DiffractGPT",       "n = 1000", dgpt, CB["orange"]),
+    systems = [  # DGpt = DiffractGPT (abbreviation defined in §1); n = 3000 is 3 seeds × 1000
+        ("PXRD-Diff\n(ours)", "n = 3000", ours, CB["blue"]),
+        ("DGpt",              "n = 990",  dgpt, CB["orange"]),
         ("PXRDnet",           "n = 20",   pxnt, CB["green"]),
+        ("deCIFer",           "n = 298",  dcif, CB["purple"]),
     ]
     labels = [s[0] for s in systems]
     nstr = [s[1] for s in systems]
     colors = [s[3] for s in systems]
+    ns = [int(s[2]["n"]) for s in systems]
 
     metrics = [
         ("Match rate (%)",         "(a) Match rate",  "match_rate (StructureMatcher)", True),
@@ -383,21 +394,34 @@ def fig5_threeway_headline():
         vals = [s[2][key] * (100 if pct else 1) for s in systems]
         ax.bar(x, vals, color=colors, edgecolor="white", linewidth=0.8,
                width=0.66, zorder=3)
+        tops = list(vals)
+        if pct:
+            # Wilson 95 % intervals from the scored counts
+            lo, hi = zip(*[_wilson(round(v / 100 * n), n) for v, n in zip(vals, ns)])
+            yerr = np.array([np.array(vals) - np.array(lo), np.array(hi) - np.array(vals)])
+            ax.errorbar(x, vals, yerr=yerr, fmt="none", ecolor="#333333", elinewidth=0.9,
+                        capsize=2.5, zorder=4)
+            tops = list(hi)
         ax.set_xticks(x)
-        ax.set_xticklabels(labels, fontsize=8)
+        ax.set_xticklabels(labels, fontsize=7.5)
         ax.set_ylabel(ylabel)
         ax.set_title(title, loc="left")
         _ygrid(ax)
-        _headroom(ax, vals, frac=0.22)
-        _bar_labels(ax, x, vals, fmt=("{:.1f}" if pct else "{:.2f}"), fontsize=8)
+        _headroom(ax, tops, frac=0.22)
+        _bar_labels(ax, x, tops, fmt=("{:.1f}" if pct else "{:.2f}"), fontsize=7)
+        if pct:  # relabel with the point estimate, placed above the interval cap
+            for t in list(ax.texts):
+                t.remove()
+            span = ax.get_ylim()[1]
+            for xi, v, tp in zip(x, vals, tops):
+                ax.text(xi, tp + span * 0.015, f"{v:.1f}", ha="center", va="bottom",
+                        fontsize=7, color="#222222")
         # sample-size row, parked just under the axis, clear of the tick labels
         for xi, n in zip(x, nstr):
             ax.annotate(n, xy=(xi, 0), xytext=(0, -26), textcoords="offset points",
                         ha="center", va="top", fontsize=6.5, color=LABEL_GREY,
                         annotation_clip=False)
 
-    fig.suptitle("Open generative baselines on the same MP-20 evaluation harness",
-                 fontsize=10.5, fontweight="bold")
     _save(fig, "fig5_threeway_headline")
 
 
