@@ -234,6 +234,8 @@ citation awaiting verified metadata before it enters the References list.
 
 ## Data and Code Availability
 - **R3.3.** Added: corrected simulator, audit scripts of §5.7 and per-structure records behind Table 2a.
+- Zenodo: new version 10.5281/zenodo.22973311 (concept DOI 10.5281/zenodo.20738993) with the revised source, the v22
+  checkpoint and the pooling-ablation heads; the section now cites the concept DOI and this version.
 
 ## Pre-upload audit (2026-09-26)
 Four independent read-only checks (referee coverage, overclaiming, internal consistency, recomputation of every headline
