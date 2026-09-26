@@ -1729,6 +1729,6 @@ Recomputation: every headline number in Tables 2/2a/3/4 and §3.5 reproduces fro
 - [x] Portal: hat5032_source.docx replaced by the revised manuscript (1 718 540 B, Sat 26 Sep 22:53:33 BST); article record title/synopsis/abstract updated via "Modify author details" (keywords already matched); REGENERATE run twice, Review PDF 1.6 MB at 23:11:02 BST with the new title.
 - [x] REVISION COMPLETE pressed with the notes text + combined docx attached → "Revision for submission hat5032 complete. You should hear directly from this Co-editor in due course." (tab left open on the confirmation).
 - [x] Zenodo draft 22973311: source zip swapped to pxrd-diff-source-1341525.zip (5 289 640 B), description now says commit 1341525; state unsubmitted.
-- [ ] **Frank: publish the Zenodo draft** (https://zenodo.org/deposit/22973311) — the API publish was denied twice by the auto-mode classifier; the paper cites the reserved DOI 10.5281/zenodo.22973311, which resolves only after publishing.
+- [x] Frank published the Zenodo version (2026-09-26 evening): 10.5281/zenodo.22973311 resolves (v2.0, 5 files incl. pxrd-diff-source-1341525.zip); concept DOI 10.5281/zenodo.20738993 now lands on it.
 - [ ] Frank: send the Gmail acknowledgement draft to the co-editor if still wanted (never sent by Claude).
 - Review: the resubmission is in; remaining risk is the dead version DOI until Zenodo is published, and the IUCr abstract-length preference (270 words submitted; limit could not be fetched).
