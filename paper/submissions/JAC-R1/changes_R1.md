@@ -1,9 +1,8 @@
 # HAT5032 revision 1 — change log for `paper/paper.md`
 
-Prepared 2026-09-20. Referee items are R1.n (referee 1), R2.n (referee 2), R3.n (referee 3), matching
-the numbering in `referee_reports/hat5032_authorreview.txt`. Every `[PENDING Cx]` tag in the manuscript
-marks a place where a GPU or long-CPU result is still to be inserted; `[REF-PENDING: key]` marks a
-citation awaiting verified metadata before it enters the References list.
+Prepared 2026-09-20, updated 2026-09-26 after the pre-upload audit. Referee items are R1.n (referee 1),
+R2.n (referee 2), R3.n (referee 3), matching the numbering in the referee reports. Bracketed keys such as
+`[Segal2026]` name entries in the manuscript's reference list.
 
 ## Title
 - **R1.1, R1.3, R1.5i.** "…, with classical autoindexing as a drop-in remedy" → clause dropped. New title:
@@ -48,7 +47,7 @@ citation awaiting verified metadata before it enters the References list.
   encoding is not the stage at fault; the evidence points instead to the regression formulation"; indexer
   CI updated to [1.2, 2.1].
 - **R1.3, R2.3, R1.5iii.** Contribution 3 retitled "A classical control": crystal system supplied; "sanity
-  check on the diagnosis, not a method"; unknown-system run announced `[PENDING C3]`.
+  check on the diagnosis, not a method"; unknown-system run reported in §3.5 and Fig. 3.
 - **R3.3 (retrain).** Contribution 2: oracle 4.5 % → 5.5 % [4.7, 6.4] with the paired p against the learned
   head; "4.5 % oracle ceiling" → "5.5 %". Contribution 3: "where the learned head recovers nothing. A
   three-seed paired McNemar test confirms the difference (p < 10⁻⁴; 27 fixed, 0 broken)" → submitted vs
@@ -61,14 +60,14 @@ citation awaiting verified metadata before it enters the References list.
 - **R3.3.** New contribution 6: the code audit, pointing to §5.7.
 
 ## §2 Related work
-- **R3.1.** New paragraph "Structure solution as a staged problem" citing `[REF-PENDING: PXRDGen]`,
+- **R3.1.** New paragraph "Structure solution as a staged problem" citing `[PXRDGen]`,
   `[XtalNet]`, `[Parackal2024]`, `[XRDSol]`, `[Chitturi2021]`; wording deliberately generic.
 - **R3.1.** "Classical autoindexing" → "Classical structure solution from powder data": adds the
-  direct-space / simulated-annealing / charge-flipping stage with `[REF-PENDING: FOX]`, `[EXPO]`; states
+  direct-space / simulated-annealing / charge-flipping stage with `[FOX]`, `[EXPO]`; states
   the indexer is given the true crystal system "which classical practice must itself infer".
 - **R1.2.** "Differentiable physics": "the contribution here is full differentiability" → "PyTorch port …
   adds no physics beyond that computation".
-- **R3.1.** Segal et al. noted as "since published in Digital Discovery `[REF-PENDING: Segal2026]`".
+- **R3.1.** Segal et al. noted as "since published in Digital Discovery `[Segal2026]`".
 
 ## §3.3 Differentiable Bragg loss
 - **R1.2.** "The core physics-informed contribution" → "an engineering component, not a physical
@@ -97,7 +96,7 @@ citation awaiting verified metadata before it enters the References list.
   accepted by the de Wolff / TREOR / DICVOL rule (all lines indexed, M20 ≥ 10, system from metric symmetry);
   43.4 % strict vs 48.8 % given, lattice type recovered 65.4 %, paired loss 65 / gain 9; the first-pass max-M20
   rule (24.3 %) reported alongside. §1 sentence and §7 bullet (i) updated; refs de Wolff (1968) and Werner
-  et al. (1985) added. `[PENDING C3]` (downstream match, three seeds) remains. Fig. 3 (fig4_indexer_bench)
+  et al. (1985) added. Downstream match without the crystal system: 1.4 % against 1.6 % with the system given (six of 48 matches lost; §7). Fig. 3 (fig4_indexer_bench)
   panel (a) gains the system-unknown strict bars and the dual overall line; caption updated.
 - **R3.3c.** Final paragraph: "drop-in in the strongest sense" → "in the mechanical sense"; unindexed
   patterns (39/1000) scored as misses; submitted version's fallback disclosed with pointer to §5.7.
@@ -153,8 +152,7 @@ citation awaiting verified metadata before it enters the References list.
   0.18 against 0.02 and 0.16.
 
 ## §5.4 Failure catalogue
-- **R3.2.** Wyckoff paragraph rewritten: letter meaningful only within a space group `[REF-PENDING:
-  Dauter2010]` `[delaFlor2023]`; embedding carried a label, not a constraint; coordinates generated freely;
+- **R3.2.** Wyckoff paragraph rewritten: letter meaningful only within a space group `[Dauter2010]` `[delaFlor2023]`; embedding carried a label, not a constraint; coordinates generated freely;
   negative result "narrow": label token does not help; says nothing about symmetry imposed as a constraint.
 
 ## §5.5 Perturbation study
@@ -175,10 +173,11 @@ citation awaiting verified metadata before it enters the References list.
 - **R2.2.** New paragraph "Controlled pooling ablation" + **new Table 4**: design (i) global average pool,
   (ii) position-aware attention pooling, (iii) explicit peak-position features, all else fixed; result on the
   frozen v21 encoder (mean length MAE 1.29 / 1.31 / 1.28 Å vs 1.32 Å for the checkpoint head; spread 0.03 Å;
-  all ~2.5× above the 0.5 Å knee); pooling reading withdrawn; revised reading = regression formulation does
-  not perform the peak-to-index assignment; three caveats (frozen encoder, arm (ii) not converged, v1
-  encoder trained with the R3.3(b) Debye term); `[PENDING C2-box]` for the 10-epoch rerun on the retrained
-  checkpoint and the end-to-end match.
+  all more than 2.2× above the ~0.5 Å tolerance of §5.5); pooling reading withdrawn; revised reading = regression formulation does
+  not perform the peak-to-index assignment; caveats as stated in §5.6 (frozen encoder; one training
+  seed per head). The rerun on the retrained v22 encoder and the end-to-end substitution are recorded in the
+  first bullet of this section; the regression-formulation reading is now stated as a hypothesis (pre-upload
+  audit below).
 
 ## §5.7 Code audit and corrections (NEW)
 - **R3.3a/b/c, R2.1.** Lists the three errors, what each affected and did not affect, the re-validation
@@ -204,7 +203,8 @@ citation awaiting verified metadata before it enters the References list.
 
 ## §7 Limitations
 - **R2.3, R1.5iii.** Indexer-realism bullet: "downstream 1.5 %" → "1.6 %"; "and a known crystal system; the
-  unknown-system run of §3.5 removes the second assumption `[PENDING C3]`"; "the indexer's advantage over the
+  unknown-system run removes it at a cost of about five percentage points at the indexing stage (48.8 → 43.4 % strict)
+  and six of 48 downstream matches (1.4 % against 1.6 %), so the assumption changes little at either stage"; "the indexer's advantage over the
   learned head" → "the indexer's cell-accuracy advantage over the learned head (§5.2)".
 - **R1.5ii, R3.3 (retrain).** Statistics bullet: "lift confirmed significant by a paired McNemar test
   (p < 10⁻⁴) … superseding the earlier underpowered unpaired test" → the comparison is "the cautionary case":
