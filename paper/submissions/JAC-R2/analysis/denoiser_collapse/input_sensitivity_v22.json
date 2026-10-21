@@ -1,0 +1,27 @@
+{
+ "ckpt": "runs/gpu_v22_jac/ckpt_final.pt",
+ "step": 100000,
+ "arch": "legacy",
+ "n": 128,
+ "levels": {
+  "0.1": {
+   "renoised_coords": 7.233428789277241e-08,
+   "random_species": 0.0,
+   "other_pxrd": 0.00035156041849404573,
+   "within_structure_spread": 6.084925274763009e-08
+  },
+  "0.5": {
+   "renoised_coords": 7.333831320011086e-08,
+   "random_species": 0.0,
+   "other_pxrd": 0.0003514495911076665,
+   "within_structure_spread": 6.413073805333624e-08
+  },
+  "0.9": {
+   "renoised_coords": 7.423237491366308e-08,
+   "random_species": 0.0,
+   "other_pxrd": 0.00035118887899443507,
+   "within_structure_spread": 6.493078785752004e-08
+  }
+ },
+ "gate_pass": false
+}

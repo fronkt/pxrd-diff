@@ -1,0 +1,78 @@
+{
+ "ckpt": "C:/Users/frank/pxrd-diff-pub/runs/gpu_v22_jac/ckpt_final.pt",
+ "n": 256,
+ "trained_dist_lattice": "clean",
+ "periodic_dist": "round",
+ "levels": {
+  "0.1": {
+   "noisy": {
+    "coord_rel_change": 6.037102906475411e-08,
+    "lattice_rel_change": 2.12980197034085e-07
+   },
+   "reference_x1.5": {
+    "coord_rel_change": 7.653975586663364e-08,
+    "lattice_rel_change": 3.261545487021067e-07
+   },
+   "far (no edges)": {
+    "coord_rel_change": 7.534682566756601e-08,
+    "lattice_rel_change": 3.6682257587017375e-07
+   }
+  },
+  "0.3": {
+   "noisy": {
+    "coord_rel_change": 6.805659324982116e-08,
+    "lattice_rel_change": 1.3905034279559914e-07
+   },
+   "reference_x1.5": {
+    "coord_rel_change": 7.71937962440461e-08,
+    "lattice_rel_change": 1.6712002093299816e-07
+   },
+   "far (no edges)": {
+    "coord_rel_change": 7.786918843066815e-08,
+    "lattice_rel_change": 1.9257299754826818e-07
+   }
+  },
+  "0.5": {
+   "noisy": {
+    "coord_rel_change": 7.415964375923068e-08,
+    "lattice_rel_change": 2.975560562390456e-07
+   },
+   "reference_x1.5": {
+    "coord_rel_change": 8.152366604008421e-08,
+    "lattice_rel_change": 1.8152037739582738e-07
+   },
+   "far (no edges)": {
+    "coord_rel_change": 7.61390666070838e-08,
+    "lattice_rel_change": 1.9575924170567305e-07
+   }
+  },
+  "0.7": {
+   "noisy": {
+    "coord_rel_change": 4.5062427034281427e-07,
+    "lattice_rel_change": 1.0257090252707712e-06
+   },
+   "reference_x1.5": {
+    "coord_rel_change": 7.424430350511102e-07,
+    "lattice_rel_change": 2.951775513793109e-06
+   },
+   "far (no edges)": {
+    "coord_rel_change": 7.655526701455528e-07,
+    "lattice_rel_change": 4.302003617340233e-06
+   }
+  },
+  "0.9": {
+   "noisy": {
+    "coord_rel_change": 7.383714972775124e-08,
+    "lattice_rel_change": 1.455411933193318e-07
+   },
+   "reference_x1.5": {
+    "coord_rel_change": 8.197434198109477e-08,
+    "lattice_rel_change": 1.6392390023156622e-07
+   },
+   "far (no edges)": {
+    "coord_rel_change": 8.182156818747899e-08,
+    "lattice_rel_change": 1.4133597403542808e-07
+   }
+  }
+ }
+}

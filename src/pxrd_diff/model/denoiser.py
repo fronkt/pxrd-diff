@@ -68,15 +68,31 @@ def periodic_distances(frac_coords: torch.Tensor,
 
 
 class PXRDCrossAttention(nn.Module):
-    """Atoms attend to multi-resolution PXRD feature maps."""
-    def __init__(self, d: int, n_heads: int = 4):
+    """Atoms attend to multi-resolution PXRD feature maps.
+
+    prenorm=False is the v10-v23 block, norm(h + attn(h, F, F)). On the encoder's
+    unnormalised feature map (token norms up to ~1800) its softmax saturates onto
+    one token and its output, the same for every atom and ~10^3 x the atom state,
+    erases the atom state, so the trained denoiser's coordinate output stops
+    depending on positions or species (JAC R2). prenorm=True normalises the
+    queries and the keys/values and adds the output to the residual stream:
+    h + attn(LN(h), LN(F), LN(F)).
+    """
+    def __init__(self, d: int, n_heads: int = 4, prenorm: bool = False):
         super().__init__()
         self.attn = nn.MultiheadAttention(d, n_heads, batch_first=True)
         self.norm = nn.LayerNorm(d)
+        self.prenorm = prenorm
+        if prenorm:
+            self.kv_norm = nn.LayerNorm(d)
 
     def forward(self, h: torch.Tensor, pxrd_feats: torch.Tensor,
                 mask: torch.Tensor) -> torch.Tensor:
         # h: (B, N, d), pxrd_feats: (B, L, d), mask: (B, N)
+        if self.prenorm:
+            kv = self.kv_norm(pxrd_feats)
+            out, _ = self.attn(self.norm(h), kv, kv)
+            return h + out * mask.unsqueeze(-1).float()
         key_padding_mask = None  # PXRD features are dense (no padding)
         out, _ = self.attn(h, pxrd_feats, pxrd_feats,
                            key_padding_mask=key_padding_mask)
@@ -85,8 +101,12 @@ class PXRDCrossAttention(nn.Module):
 
 
 class MessagePassingLayer(nn.Module):
-    def __init__(self, d: int, n_rbf: int = N_RBF, n_heads: int = 4):
+    """mask_senders=False is the v10-v23 aggregation, which masks only the
+    receiving atom, so padding atoms send messages; True masks both ends."""
+    def __init__(self, d: int, n_rbf: int = N_RBF, n_heads: int = 4,
+                 prenorm_cross_attn: bool = False, mask_senders: bool = False):
         super().__init__()
+        self.mask_senders = mask_senders
         self.edge_net = nn.Sequential(
             nn.Linear(n_rbf, d), nn.SiLU(), nn.Linear(d, d),
         )
@@ -96,13 +116,16 @@ class MessagePassingLayer(nn.Module):
         # FiLM: time conditioning only (PXRD now handled by cross-attention)
         self.film = nn.Linear(d, 2 * d)
         self.norm = nn.LayerNorm(d)
-        self.cross_attn = PXRDCrossAttention(d, n_heads)
+        self.cross_attn = PXRDCrossAttention(d, n_heads, prenorm=prenorm_cross_attn)
 
     def forward(self, h: torch.Tensor, rbf: torch.Tensor,
                 mask: torch.Tensor, t_cond: torch.Tensor,
                 pxrd_feats: torch.Tensor) -> torch.Tensor:
         edge_w = self.edge_net(rbf)
-        pair_mask = mask.unsqueeze(2).unsqueeze(-1).float()
+        if self.mask_senders:
+            pair_mask = (mask.unsqueeze(2) & mask.unsqueeze(1)).unsqueeze(-1).float()
+        else:
+            pair_mask = mask.unsqueeze(2).unsqueeze(-1).float()
         agg = (edge_w * h.unsqueeze(1) * pair_mask).sum(dim=2)
         out = self.node_net(torch.cat([h, agg], dim=-1))
         scale, shift = self.film(t_cond).unsqueeze(1).chunk(2, dim=-1)
@@ -115,10 +138,16 @@ class MessagePassingLayer(nn.Module):
 class CrystalDenoiser(nn.Module):
     def __init__(self, d_model: int = 256, n_layers: int = 3,
                  n_rbf: int = N_RBF, max_atoms: int = 20, n_heads: int = 4,
-                 min_image: bool = False):
+                 min_image: bool = False, arch: str = "legacy"):
+        """arch: "legacy" (v10-v23 layers) or "r2" (pre-norm cross-attention on
+        normalised PXRD features and sender masking; JAC R2). Not stored in the
+        state dict: callers pass it from the checkpoint's training args."""
         super().__init__()
+        if arch not in ("legacy", "r2"):
+            raise ValueError(f"arch must be 'legacy' or 'r2', got {arch!r}")
         self.d_model = d_model
         self.min_image = min_image  # see periodic_distances; not a parameter
+        self.arch = arch
 
         self.atom_emb = nn.Embedding(MAX_ATOMIC_NUM + 1, d_model, padding_idx=0)
         self.wyckoff_emb = nn.Embedding(N_WYCKOFF, d_model)
@@ -131,7 +160,9 @@ class CrystalDenoiser(nn.Module):
         self.lat_in_proj = nn.Linear(6, d_model)
 
         self.layers = nn.ModuleList(
-            [MessagePassingLayer(d_model, n_rbf, n_heads) for _ in range(n_layers)]
+            [MessagePassingLayer(d_model, n_rbf, n_heads,
+                                 prenorm_cross_attn=arch == "r2",
+                                 mask_senders=arch == "r2") for _ in range(n_layers)]
         )
 
         self.coord_head = nn.Sequential(

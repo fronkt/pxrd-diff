@@ -72,8 +72,10 @@ def train(args: argparse.Namespace) -> None:
     encoder = PXRDEncoder(d_model=args.d_model).to(device)
     min_image = args.periodic_dist == "min_image"
     denoiser = CrystalDenoiser(d_model=args.d_model, n_layers=args.n_layers,
-                                n_heads=args.n_heads, min_image=min_image).to(device)
-    print(f"Distance features: lattice={args.dist_lattice}, periodic={args.periodic_dist}")
+                                n_heads=args.n_heads, min_image=min_image,
+                                arch=args.denoiser_arch).to(device)
+    print(f"Distance features: lattice={args.dist_lattice}, periodic={args.periodic_dist}; "
+          f"denoiser arch={args.denoiser_arch}")
     if args.peak_aug_lat_head:
         aux_head = PeakAugmentedLatHead(
             d_model=args.d_model, peak_dim=2 * args.n_peaks,
@@ -372,6 +374,11 @@ def main():
                     help="Periodic distances: true minimum image (default; JAC "
                          "R2) or component-wise rounding (v10-v22 behaviour, "
                          "wrong image in oblique cells).")
+    ap.add_argument("--denoiser-arch", choices=["r2", "legacy"], default="r2",
+                    help="Denoiser layers: 'r2' (default; pre-norm cross-attention "
+                         "on normalised PXRD features, sender masking) or 'legacy' "
+                         "(v10-v23, whose cross-attention saturates and erases the "
+                         "atom state; JAC R2).")
     ap.add_argument("--dist-weight", type=float, default=0.0,
                     help="Weight for pairwise distance auxiliary loss")
     ap.add_argument("--use-wyckoff", action="store_true",

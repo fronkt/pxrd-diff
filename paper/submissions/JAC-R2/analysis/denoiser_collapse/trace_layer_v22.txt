@@ -1,0 +1,6 @@
+ref: rbf sum 4130.18 |agg| 367.24 |node out| 13891.5 |film out| 110506.2 |h0| 243.33
+far: rbf sum 251.39 |agg| 329.68 |node out| 13417.6 |film out| 106714.1 |h0| 243.33
+rel diff ref vs far at agg: 3.942e-01
+rel diff ref vs far at film out: 4.837e-02
+rel diff ref vs far at after LayerNorm: 2.399e-03
+rel diff ref vs far at after cross-attn: 1.852e-06

@@ -214,8 +214,10 @@ def main():
     dist_lattice = (train_args.get("dist_lattice", "clean")
                     if args.dist_lattice == "auto" else args.dist_lattice)
     encoder = PXRDEncoder(d_model=d_model).to(device)
+    denoiser_arch = train_args.get("denoiser_arch", "legacy")
     denoiser = CrystalDenoiser(d_model=d_model, n_layers=n_layers,
-                               min_image=periodic_dist == "min_image").to(device)
+                               min_image=periodic_dist == "min_image",
+                               arch=denoiser_arch).to(device)
     encoder.load_state_dict(ckpt["encoder"])
     denoiser.load_state_dict(ckpt["denoiser"])
     encoder.eval()
@@ -336,7 +338,8 @@ def main():
         predict_x0=predict_x0, dist_lattice=dist_lattice,
     )
     print(f"Distance features: lattice={dist_lattice} "
-          f"(trained {train_args.get('dist_lattice', 'clean')}), periodic={periodic_dist}")
+          f"(trained {train_args.get('dist_lattice', 'clean')}), periodic={periodic_dist}, "
+          f"denoiser arch={denoiser_arch}")
 
     B = len(indices)
     bs = max(1, min(args.batch_size, B))
@@ -819,6 +822,7 @@ def main():
                 "seed": args.seed,
                 "dist_lattice": dist_lattice,
                 "periodic_dist": periodic_dist,
+                "denoiser_arch": denoiser_arch,
             }
             if use_index_topk and picked_cell_ranks:
                 from collections import Counter

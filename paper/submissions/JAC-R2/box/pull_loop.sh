@@ -20,10 +20,10 @@ for i in $(seq 1 105); do
         done
         (cd "$STAGE" && sed 's|/workspace/||' out.tar.md5 | md5sum -c -) || { echo "PULL FAILED"; exit 1; }
         tar -xf "$STAGE/out.tar" -C "$STAGE"
-        mkdir -p "$REPO/paper/phase17_results" "$REPO/paper/submissions/JAC-R2/analysis/box_logs" "$REPO/runs/gpu_v23_r2"
+        mkdir -p "$REPO/paper/phase17_results" "$REPO/paper/submissions/JAC-R2/analysis/box_logs" "$REPO/runs"
         cp -r "$STAGE/paper/phase17_results/." "$REPO/paper/phase17_results/"
         cp -r "$STAGE/logs/." "$REPO/paper/submissions/JAC-R2/analysis/box_logs/"
-        [ -f "$STAGE/runs/gpu_v23_r2/ckpt_final.pt" ] && cp "$STAGE/runs/gpu_v23_r2/ckpt_final.pt" "$REPO/runs/gpu_v23_r2/"
+        [ -d "$STAGE/runs" ] && cp -r "$STAGE/runs/." "$REPO/runs/"
         timeout 60 "${SSH[@]}" 'touch /workspace/PULLED' && echo "PULLED $(date -u +%FT%TZ)"
         exit 0
     fi

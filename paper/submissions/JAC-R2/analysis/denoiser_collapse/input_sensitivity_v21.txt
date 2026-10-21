@@ -1,0 +1,3 @@
+t=0.1: coord-output change when (re-noised coords) 5.54e-08  (random species) 3.32e-09  (other PXRD) 7.48e-06  | within-structure spread of per-atom output 5.43e-08  |out| per atom 2.007
+t=0.5: coord-output change when (re-noised coords) 5.58e-08  (random species) 5.74e-09  (other PXRD) 7.48e-06  | within-structure spread of per-atom output 5.34e-08  |out| per atom 2.007
+t=0.9: coord-output change when (re-noised coords) 5.67e-08  (random species) 3.32e-09  (other PXRD) 7.48e-06  | within-structure spread of per-atom output 5.42e-08  |out| per atom 2.007

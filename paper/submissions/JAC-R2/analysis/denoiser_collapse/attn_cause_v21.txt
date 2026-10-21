@@ -1,0 +1,6 @@
+PXRD feature map: shape (32, 4253, 256), per-token norm mean 12.7, max 853.9
+atom state into cross-attn: per-atom norm 17.0
+cross-attn output: per-atom norm 10909.9  (ratio to atom state 641.2x)
+attention entropy per query: mean 1.064 nats (uniform over 4253 keys = 8.36); max weight mean 0.484
+structures whose atoms all pick the same top key: 30/32
+after residual+LayerNorm: within-structure spread / norm = 6.49e-03

@@ -149,3 +149,52 @@ def test_noisy_fixed_mode_conditions_on_given_cell():
     assert not torch.allclose(c_a, c_b)
     assert torch.allclose(l_a, lattice_matrix_to_params(_CELL_A), atol=1e-3)
     assert torch.allclose(l_b, lattice_matrix_to_params(_CELL_B), atol=1e-3)
+
+
+# ---- denoiser architecture (JAC R2: saturated cross-attention, padding senders) ----
+
+def _den_inputs(seed: int = 0):
+    g = torch.Generator().manual_seed(seed)
+    B, N, d, L = 2, 6, 32, 50
+    types = torch.tensor([[14, 8, 8, 0, 0, 0], [26, 26, 8, 8, 8, 0]])
+    mask = types > 0
+    coords = torch.rand(B, N, 3, generator=g)
+    lat = lattice_params_to_matrix(torch.tensor([[4.0, 5.0, 6.0, 80.0, 100.0, 95.0],
+                                                 [7.0, 7.0, 7.0, 90.0, 90.0, 90.0]]))
+    feats = torch.randn(B, L, d, generator=g) * 50.0     # large, unnormalised tokens
+    g_glob = torch.randn(B, d, generator=g)
+    return coords, types, lat, torch.full((B,), 0.5), g_glob, feats, mask, torch.zeros(B, 6)
+
+
+def test_legacy_arch_state_dict_unchanged():
+    legacy = CrystalDenoiser(d_model=32, n_layers=2, n_heads=2)
+    r2 = CrystalDenoiser(d_model=32, n_layers=2, n_heads=2, arch="r2")
+    assert not any("kv_norm" in k for k in legacy.state_dict())
+    assert set(r2.state_dict()) - set(legacy.state_dict()) == {
+        f"layers.{i}.cross_attn.kv_norm.{p}" for i in range(2) for p in ("weight", "bias")}
+
+
+@pytest.mark.parametrize("arch,padding_leaks", [("legacy", True), ("r2", False)])
+def test_padding_atoms_send_no_messages_in_r2(arch, padding_leaks):
+    torch.manual_seed(0)
+    den = CrystalDenoiser(d_model=32, n_layers=2, n_heads=2, arch=arch).eval()
+    coords, types, lat, t, g_glob, feats, mask, nl = _den_inputs()
+    moved = coords.clone()
+    moved[~mask] = torch.rand(int((~mask).sum()), 3)      # move only the padding atoms
+    with torch.no_grad():
+        a, _ = den(coords, types, lat, t, g_glob, feats, mask, nl)
+        b, _ = den(moved, types, lat, t, g_glob, feats, mask, nl)
+    changed = not torch.allclose(a[mask], b[mask], atol=1e-6)
+    assert changed == padding_leaks
+
+
+def test_r2_arch_keeps_per_atom_information_with_large_pxrd_tokens():
+    torch.manual_seed(0)
+    den = CrystalDenoiser(d_model=32, n_layers=2, n_heads=2, arch="r2").eval()
+    coords, types, lat, t, g_glob, feats, mask, nl = _den_inputs()
+    with torch.no_grad():
+        a, _ = den(coords, types, lat, t, g_glob, feats, mask, nl)
+        b, _ = den(torch.rand_like(coords), types, lat, t, g_glob, feats, mask, nl)
+    real = a[mask]
+    assert (real - real.mean(0)).norm() / real.norm() > 1e-2     # atoms differ
+    assert (a[mask] - b[mask]).norm() / a[mask].norm() > 1e-2    # positions matter
