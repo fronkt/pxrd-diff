@@ -31,6 +31,7 @@ from pxrd_diff.model.lat_head import (
     sg_topk_accuracy,
 )
 from pxrd_diff.model.pxrd_encoder import PXRDEncoder
+from pxrd_diff.sampler import noisy_lattice_matrix
 
 
 def collate(batch: list[dict]) -> dict:
@@ -69,8 +70,10 @@ def train(args: argparse.Namespace) -> None:
     print(f"Lattice norm: mean={stats['mean'].round(2)}, std={stats['std'].round(2)}")
 
     encoder = PXRDEncoder(d_model=args.d_model).to(device)
+    min_image = args.periodic_dist == "min_image"
     denoiser = CrystalDenoiser(d_model=args.d_model, n_layers=args.n_layers,
-                                n_heads=args.n_heads).to(device)
+                                n_heads=args.n_heads, min_image=min_image).to(device)
+    print(f"Distance features: lattice={args.dist_lattice}, periodic={args.periodic_dist}")
     if args.peak_aug_lat_head:
         aux_head = PeakAugmentedLatHead(
             d_model=args.d_model, peak_dim=2 * args.n_peaks,
@@ -186,8 +189,13 @@ def train(args: argparse.Namespace) -> None:
 
             pxrd_global, pxrd_feats = encoder(pxrd)
             use_dist = args.dist_weight > 0
+            # JAC R2 Q1: "clean" hands the denoiser the reference cell while it
+            # denoises that cell's parameters (v10-v22); "noisy" uses the cell at
+            # the current noise level, which is all the sampler has at test time.
+            lat_for_dist = (noisy_lattice_matrix(noisy_lat_p, lat_mean, lat_std)
+                            if args.dist_lattice == "noisy" else lat)
             denoiser_out = denoiser(
-                noisy_coords, types, lat, t,
+                noisy_coords, types, lat_for_dist, t,
                 pxrd_global, pxrd_feats, mask, noisy_lat_p,
                 wyckoff=wyckoff,
                 return_dist=use_dist,
@@ -243,7 +251,7 @@ def train(args: argparse.Namespace) -> None:
             loss_dist = torch.tensor(0.0, device=device)
             if use_dist:
                 # True periodic Cartesian distances from clean coords + true lattice
-                d_true = periodic_distances(coords, lat, mask)
+                d_true = periodic_distances(coords, lat, mask, min_image=min_image)
                 pair_mask = (mask.unsqueeze(2) & mask.unsqueeze(1)).float()
                 # Mask diagonal (self-distances)
                 eye = torch.eye(d_true.shape[-1], device=device).unsqueeze(0)
@@ -354,6 +362,16 @@ def main():
                     help="Path to ckpt to resume from")
     ap.add_argument("--predict-x0", action="store_true",
                     help="Predict x0 directly instead of eps")
+    ap.add_argument("--dist-lattice", choices=["noisy", "clean"], default="noisy",
+                    help="Lattice behind the denoiser's distance features: the "
+                         "noisy cell being denoised (default; JAC R2) or the "
+                         "clean reference cell (v10-v22 behaviour, which leaks "
+                         "the true lattice into the learned-head mode).")
+    ap.add_argument("--periodic-dist", choices=["min_image", "round"],
+                    default="min_image",
+                    help="Periodic distances: true minimum image (default; JAC "
+                         "R2) or component-wise rounding (v10-v22 behaviour, "
+                         "wrong image in oblique cells).")
     ap.add_argument("--dist-weight", type=float, default=0.0,
                     help="Weight for pairwise distance auxiliary loss")
     ap.add_argument("--use-wyckoff", action="store_true",

@@ -177,6 +177,15 @@ def main():
                          "+ Gaussian noise, deterministic seed=42). Use this "
                          "to measure robustness of a model trained with or "
                          "without --noise-aug.")
+    ap.add_argument("--dist-lattice", choices=["auto", "clean", "noisy"],
+                    default="auto",
+                    help="JAC R2 Q1: lattice behind the denoiser's distance "
+                         "features. 'auto' (default) = what the checkpoint was "
+                         "trained with (v10-v22: 'clean'). 'clean' passes the "
+                         "fixed cell, which in the learned-head mode is the TRUE "
+                         "cell (not a no-true-lattice measurement). 'noisy' "
+                         "uses the lattice being sampled; on a 'clean'-trained "
+                         "checkpoint that is out of distribution.")
     ap.add_argument("--out-json", default=None,
                     help="If set, write aggregate metrics JSON here")
     ap.add_argument("--seed", type=int, default=42,
@@ -201,8 +210,12 @@ def main():
     d_model = train_args.get("d_model", 256)
     n_layers = train_args.get("n_layers", 3)
 
+    periodic_dist = train_args.get("periodic_dist", "round")
+    dist_lattice = (train_args.get("dist_lattice", "clean")
+                    if args.dist_lattice == "auto" else args.dist_lattice)
     encoder = PXRDEncoder(d_model=d_model).to(device)
-    denoiser = CrystalDenoiser(d_model=d_model, n_layers=n_layers).to(device)
+    denoiser = CrystalDenoiser(d_model=d_model, n_layers=n_layers,
+                               min_image=periodic_dist == "min_image").to(device)
     encoder.load_state_dict(ckpt["encoder"])
     denoiser.load_state_dict(ckpt["denoiser"])
     encoder.eval()
@@ -320,8 +333,10 @@ def main():
     sampler = DDIMSampler(
         encoder, denoiser, n_steps=args.ddim_steps,
         eta=args.eta, lat_mean=lat_mean, lat_std=lat_std,
-        predict_x0=predict_x0,
+        predict_x0=predict_x0, dist_lattice=dist_lattice,
     )
+    print(f"Distance features: lattice={dist_lattice} "
+          f"(trained {train_args.get('dist_lattice', 'clean')}), periodic={periodic_dist}")
 
     B = len(indices)
     bs = max(1, min(args.batch_size, B))
@@ -550,6 +565,7 @@ def main():
                 guide_scale=args.guide_scale,
                 guide_start_t=args.guide_start_t,
                 guide_clip=args.guide_clip,
+                fixed_lattice=use_fixed_lat,
             )                                                       # (cb*K, M, N, 3)
             t_sample += time.perf_counter() - t0
             # Reshape to (cb, K*M, ...)
@@ -594,6 +610,7 @@ def main():
                 guide_scale=args.guide_scale,
                 guide_start_t=args.guide_start_t,
                 guide_clip=args.guide_clip,
+                fixed_lattice=use_fixed_lat,
             )
             t_sample += time.perf_counter() - t0
 
@@ -620,6 +637,7 @@ def main():
                 guide_scale=args.guide_scale,
                 guide_start_t=args.guide_start_t,
                 guide_clip=args.guide_clip,
+                fixed_lattice=use_fixed_lat,
             )
             t_sample += time.perf_counter() - t0
 
@@ -799,6 +817,8 @@ def main():
                 "ddim_steps": args.ddim_steps,
                 "eta": args.eta,
                 "seed": args.seed,
+                "dist_lattice": dist_lattice,
+                "periodic_dist": periodic_dist,
             }
             if use_index_topk and picked_cell_ranks:
                 from collections import Counter

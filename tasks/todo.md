@@ -1730,5 +1730,40 @@ Recomputation: every headline number in Tables 2/2a/3/4 and §3.5 reproduces fro
 - [x] REVISION COMPLETE pressed with the notes text + combined docx attached → "Revision for submission hat5032 complete. You should hear directly from this Co-editor in due course." (tab left open on the confirmation).
 - [x] Zenodo draft 22973311: source zip swapped to pxrd-diff-source-1341525.zip (5 289 640 B), description now says commit 1341525; state unsubmitted.
 - [x] Frank published the Zenodo version (2026-09-26 evening): 10.5281/zenodo.22973311 resolves (v2.0, 5 files incl. pxrd-diff-source-1341525.zip); concept DOI 10.5281/zenodo.20738993 now lands on it.
-- [ ] Frank: send the Gmail acknowledgement draft to the co-editor if still wanted (never sent by Claude).
+- [x] Frank: send the Gmail acknowledgement draft to the co-editor if still wanted (never sent by Claude). Sent by Frank 2026-09-25 21:53 UTC (found in Sent 2026-10-21).
 - Review: the resubmission is in; remaining risk is the dead version DOI until Zenodo is published, and the IUCr abstract-length preference (270 words submitted; limit could not be fetched).
+
+## Phase 17 — JAC R2 (request for revision received 2026-10-21, co-editor V. R. Hathwar; DUE 2026-11-18)
+One referee report (local only: `paper/submissions/JAC-R2/referee_reports/`, gitignored). Three questions, all checked against the code on 2026-10-21 and all CONFIRMED:
+
+**Q1 reference lattice during generation: CONFIRMED, and wider than stated.**
+- `sampler.py:290` `_params_to_approx_lattice()` is a stub that returns `lattice_init`.
+- In the learned-head (joint) mode `03_sample.py:485` sets `sampler_lattice = lattice`, i.e. the TRUE cell, so the denoiser's distance features see the reference lattice while its lattice channel "predicts" it.
+- Training does the same: `02_train.py:189` passes the clean `lat` to the denoiser while it denoises `noisy_lat_p`.
+- Affected: every learned-head number. That is v22 `phase15_results/v22_learned_s{0,1,2}.json` (1.9 %) and v21 `phase12_multiseed/learned_s*.json` (0 / 1949), carried into the abstract, §1, Table 2/2a/3, Fig. 4, §5.2 (42/52 McNemar; "learned head wins cubic"), §8 and the 0 → 1.9 % retrain narrative.
+- Not affected: the indexer arm (sampler gets the indexed cell; uncovered rows = miss), the oracle (true cell by design), the aux-head substitution (§5.6), the external baselines and the perturbation study.
+- `phase9_results/p9_idxlat_n1000.json` predates the `lat_from_index` key: check its provenance.
+
+**Q2 minimum image: CONFIRMED.** `denoiser.py:32` rounds fractional differences component-wise. `analysis/q2_min_image.py` (n = 1000 test, 125-image search) finds:
+- the wrong image for 16.2 % of pairs and 6.3 % of nearest-neighbour distances;
+- 72.4 % of structures affected (triclinic 97 %, monoclinic 91 %, cubic 84 %, because MP-20 stores primitive cells with oblique axes);
+- median overestimate 1.6 Å.
+
+Cross-check against pymatgen `distance_matrix` (first 200): 14.4 % of pairs differ, and rounding is never shorter. Scope: denoiser input features only. v22 has `dist_weight = 0`, `debye.py` is a structure-factor sum, and scoring is pymatgen.
+
+**Q3 prior information: CONFIRMED.** `data.py` supplies the full-cell `atom_types` + `num_atoms`, i.e. composition × Z, not composition. The paper calls it "composition" (§3.1 line 62, §5.3 line 231 "All four systems are given the composition"), which is wrong for Table 3:
+- DiffractGPT gets MP `pretty_formula` (reduced) only (`10_diffractgpt_eval.py:136`).
+- PXRDnet gets neither the count nor the types (`10_pxrdnet_eval.py:126`).
+- deCIFer: CHECKED 2026-10-21 — its CIF preprocessing replaces the reduced formula after `data_` with the full cell composition (Johansen et al., arXiv:2502.02189, App. A.2), so it receives the cell contents as PXRD-Diff does.
+
+### Plan (awaiting Frank's OK; GPU spend is his call)
+- [x] F1 `periodic_distances(min_image=True)`: shortest of the 125 images within +-2 cells of the wrapped difference; `tests/test_r2_fixes.py` matches pymatgen `distance_matrix` to < 1e-3 Å on all 1000 evaluation structures and on six synthetic oblique cells. Train flag `--periodic-dist min_image` (default; v10-v22 = `round`).
+- [x] F2 lattice leak (done 2026-10-21: train `--dist-lattice noisy` default; sampler `dist_lattice` read from the checkpoint, `--dist-lattice` override; tests: noisy learned mode output identical for any `lattice_init`, incl. NaN; given-cell modes still condition on the cell): training computes distances from the noisy lattice (denormalised `noisy_lat_p` → matrix); `_params_to_approx_lattice` builds the matrix from the current `l_t`. Given-cell modes (oracle/indexer/aux) replace `l_t` at each step by the forward-noised given cell, so the model sees what it saw in training; the final cell = the given cell. Regression test: with `--true-lattice` off, no tensor derived from `batch["lattice"]` reaches the denoiser (instrumented check).
+- [ ] D1 diagnostic on the published v22 checkpoint, no retrain: learned arm × 3 seeds with the reference lattice fully excluded (F2 sampler path). This answers the referee's "remain valid" question for the released model. Out of distribution for v22, so labelled as such.
+- [ ] R1 retrain v23 with F1+F2 (100 k steps, ~1.6 h on a 5090), then learned / indexer / oracle / unknown-system indexer × 3 seeds. Box queue ends in self-stop + idle watchdog. Estimate USD 4–8 (R1 round: USD 2.87).
+- [x] Z1 DONE (`analysis/z_from_volume.py`/`.json`; NNLS element volumes on train, median fit error 6.6 %): Z from the true cell volume 98.4 % (always-Z=1 baseline 55.2 %); 620/961 given-system indexed cells hold a whole number of formula units, Z right for 94.7 % of those (58.7 % of all). On v22 records, counting wrong-Z rows as misses: oracle 5.50 → 5.47 %, indexer 1.60 → 1.60 %. Original item: (CPU) estimate Z from the cell volume with an atomic-volume rule, from (i) the true volume and (ii) the indexed volume; report the Z-recovery rate per crystal system. Optional on the box: indexer arm with Z enumerated, picked by Debye Pearson.
+- [ ] T1 text: "composition" → "unit-cell contents (species and count, i.e. composition and Z)" throughout; correct Table 3's prior-information statement per baseline; limitation bullet; new §5.7 (f) lattice leak, (g) minimum image; every learned-head number replaced by v23 (or withdrawn).
+- [ ] T2 response letter R2 (point-by-point), changes list, Zenodo v3, portal upload before 2026-11-18.
+- [ ] E1 acknowledgement to the co-editor: Gmail draft created 2026-10-21; Frank sends.
+- Verified 2026-10-21 before the box: full suite 62 passed; 4-step CPU training smoke with the new defaults (finite losses, args record noisy/min_image); HEAD vs new code on v22 (learned + oracle, n = 4, CPU): per-sample JSONL byte-identical and aggregate metrics identical, so the default path for v10-v22 checkpoints is unchanged.
+- Box plan (`paper/submissions/JAC-R2/box/`): setup.sh (clone, deps, MP-20, v22 ckpt from Zenodo md5 89d407d3…, R2 tests) → pipeline.sh (D1 v22 noref × 3, train v23 100 k steps, v23 learned/oracle/indexer × 3, then unknown-system indexer × 3; pack + RUN_DONE; 45-min pull window; self-stop; watchdog = runner gone 30 min or 5.5 h cap) + local pull_loop.sh. Credit USD 4.27; cheapest suitable 5090 USD 0.735/h.

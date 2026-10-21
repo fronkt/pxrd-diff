@@ -29,12 +29,38 @@ def rbf_expansion(d: torch.Tensor, n_rbf: int = N_RBF,
     return torch.exp(-gamma * (d.unsqueeze(-1) - centers) ** 2)
 
 
+# Lattice translations searched by the minimum-image mode: every image within
+# +-2 cells of the component-wise wrapped difference (125 shifts).
+_IMAGE_SHIFTS = torch.tensor(
+    [[i, j, k] for i in range(-2, 3) for j in range(-2, 3) for k in range(-2, 3)],
+    dtype=torch.float32,
+)
+
+
 def periodic_distances(frac_coords: torch.Tensor,
                        lattice: torch.Tensor,
-                       mask: torch.Tensor) -> torch.Tensor:
+                       mask: torch.Tensor,
+                       min_image: bool = False) -> torch.Tensor:
+    """Pairwise periodic Cartesian distances (B, N, N).
+
+    min_image=False is the featurisation of hat5032 v1/R1 (v10-v22): fractional
+    differences are wrapped component-wise to [-0.5, 0.5] and then transformed,
+    which is the minimum image only for orthogonal cells (JAC R2 Q2: wrong
+    image for 16 % of MP-20 test pairs). min_image=True keeps the shortest of
+    the 125 images within +-2 cells of that wrapped difference.
+    """
     delta = frac_coords.unsqueeze(2) - frac_coords.unsqueeze(1)
     delta = delta - delta.round()
     cart = torch.einsum("bnmd,bdc->bnmc", delta, lattice)
+    if min_image:
+        B, N = cart.shape[:2]
+        shifts = _IMAGE_SHIFTS.to(cart)
+        shift_cart = torch.einsum("kd,bdc->bkc", shifts, lattice)         # (B, K, 3)
+        # |cart + s|^2 = |cart|^2 + 2 cart.s + |s|^2, minimised over the shifts
+        sq = (2.0 * torch.einsum("bnmc,bkc->bnmk", cart, shift_cart)
+              + shift_cart.pow(2).sum(-1)[:, None, None, :])
+        best = sq.argmin(dim=-1).reshape(B, N * N, 1).expand(-1, -1, 3)
+        cart = cart + shift_cart.gather(1, best).reshape(B, N, N, 3)
     dist = cart.norm(dim=-1)
     pair_mask = mask.unsqueeze(2) & mask.unsqueeze(1)
     dist = dist.masked_fill(~pair_mask, RBF_CUTOFF + 1.0)
@@ -88,9 +114,11 @@ class MessagePassingLayer(nn.Module):
 
 class CrystalDenoiser(nn.Module):
     def __init__(self, d_model: int = 256, n_layers: int = 3,
-                 n_rbf: int = N_RBF, max_atoms: int = 20, n_heads: int = 4):
+                 n_rbf: int = N_RBF, max_atoms: int = 20, n_heads: int = 4,
+                 min_image: bool = False):
         super().__init__()
         self.d_model = d_model
+        self.min_image = min_image  # see periodic_distances; not a parameter
 
         self.atom_emb = nn.Embedding(MAX_ATOMIC_NUM + 1, d_model, padding_idx=0)
         self.wyckoff_emb = nn.Embedding(N_WYCKOFF, d_model)
@@ -138,7 +166,8 @@ class CrystalDenoiser(nn.Module):
             h = h + self.wyckoff_emb(wyckoff)
         t_cond = self.time_emb(t)
 
-        dist = periodic_distances(noisy_coords, lattice, mask)
+        dist = periodic_distances(noisy_coords, lattice, mask,
+                                  min_image=self.min_image)
         rbf = rbf_expansion(dist)
 
         for layer in self.layers:

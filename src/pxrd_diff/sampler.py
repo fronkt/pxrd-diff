@@ -56,6 +56,35 @@ def lattice_params_to_matrix(lp: torch.Tensor) -> torch.Tensor:
     return torch.stack([a_vec, b_vec, c_vec], dim=-2)
 
 
+def lattice_matrix_to_params(m: torch.Tensor) -> torch.Tensor:
+    """(..., 3, 3) lattice matrix (rows = lattice vectors) -> (..., 6) params
+    [a, b, c, alpha_deg, beta_deg, gamma_deg]; inverse of lattice_params_to_matrix."""
+    lengths = m.norm(dim=-1)
+
+    def angle(u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+        cos = (u * v).sum(-1) / (u.norm(dim=-1) * v.norm(dim=-1)).clamp(min=1e-8)
+        return torch.rad2deg(torch.acos(cos.clamp(-1.0, 1.0)))
+
+    a_vec, b_vec, c_vec = m[..., 0, :], m[..., 1, :], m[..., 2, :]
+    return torch.cat([lengths, torch.stack([angle(b_vec, c_vec), angle(a_vec, c_vec),
+                                            angle(a_vec, b_vec)], dim=-1)], dim=-1)
+
+
+def noisy_lattice_matrix(l_norm: torch.Tensor, lat_mean: torch.Tensor,
+                         lat_std: torch.Tensor) -> torch.Tensor:
+    """Normalised (possibly noisy) lattice params -> a finite lattice matrix.
+
+    Used for the denoiser's distance features when they are taken from the
+    lattice being denoised rather than from the reference cell (JAC R2 Q1).
+    Lengths are clamped to [0.5, 100] Å and angles to [10, 170]°, as for the
+    sampled cells elsewhere in this module.
+    """
+    lp = l_norm * lat_std.to(l_norm) + lat_mean.to(l_norm)
+    lp = torch.cat([lp[..., :3].clamp(0.5, 100.0), lp[..., 3:].clamp(10.0, 170.0)],
+                   dim=-1)
+    return lattice_params_to_matrix(lp)
+
+
 def _interp_to_bins(pattern: torch.Tensor, n_bins: int) -> torch.Tensor:
     """Linear-interpolate a (B, L) pattern to (B, n_bins)."""
     if pattern.shape[-1] == n_bins:
@@ -83,7 +112,19 @@ class DDIMSampler:
                  n_steps: int = 50, eta: float = 0.0,
                  lat_mean: torch.Tensor | None = None,
                  lat_std: torch.Tensor | None = None,
-                 predict_x0: bool = False):
+                 predict_x0: bool = False,
+                 dist_lattice: str = "clean"):
+        """dist_lattice selects the lattice behind the denoiser's distance
+        features. "clean" (hat5032 v1/R1 behaviour, v10-v22) uses lattice_init
+        throughout; in the learned-head mode the caller passes the reference
+        cell there, so that mode is not a no-true-lattice measurement (JAC R2
+        Q1). "noisy" (checkpoints trained with --dist-lattice noisy) uses the
+        lattice being denoised, l_t; with fixed_lattice=True, l_t is replaced
+        at every step by the forward-noised given cell, matching training."""
+        if dist_lattice not in ("clean", "noisy"):
+            raise ValueError(f"dist_lattice must be 'clean' or 'noisy', got {dist_lattice!r}")
+        if dist_lattice == "noisy" and (lat_mean is None or lat_std is None):
+            raise ValueError("dist_lattice='noisy' needs lat_mean and lat_std")
         self.encoder = encoder
         self.denoiser = denoiser
         self.n_steps = n_steps
@@ -91,6 +132,7 @@ class DDIMSampler:
         self.lat_mean = lat_mean
         self.lat_std = lat_std
         self.predict_x0 = predict_x0
+        self.dist_lattice = dist_lattice
 
     def sample(self, pxrd: torch.Tensor, atom_types: torch.Tensor,
                lattice_init: torch.Tensor, mask: torch.Tensor,
@@ -100,8 +142,13 @@ class DDIMSampler:
                guide_scale: float = 0.0,
                guide_start_t: float = 0.5,
                guide_clip: float = 0.05,
+               fixed_lattice: bool = False,
                ) -> tuple[torch.Tensor, torch.Tensor]:
         """DDIM reverse sampling with optional Debye-gradient guidance (Phase 9.2).
+
+        fixed_lattice: lattice_init is a given cell (oracle, indexer, aux head)
+        rather than a placeholder. Only read when dist_lattice == "noisy"; with
+        "clean" lattice_init is always used for the distances.
 
         Guidance: at each step where t <= guide_start_t (late, low-noise steps),
         compute x0_pred from the current (x_t, eps), render its PXRD via
@@ -123,6 +170,13 @@ class DDIMSampler:
             x_t = torch.randn(B, N, 3, device=device)
             l_t = torch.randn(B, 6, device=device)
 
+            # "noisy" distance lattice with a given cell: l_t follows q(l_t | l_0)
+            # of that cell instead of the model's own lattice channel.
+            given_l0 = None
+            if self.dist_lattice == "noisy" and fixed_lattice:
+                given_l0 = ((lattice_matrix_to_params(lattice_init)
+                             - self.lat_mean.to(device)) / self.lat_std.to(device))
+
         timesteps = torch.linspace(1.0 - 0.5 / self.n_steps, 1e-4,
                                     self.n_steps + 1, device=device)
 
@@ -133,6 +187,9 @@ class DDIMSampler:
             t_batch = t_now.expand(B)
 
             with torch.no_grad():
+                if given_l0 is not None:
+                    l_t = (ab_now.sqrt() * given_l0
+                           + (1 - ab_now).sqrt() * torch.randn_like(given_l0))
                 lattice_for_dist = self._params_to_approx_lattice(l_t, lattice_init)
                 pred_c, pred_l = self.denoiser(
                     x_t % 1.0, atom_types, lattice_for_dist, t_batch,
@@ -169,6 +226,8 @@ class DDIMSampler:
                         lp_phys[..., 3:].clamp(10.0, 170.0),
                     ], dim=-1)
                     lat_mat_phys = lattice_params_to_matrix(lp_phys)
+                    if given_l0 is not None:
+                        lat_mat_phys = lattice_init
                 # Enable grad just for the Debye + Pearson path on x0_c
                 x0_c_g = (x0_c_recon % 1.0).detach().clone().requires_grad_(True)
                 with torch.enable_grad():
@@ -193,6 +252,8 @@ class DDIMSampler:
                 x_t = self._ddim_step(x_t, eps_c, ab_now, ab_next) % 1.0
                 l_t = self._ddim_step(l_t, eps_l, ab_now, ab_next)
 
+        if given_l0 is not None:
+            l_t = given_l0
         if self.lat_mean is not None and self.lat_std is not None:
             lat_mean = self.lat_mean.to(device)
             lat_std = self.lat_std.to(device)
@@ -212,6 +273,7 @@ class DDIMSampler:
                         guide_scale: float = 0.0,
                         guide_start_t: float = 0.5,
                         guide_clip: float = 0.05,
+                        fixed_lattice: bool = False,
                         ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate n_samples candidate structures per input pattern.
 
@@ -265,6 +327,7 @@ class DDIMSampler:
                 guide_scale=guide_scale,
                 guide_start_t=guide_start_t,
                 guide_clip=guide_clip,
+                fixed_lattice=fixed_lattice,
             )
         finally:
             self.eta = old_eta
@@ -289,6 +352,8 @@ class DDIMSampler:
 
     def _params_to_approx_lattice(self, l_params_norm: torch.Tensor,
                                   lattice_init: torch.Tensor) -> torch.Tensor:
+        if self.dist_lattice == "noisy":
+            return noisy_lattice_matrix(l_params_norm, self.lat_mean, self.lat_std)
         return lattice_init
 
 

@@ -1,0 +1,74 @@
+{
+  "triclinic": {
+    "n": 34,
+    "structs_wrong_pct": 97.05882352941177,
+    "pairs_wrong_pct": 16.30712131755973,
+    "nn_wrong_pct": 0.9208103130755064,
+    "err_median_A": 0.528419017791748,
+    "err_max_A": 6.768924713134766,
+    "nn_err_median_A": 0.009985089302062988
+  },
+  "monoclinic": {
+    "n": 147,
+    "structs_wrong_pct": 91.15646258503402,
+    "pairs_wrong_pct": 20.828538550057537,
+    "nn_wrong_pct": 6.947890818858561,
+    "err_median_A": 0.9712808132171631,
+    "err_max_A": 9.811090469360352,
+    "nn_err_median_A": 0.06774759292602539
+  },
+  "orthorhombic": {
+    "n": 196,
+    "structs_wrong_pct": 58.16326530612245,
+    "pairs_wrong_pct": 14.262820512820513,
+    "nn_wrong_pct": 8.009611533840609,
+    "err_median_A": 1.6849615573883057,
+    "err_max_A": 14.510786056518555,
+    "nn_err_median_A": 0.15201103687286377
+  },
+  "tetragonal": {
+    "n": 182,
+    "structs_wrong_pct": 53.2967032967033,
+    "pairs_wrong_pct": 11.044776119402986,
+    "nn_wrong_pct": 7.4821852731591445,
+    "err_median_A": 1.9896063804626465,
+    "err_max_A": 15.456709861755371,
+    "nn_err_median_A": 0.12571191787719727
+  },
+  "trigonal": {
+    "n": 98,
+    "structs_wrong_pct": 76.53061224489795,
+    "pairs_wrong_pct": 24.206122837041264,
+    "nn_wrong_pct": 16.80851063829787,
+    "err_median_A": 2.2383639812469482,
+    "err_max_A": 36.36482238769531,
+    "nn_err_median_A": 2.0532586574554443
+  },
+  "hexagonal": {
+    "n": 105,
+    "structs_wrong_pct": 67.61904761904762,
+    "pairs_wrong_pct": 9.439696106362772,
+    "nn_wrong_pct": 0.0,
+    "err_median_A": 1.3042302131652832,
+    "err_max_A": 4.477651596069336,
+    "nn_err_median_A": 0.0
+  },
+  "cubic": {
+    "n": 238,
+    "structs_wrong_pct": 84.03361344537815,
+    "pairs_wrong_pct": 17.011809002224883,
+    "nn_wrong_pct": 1.0396361273554255,
+    "err_median_A": 2.4049735069274902,
+    "err_max_A": 4.777510166168213,
+    "nn_err_median_A": 2.079492926597595
+  },
+  "ALL": {
+    "n": 1000,
+    "structs_wrong_pct": 72.4,
+    "pairs_wrong_pct": 16.213484611371936,
+    "nn_wrong_pct": 6.317954745812519,
+    "err_median_A": 1.5680460929870605,
+    "err_max_A": 36.36482238769531,
+    "nn_err_median_A": 0.18960094451904297
+  }
+}
