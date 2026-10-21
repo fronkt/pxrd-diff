@@ -34,8 +34,8 @@ pack_and_stop() {
 }
 
 # Watchdog (a forked subshell keeps this script's argv, so it tracks the runner by
-# PID): stop the box 30 min after the runner dies, or at the 5.5 h hard cap
-# (credit USD 4.27 at USD 0.735/h runs out at ~5.8 h).
+# PID): stop the box 30 min after the runner dies, or at the 4.4 h hard cap
+# (credit USD 4.27 at USD 0.884/h runs out at ~4.8 h).
 RUNNER_PID=$$
 (
     dead=0; elapsed=0
@@ -44,7 +44,7 @@ RUNNER_PID=$$
         elapsed=$((elapsed + 5))
         if kill -0 "$RUNNER_PID" 2>/dev/null; then dead=0; else dead=$((dead + 5)); fi
         if [ "$dead" -ge 30 ]; then self_stop "watchdog: runner gone 30 min"; exit 0; fi
-        if [ "$elapsed" -ge 330 ]; then pkill -x python; pack_and_stop "watchdog: 5.5 h cap"; exit 0; fi
+        if [ "$elapsed" -ge 265 ]; then pkill -x python; pack_and_stop "watchdog: 4.4 h cap"; exit 0; fi
     done
 ) &
 
