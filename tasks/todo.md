@@ -1805,19 +1805,19 @@ sqrt(ab) * x0 is undefined on the torus, and `coord_proj` embeds absolute coordi
 Saturated cross-attention (Phase 17b) is a second, independent defect.
 
 **Design** (DiffCSP-style coordinates; Jiao et al. 2023, MIT-licensed reference code jiaor17/DiffCSP):
-- [ ] Coordinates: VE wrapped-normal diffusion, F_t = wrap(F_0 + s_t eps), s_t log-uniform in [0.005, 0.5];
+- [x] Coordinates: VE wrapped-normal diffusion, F_t = wrap(F_0 + s_t eps), s_t log-uniform in [0.005, 0.5];
       target = wrapped-normal score, loss weighted by lambda_t = 1 / E||score||^2 (zero predictor = 1.0 by construction).
-- [ ] Denoiser: CSPNet-type message passing. Edge input = Fourier features of wrap(f_j - f_i) (periodic,
+- [x] Denoiser: CSPNet-type message passing. Edge input = Fourier features of wrap(f_j - f_i) (periodic,
       translation-invariant) + the metric tensor L^T L of the CURRENT lattice (noisy in learned mode = R2 Q1 fix).
       No absolute-coordinate embedding. Senders masked. PXRD: FiLM from the global embedding + pre-norm
       cross-attention to LayerNorm-ed tokens in each layer. 10 % PXRD dropout -> null-pattern mode for free.
-- [ ] Lattice: keep the 6 normalised parameters with the VP DDPM (correct in R^6); oracle/indexer modes fix the cell.
-- [ ] Sampler: predictor-corrector (reverse step + Langevin corrector) for coordinates; unchanged downstream
+- [x] Lattice: keep the 6 normalised parameters with the VP DDPM (correct in R^6); oracle/indexer modes fix the cell.
+- [x] Sampler: predictor-corrector (reverse step + Langevin corrector) for coordinates; unchanged downstream
       (best-of-20 by Debye-Pearson, 200-step Debye refinement, same StructureMatcher settings as the paper).
 - [ ] Keep the R2 fixes: min-image distances wherever distances are used; Z-from-volume analysis (Q3) unchanged.
 
 **Gates (fixed now, before any run):**
-- [ ] G0 (CPU tests): wrapped-normal score = autograd of the log-density; denoiser output unchanged under a global
+- [x] G0 (CPU tests): PASS 2026-10-22, 12/12 (`tests/test_csp_model.py`, commit 3ed783e). wrapped-normal score = autograd of the log-density; denoiser output unchanged under a global
       periodic shift, under +1 on any single coordinate, and under atom permutation (permuted); padding inert;
       changing the pattern changes the output.
 - [ ] G1 (CPU overfit, 256 train structures): weighted coordinate loss < 0.5 (zero predictor = 1.0).
@@ -1828,6 +1828,13 @@ Saturated cross-attention (Phase 17b) is a second, independent defect.
 - [ ] G4 (paper arms): learned / oracle / indexer / unknown-system x 3 seeds, n = 1000, 20 samples, paper matcher;
       plus null-pattern x 3. Stats via `analysis/r2_stats.py`.
 
+**Gate definitions made precise (2026-10-22, before G1 finished and before any GPU run):**
+- G1 = mean of the val.jsonl coordinate losses over all 8 fixed sigmas (0.005-0.5) on the 256 training
+  structures, < 0.5 in BOTH the learned-cell and the given-cell mode.
+- G2 (a) applies to BOTH modes; (b) is measured in both modes (`analysis/denoiser_collapse/csp_gate.py`).
+- Code: `src/pxrd_diff/torus.py`, `model/csp_denoiser.py`, `sampler_pc.py`, `scripts/14_train_csp.py`;
+  `03_sample.py` dispatches on `model_family`. Anvil jobs in `paper/submissions/JAC-R2/anvil/`.
+
 **Schedule (to the 11-18 deadline):** 10-22..24 build + G0/G1 on CPU -> 10-25 G2, then full training ->
 10-26..28 G3/G4 arms -> 10-29..11-08 rewrite paper + letter (the results and possibly the thesis change) ->
 11-09..14 claim audit, docx, Zenodo v3 -> 11-15..18 upload. Calendar facts: college EA/REA 11-01, NeurIPS
@@ -1835,3 +1842,10 @@ camera-ready 11-09. Extension trigger: if G2 has not passed by 10-30, draft a re
 
 **Compute:** ~10-15 GPU-h (training ~3-5 h + 13 arms ~3-4 h + gates/reruns). Vast credit is ~USD 2.4, so a top-up
 or Anvil GPU-h (CHE260157) is needed. FRANK'S CALL.
+- [x] Anvil env built 2026-10-22 (`$PROJECT/pxrd_env`, torch 2.8.0+cu128; repo `$PROJECT/pxrd-diff`; MP-20 csv
+      verified; G0 12/12 on the login node). GPU balance 1,477.9 GPU-h (Frank: use Anvil, free).
+- [x] SUBMITTED 2026-10-22 15:02Z at commit 5bddec4: train **21587498** (gpu, 10 h), eval array **21587499** (13 tasks, afterok). Logs: `$SCRATCH/pxrd_ops/`. Was blocked: Anvil logins disabled again
+      ("unscheduled outage", 2026-10-22 ~15:00 UTC, after the 10-21 RCAC power shutdown). A local loop retries
+      every 10 min and submits once (scratchpad `anvil_submit_when_up.sh`). Planned MATH outage Nov 6-9:
+      the eval arms must finish before Nov 6. Fallback if Anvil stays down: Vast (needs Frank's top-up).
+- [ ] G1 CPU overfit running locally (`runs/cpu_g1_csp`, ~3 s/step, 3000 steps). Cancel the Anvil jobs if it fails.
