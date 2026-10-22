@@ -2,7 +2,7 @@
 #SBATCH -A che260157-gpu
 #SBATCH -p gpu
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=32 --gpus-per-node=1
-#SBATCH -t 06:00:00
+#SBATCH -t 02:00:00
 #SBATCH -J pxrd-v30-eval
 #SBATCH --array=0-12
 #SBATCH -o /anvil/scratch/x-fcai3/pxrd_ops/%x_%A_%a.out
