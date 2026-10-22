@@ -46,6 +46,7 @@ from pxrd_diff.eval import (                                          # noqa: E4
     rwp,
 )
 from pxrd_diff.model.aux_head import AuxLatHead                       # noqa: E402
+from pxrd_diff.model.csp_denoiser import CSPDenoiser                 # noqa: E402
 from pxrd_diff.model.denoiser import CrystalDenoiser                 # noqa: E402
 from pxrd_diff.model.lat_head import (                                # noqa: E402
     ConstrainedLatHead,
@@ -60,7 +61,9 @@ from pxrd_diff.sampler import (                                       # noqa: E4
     refine_structure,
     select_best_by_pearson,
 )
+from pxrd_diff.sampler_pc import PCSampler                           # noqa: E402
 from pxrd_diff.simulator import PXRDSimulator                        # noqa: E402
+from pxrd_diff.torus import TorusVE                                  # noqa: E402
 
 from pymatgen.core import Lattice, Structure                          # noqa: E402
 
@@ -100,6 +103,16 @@ def main():
     ap.add_argument("--ckpt", required=True, help="Path to checkpoint .pt")
     ap.add_argument("--n", type=int, default=16, help="Number of test samples")
     ap.add_argument("--ddim-steps", type=int, default=50)
+    ap.add_argument("--pc-steps", type=int, default=1000,
+                    help="model_family csp: predictor-corrector noise levels")
+    ap.add_argument("--step-lr", type=float, default=1e-5,
+                    help="model_family csp: Langevin corrector step at sigma_min")
+    ap.add_argument("--save-structures", default=None,
+                    help="write the final predicted structures (one CIF per line, jsonl) "
+                         "so they can be re-matched at other tolerances")
+    ap.add_argument("--null-pattern", action="store_true",
+                    help="model_family csp: replace every pattern by the learned null "
+                         "pattern (composition-only generation; sanity anchor G3)")
     ap.add_argument("--eta", type=float, default=0.0)
     ap.add_argument("--split", default="test")
     ap.add_argument("--true-lattice", action="store_true",
@@ -214,10 +227,16 @@ def main():
     dist_lattice = (train_args.get("dist_lattice", "clean")
                     if args.dist_lattice == "auto" else args.dist_lattice)
     encoder = PXRDEncoder(d_model=d_model).to(device)
+    model_family = train_args.get("model_family", "legacy")
     denoiser_arch = train_args.get("denoiser_arch", "legacy")
-    denoiser = CrystalDenoiser(d_model=d_model, n_layers=n_layers,
-                               min_image=periodic_dist == "min_image",
-                               arch=denoiser_arch).to(device)
+    if model_family == "csp":
+        denoiser = CSPDenoiser(d_model=d_model, n_layers=n_layers,
+                               n_heads=train_args.get("n_heads", 4),
+                               n_freq=train_args.get("n_freq", 10)).to(device)
+    else:
+        denoiser = CrystalDenoiser(d_model=d_model, n_layers=n_layers,
+                                   min_image=periodic_dist == "min_image",
+                                   arch=denoiser_arch).to(device)
     encoder.load_state_dict(ckpt["encoder"])
     denoiser.load_state_dict(ckpt["denoiser"])
     encoder.eval()
@@ -332,14 +351,26 @@ def main():
               f"start_t={args.guide_start_t}, clip={args.guide_clip}")
 
     # Sampler
-    sampler = DDIMSampler(
-        encoder, denoiser, n_steps=args.ddim_steps,
-        eta=args.eta, lat_mean=lat_mean, lat_std=lat_std,
-        predict_x0=predict_x0, dist_lattice=dist_lattice,
-    )
-    print(f"Distance features: lattice={dist_lattice} "
-          f"(trained {train_args.get('dist_lattice', 'clean')}), periodic={periodic_dist}, "
-          f"denoiser arch={denoiser_arch}")
+    if model_family == "csp":
+        if use_guide:
+            sys.exit("Debye guidance is not implemented for model_family csp")
+        torus = TorusVE(train_args["sigma_min"], train_args["sigma_max"]).to(device)
+        sampler = PCSampler(encoder, denoiser, torus, lat_mean.to(device), lat_std.to(device),
+                            n_steps=args.pc_steps, step_lr=args.step_lr,
+                            null_pattern=args.null_pattern)
+        print(f"Model family csp: PC sampler, {args.pc_steps} levels, step_lr={args.step_lr}, "
+              f"null_pattern={args.null_pattern}")
+    else:
+        if args.null_pattern:
+            sys.exit("--null-pattern needs a model_family csp checkpoint")
+        sampler = DDIMSampler(
+            encoder, denoiser, n_steps=args.ddim_steps,
+            eta=args.eta, lat_mean=lat_mean, lat_std=lat_std,
+            predict_x0=predict_x0, dist_lattice=dist_lattice,
+        )
+        print(f"Distance features: lattice={dist_lattice} "
+              f"(trained {train_args.get('dist_lattice', 'clean')}), periodic={periodic_dist}, "
+              f"denoiser arch={denoiser_arch}")
 
     B = len(indices)
     bs = max(1, min(args.batch_size, B))
@@ -706,6 +737,7 @@ def main():
     # Simulate PXRD for predicted structures and evaluate
     sim = PXRDSimulator()
     metrics_list = []
+    saved_structures = []
     index_miss_mids = set()
 
     for i, idx in enumerate(indices):
@@ -763,6 +795,8 @@ def main():
         m = evaluate_one(mid, pred_struct, true_struct,
                          pred_pattern, true_pattern)
         metrics_list.append(m)
+        if args.save_structures:
+            saved_structures.append({"material_id": mid, "cif": pred_struct.to(fmt="cif")})
 
         sg_ok = "Y" if m.sg_match.get(0.1, False) else "N"
         rmsd_str = f"{m.rmsd:.3f}" if not np.isnan(m.rmsd) else "  NaN"
@@ -788,6 +822,11 @@ def main():
                     "index_fallback_miss": m.material_id in index_miss_mids,
                 }) + "\n")
         print(f"Wrote per-sample flags to {args.per_sample_json}")
+    if args.save_structures:
+        with open(args.save_structures, "w") as f:
+            for rec in saved_structures:
+                f.write(json.dumps(rec) + "\n")
+        print(f"Wrote {len(saved_structures)} predicted structures to {args.save_structures}")
 
     # Aggregate
     if metrics_list:
@@ -823,6 +862,10 @@ def main():
                 "dist_lattice": dist_lattice,
                 "periodic_dist": periodic_dist,
                 "denoiser_arch": denoiser_arch,
+                "model_family": model_family,
+                "pc_steps": args.pc_steps if model_family == "csp" else None,
+                "step_lr": args.step_lr if model_family == "csp" else None,
+                "null_pattern": args.null_pattern,
             }
             if use_index_topk and picked_cell_ranks:
                 from collections import Counter
