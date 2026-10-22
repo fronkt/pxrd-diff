@@ -1,0 +1,2 @@
+identity prediction (x0_pred = x_t) loss: 0.0719 (20 draws, n=512)
+uniform random prediction loss: 0.0827

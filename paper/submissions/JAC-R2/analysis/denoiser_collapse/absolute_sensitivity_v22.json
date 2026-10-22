@@ -1,0 +1,32 @@
+{
+ "ckpt": "runs/gpu_v22_jac/ckpt_final.pt",
+ "step": 100000,
+ "arch": "legacy",
+ "n": 128,
+ "levels": {
+  "0.1": {
+   "output_rms_wrapped": 0.007603055331856012,
+   "renoised_coords_rms": 5.681599759554956e-07,
+   "random_species_rms": 0.0,
+   "within_structure_spread_rms": 5.052444294051384e-07,
+   "ideal_residual_rms": 0.16918043792247772,
+   "ideal_residual_vs_output_corr": 0.036180317401885986
+  },
+  "0.5": {
+   "output_rms_wrapped": 0.007605059538036585,
+   "renoised_coords_rms": 5.760467729487573e-07,
+   "random_species_rms": 0.0,
+   "within_structure_spread_rms": 5.158726139598002e-07,
+   "ideal_residual_rms": 0.2863471806049347,
+   "ideal_residual_vs_output_corr": -0.013132879510521889
+  },
+  "0.9": {
+   "output_rms_wrapped": 0.007607680279761553,
+   "renoised_coords_rms": 5.830689246977272e-07,
+   "random_species_rms": 0.0,
+   "within_structure_spread_rms": 5.318601665749156e-07,
+   "ideal_residual_rms": 0.2877495288848877,
+   "ideal_residual_vs_output_corr": -0.015515988692641258
+  }
+ }
+}
