@@ -1849,3 +1849,10 @@ or Anvil GPU-h (CHE260157) is needed. FRANK'S CALL.
       every 10 min and submits once (scratchpad `anvil_submit_when_up.sh`). Planned MATH outage Nov 6-9:
       the eval arms must finish before Nov 6. Fallback if Anvil stays down: Vast (needs Frank's top-up).
 - [ ] G1 CPU overfit running locally (`runs/cpu_g1_csp`, ~3 s/step, 3000 steps). Cancel the Anvil jobs if it fails.
+- 2026-10-22 ~16:00Z: Anvil `gpu` queue after the outage: 613 pending; train 21587498 est. start Oct 27 07:00 EDT,
+  new gpu jobs est. Nov 20 (`sbatch --test-only`). Asked Frank: Vast ~$25 vs stay on Anvil -> **Frank: stay on Anvil.**
+  - G2 moved to `gpu-debug` (30-min cap, 1 running/user): `anvil/g2_debug.sbatch`, own run `gpu_v30_g2`, chains
+    30-min slices to step 10k with the production schedule (`--steps 100000 --stop-at 10000`). Job 21588261.
+  - Extension request DRAFTED (Gmail draft r3482975402111654708, in the HAT5032 thread; Frank sends): 18 Nov -> 16 Dec.
+    It discloses the coordinate-model defect. The IUCr calendar link in Hathwar's email is already dated 2026-12-16.
+  - The 10-21 acknowledgement was SENT by Frank (promised the revision before 18 Nov).
