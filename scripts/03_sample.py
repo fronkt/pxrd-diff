@@ -739,6 +739,7 @@ def main():
     metrics_list = []
     saved_structures = []
     index_miss_mids = set()
+    unbuildable_mids = set()
 
     for i, idx in enumerate(indices):
         na = num_atoms[i]
@@ -762,11 +763,25 @@ def main():
         # Choose lattice for building predicted structure
         eval_lat_params = lattice_params_true[i] if args.true_lattice else pred_lat_params[i]
 
+        # An invalid predicted cell or a structure that cannot be built is a miss,
+        # recorded so that every arm keeps the full denominator.
+        def record_unbuildable(reason: str) -> None:
+            true_pattern = batch_items[i]["pxrd_pattern"].numpy()
+            metrics_list.append(SampleMetrics(
+                material_id=mid, composition_ok=True,
+                sg_match={tol: False for tol in SG_TOLS},
+                rmsd=float("nan"),
+                rwp=rwp(np.zeros_like(true_pattern), true_pattern),
+                pearson=0.0,
+            ))
+            unbuildable_mids.add(mid)
+            print(f"  [{mid}] {reason}")
+
         # Validate lattice (skip if using ground truth)
         if not args.true_lattice:
             lp = eval_lat_params.cpu().numpy()
             if not is_valid_lattice(lp):
-                print(f"  [{mid}] invalid lattice: {lp.round(1).tolist()}")
+                record_unbuildable(f"invalid lattice: {lp.round(1).tolist()}")
                 continue
 
         # Build predicted structure
@@ -775,7 +790,7 @@ def main():
                 pred_coords[i], atom_types[i], eval_lat_params, na
             )
         except Exception as e:
-            print(f"  [{mid}] failed to build structure: {e}")
+            record_unbuildable(f"failed to build structure: {e}")
             continue
 
         # Build true structure
@@ -820,6 +835,7 @@ def main():
                     "rmsd": None if np.isnan(m.rmsd) else float(m.rmsd),
                     "all_correct": bool(m.all_correct),
                     "index_fallback_miss": m.material_id in index_miss_mids,
+                    "unbuildable": m.material_id in unbuildable_mids,
                 }) + "\n")
         print(f"Wrote per-sample flags to {args.per_sample_json}")
     if args.save_structures:
@@ -831,6 +847,7 @@ def main():
     # Aggregate
     if metrics_list:
         agg = aggregate(metrics_list)
+        agg["n_unbuildable"] = len(unbuildable_mids)
         print("\n--- Aggregate Metrics ---")
         for k, v in agg.items():
             if isinstance(v, float):
