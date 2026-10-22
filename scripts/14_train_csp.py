@@ -107,6 +107,10 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--resume", default=None, help="checkpoint to continue from (same args)")
+    ap.add_argument("--stop-at", type=int, default=0,
+                    help="stop (and save) at this step, keeping the --steps LR schedule")
+    ap.add_argument("--max-minutes", type=float, default=0,
+                    help="save a checkpoint and exit after this much wall time")
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -208,6 +212,12 @@ def main() -> None:
                 print(f"  val step {step}: {v}", flush=True)
             if step % args.save_every == 0:
                 save(step, f"ckpt_{step:06d}.pt")
+            out_of_time = args.max_minutes and time.perf_counter() - t0 > 60 * args.max_minutes
+            if (args.stop_at and step >= args.stop_at) or out_of_time:
+                if step % args.save_every:
+                    save(step, f"ckpt_{step:06d}.pt")
+                print(f"Stopped at step {step} ({'time limit' if out_of_time else '--stop-at'})", flush=True)
+                return
     v = validate((encoder, denoiser), torus, val, lat_mean, lat_std, device)
     val_log.write(json.dumps({"step": step, "final": True, **v}) + "\n"); val_log.close()
     print(f"  val final: {v}", flush=True)

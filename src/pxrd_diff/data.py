@@ -204,12 +204,32 @@ class CrystalPXRDDataset(Dataset):
             self.peak_features = None
 
         if preload:
+            import os
+            import pickle
             import pandas as pd
             df = pd.read_csv(raw_dir / f"{split}.csv", nrows=limit)
-            self._structures = []
-            for _, row in tqdm(df.iterrows(), total=len(df),
-                               desc=f"Parsing {split} CIFs", leave=False):
-                self._structures.append(_parse_cif(row["cif"]))
+            ids = df["material_id"].tolist()
+            # Parsed-CIF cache: parsing 27k CIFs takes minutes; the cache is keyed
+            # by the material ids, so a changed csv is re-parsed.
+            pc = cache_dir / f"{split}_parsed.pkl"
+            cached = None
+            if pc.exists():
+                with open(pc, "rb") as fh:
+                    cached = pickle.load(fh)
+                if cached.get("material_ids", [])[:len(ids)] != ids:
+                    cached = None
+            if cached is not None:
+                self._structures = cached["structures"][:len(ids)]
+            else:
+                self._structures = []
+                for _, row in tqdm(df.iterrows(), total=len(df),
+                                   desc=f"Parsing {split} CIFs", leave=False):
+                    self._structures.append(_parse_cif(row["cif"]))
+                if limit is None:
+                    tmp = pc.with_suffix(f".tmp{os.getpid()}")
+                    with open(tmp, "wb") as fh:
+                        pickle.dump({"material_ids": ids, "structures": self._structures}, fh)
+                    os.replace(tmp, pc)
 
     def __len__(self) -> int:
         return len(self.patterns)
