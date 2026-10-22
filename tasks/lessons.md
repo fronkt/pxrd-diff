@@ -101,3 +101,12 @@ successful surprising approach. Use format:
 - **The auto-mode classifier denies public-surface clicks in batches too.** Zenodo publish (again) and a batch that filled
   metadata and clicked Continue were denied; the same fill and click as separate single calls went through. Keep
   fills, clicks and reads in separate calls near a submit, and expect the final REVISION COMPLETE to need Frank.
+
+## 2026-10-22 — a fundamental defect is a reason to fix, not to withdraw
+- **Pattern:** after the coordinate denoiser turned out never to have learned, I recommended withdrawing
+  HAT5032. Frank: "bro why would I do that. fix it or redesign".
+- **Rule:** on a broken core result, report the root cause and the redesign plan sized to the deadline,
+  plus the decisions that are his (compute money, an extension). Withdrawal only if he asks.
+- **Rule:** before concluding "a patch cannot fix it", measure the do-nothing baseline per noise band.
+  The per-band check (vp_torus_check.txt) found the actual cause in one CPU run: the coordinate noise
+  schedule wipes out the signal for 81 % of timesteps. Three earlier diagnostics only measured symptoms.

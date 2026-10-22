@@ -1,0 +1,21 @@
+vp_torus_check.py on 4096 MP-20 training structures (2026-10-22, CPU). Training objective:
+periodic MSE of x0_pred vs x0, t ~ U(0,1), cosine VP forward process from diffusion.py.
+
+                identity  uncontract(x_t/sqrt(ab))   per band (identity, uncontract)
+CIF origin      0.0721    0.0723    0-0.25 (0.0401, 0.0401)  0.25-0.5 (0.0836, 0.0840)  0.5-0.75 (0.0832, 0.0833)  0.75-1 (0.0831, 0.0834)
+random origin   0.0718    0.0722    0-0.25 (0.0401, 0.0401)  0.25-0.5 (0.0831, 0.0834)  0.5-0.75 (0.0825, 0.0834)  0.75-1 (0.0828, 0.0832)
+
+1/12 = 0.0833 is the loss of a uniformly random guess on the torus. For t >= 0.25 the do-nothing
+predictor already sits at that ceiling: x_t carries no information about x0.
+
+Why: the coordinate noise std is sqrt(1 - alpha_bar(t)) in fractional units: 0.090 at t = 0.05,
+0.167 at t = 0.10, 0.30 at t = 0.188, 0.39 at t = 0.25. A wrapped normal keeps exp(-2 pi^2 s^2) of
+its first Fourier mode: 0.17 at s = 0.3, 0.05 at s = 0.39. So ~81 % of training timesteps
+(t > 0.188) and ~40 of the 50 DDIM steps run on coordinates that are uniform noise. The schedule is a
+unit-variance Euclidean schedule applied to a period-1 torus. For comparison, DiffCSP's log-uniform
+wrapped-normal schedule (s in [0.005, 0.5]) spends ~11 % of its timesteps at s >= 0.3.
+
+The origin shift changes nothing at the loss level: the dominant defect is the schedule scale, not
+the origin dependence. Further defects found in the same read: sqrt(alpha_bar) * x0 is not defined
+on the torus (x and x + 1 map sqrt(alpha_bar) apart), and the denoiser embeds absolute fractional
+coordinates linearly (coord_proj), which is not periodic.

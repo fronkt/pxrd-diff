@@ -1795,3 +1795,43 @@ Cross-check against pymatgen `distance_matrix` (first 200): 14.4 % of pairs diff
 - **ROOT FINDING:** the coordinate channel never learned in ANY run. The identity predictor (x0_pred = x_t) scores 0.0719 on the training objective (`analysis/denoiser_collapse/identity_loss.*`). The coordinate loss of v22, v23 and v24 is ~0.07 from step 100 onward; v22 ends at 0.0707. The saturated cross-attention is a symptom: the coordinate model/objective never escapes "do nothing". A patch cannot fix this; it needs a redesigned coordinate denoiser (e.g. DiffCSP-style wrapped-normal score matching on fractional-difference features). That is research with an unknown outcome, and the manuscript's claims about a diffusion model rest on a coordinate model that never trained.
 - STOPPED for Frank's decision: redesign (likely needs an extension from the editor) vs withdraw vs disclose-and-reframe. No further GPU spend until then.
 - [x] Box 57129057 DESTROYED 2026-10-22 on Frank's "destroy the stopped one" (results pulled + md5-checked + committed f15d97c first). No pxrd-diff instance remains; 57115732 and 57136505 belong to other sessions, untouched.
+
+### Phase 18 — REDESIGN (Frank 2026-10-22: "fix it or redesign"); R2 due 2026-11-18
+**Root cause** (`analysis/denoiser_collapse/vp_torus_check.txt`): the coordinate channel uses a unit-variance
+Euclidean VP schedule on a period-1 torus. For t > 0.188 (81 % of training timesteps, ~40 of 50 DDIM steps)
+the coordinate noise has s >= 0.3, a wrapped normal that is ~uniform: x_t carries no information about x0. The
+do-nothing loss is 0.040 for t < 0.25 and 0.083 (= 1/12, the random-guess ceiling) above. Also wrong:
+sqrt(ab) * x0 is undefined on the torus, and `coord_proj` embeds absolute coordinates non-periodically.
+Saturated cross-attention (Phase 17b) is a second, independent defect.
+
+**Design** (DiffCSP-style coordinates; Jiao et al. 2023, MIT-licensed reference code jiaor17/DiffCSP):
+- [ ] Coordinates: VE wrapped-normal diffusion, F_t = wrap(F_0 + s_t eps), s_t log-uniform in [0.005, 0.5];
+      target = wrapped-normal score, loss weighted by lambda_t = 1 / E||score||^2 (zero predictor = 1.0 by construction).
+- [ ] Denoiser: CSPNet-type message passing. Edge input = Fourier features of wrap(f_j - f_i) (periodic,
+      translation-invariant) + the metric tensor L^T L of the CURRENT lattice (noisy in learned mode = R2 Q1 fix).
+      No absolute-coordinate embedding. Senders masked. PXRD: FiLM from the global embedding + pre-norm
+      cross-attention to LayerNorm-ed tokens in each layer. 10 % PXRD dropout -> null-pattern mode for free.
+- [ ] Lattice: keep the 6 normalised parameters with the VP DDPM (correct in R^6); oracle/indexer modes fix the cell.
+- [ ] Sampler: predictor-corrector (reverse step + Langevin corrector) for coordinates; unchanged downstream
+      (best-of-20 by Debye-Pearson, 200-step Debye refinement, same StructureMatcher settings as the paper).
+- [ ] Keep the R2 fixes: min-image distances wherever distances are used; Z-from-volume analysis (Q3) unchanged.
+
+**Gates (fixed now, before any run):**
+- [ ] G0 (CPU tests): wrapped-normal score = autograd of the log-density; denoiser output unchanged under a global
+      periodic shift, under +1 on any single coordinate, and under atom permutation (permuted); padding inert;
+      changing the pattern changes the output.
+- [ ] G1 (CPU overfit, 256 train structures): weighted coordinate loss < 0.5 (zero predictor = 1.0).
+- [ ] G2 (GPU, 10k steps, 512 val structures): weighted loss < 0.7 averaged over s in [0.01, 0.2]; at mid noise
+      the re-noised-coords change and within-structure spread >= 1e-2, random-species >= 1e-3, other-pattern >= 1e-3.
+- [ ] G3 (sanity anchor): the null-pattern mode at DiffCSP's matcher (stol 0.5, ltol 0.3, angle 10) on the 1000
+      test structures should land near DiffCSP's published 51.5 % (1 sample). Far below = implementation bug.
+- [ ] G4 (paper arms): learned / oracle / indexer / unknown-system x 3 seeds, n = 1000, 20 samples, paper matcher;
+      plus null-pattern x 3. Stats via `analysis/r2_stats.py`.
+
+**Schedule (to the 11-18 deadline):** 10-22..24 build + G0/G1 on CPU -> 10-25 G2, then full training ->
+10-26..28 G3/G4 arms -> 10-29..11-08 rewrite paper + letter (the results and possibly the thesis change) ->
+11-09..14 claim audit, docx, Zenodo v3 -> 11-15..18 upload. Calendar facts: college EA/REA 11-01, NeurIPS
+camera-ready 11-09. Extension trigger: if G2 has not passed by 10-30, draft a request to Hathwar (draft only).
+
+**Compute:** ~10-15 GPU-h (training ~3-5 h + 13 arms ~3-4 h + gates/reruns). Vast credit is ~USD 2.4, so a top-up
+or Anvil GPU-h (CHE260157) is needed. FRANK'S CALL.
