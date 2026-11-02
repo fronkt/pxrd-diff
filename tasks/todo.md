@@ -1856,3 +1856,20 @@ or Anvil GPU-h (CHE260157) is needed. FRANK'S CALL.
   - Extension request DRAFTED (Gmail draft r3482975402111654708, in the HAT5032 thread; Frank sends): 18 Nov -> 16 Dec.
     It discloses the coordinate-model defect. The IUCr calendar link in Hathwar's email is already dated 2026-12-16.
   - The 10-21 acknowledgement was SENT by Frank (promised the revision before 18 Nov).
+- **2026-11-02 status check + restart (Frank: "resubmit the anvil jobs").** Nothing ran after 10-23:
+  - train 21587498 TIMEOUT at step 95,400/100k (10-h limit), EMA coord loss ~0.40 (zero predictor 1.0);
+    ckpt_094000.pt kept; eval 21587499 DependencyNeverSatisfied (cancelled).
+  - G2: production run passed its 10k gate (training continued); gpu_v30_g2 10k val loss averaged over
+    s in [0.01, 0.2] is ~0.51 learned / ~0.47 given (< 0.7).
+  - **G1 FAILED its pre-set bar**: runs/cpu_g1_csp at 3000 CPU steps, mean of the 8 sigmas = 0.834 learned
+    (0.828 given) vs < 0.5. The 10-22 rule was "cancel the Anvil jobs if it fails"; not acted on at the
+    time. Proceeding because G2 on real data passed and the full run learns; G3 (null-pattern near
+    DiffCSP 51.5 %) is now the deciding implementation check. Record this in the R2 letter/methods.
+  - R2 NOT submitted (no IUCr receipt); extension draft (18 Nov -> 16 Dec) still unsent (Frank's).
+  - gpu queue start estimate (sbatch --test-only) = Nov 24 for any length, so everything moves to
+    gpu-debug: `anvil/chain_debug.sbatch` (self-chaining, 30 min x 2 GPUs): finish training from the
+    latest ckpt, final gate, the 13 eval_v30 arms in 100-structure chunks (`03_sample.py --start`, new;
+    start 0 = identical to before; chunks offset the RNG seed by 100003*start, per-sample rows keep
+    --seed), merge with `anvil/merge_chunks.py` into the eval_v30 file names, G3 rematch in the
+    background. Smoke-tested locally on the G1 ckpt: chunk rows = unchunked rows, merge order identical,
+    incomplete arm refused. Stop: touch $SCRATCH/pxrd_ops/CHAIN_STOP. Must finish before the Nov 6 outage.

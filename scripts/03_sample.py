@@ -102,6 +102,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", required=True, help="Path to checkpoint .pt")
     ap.add_argument("--n", type=int, default=16, help="Number of test samples")
+    ap.add_argument("--start", type=int, default=0,
+                    help="First test index (chunked runs: structures start..start+n-1). "
+                         "start > 0 also offsets the RNG seed by 100003*start so chunks of "
+                         "one arm draw different noise; per-sample rows keep --seed.")
     ap.add_argument("--ddim-steps", type=int, default=50)
     ap.add_argument("--pc-steps", type=int, default=1000,
                     help="model_family csp: predictor-corrector noise levels")
@@ -210,10 +214,11 @@ def main():
 
     # Seed everything so multi-seed reruns are reproducible and so a paired
     # McNemar test across lattice sources sees the same material order/noise.
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
+    rng_seed = args.seed + 100003 * args.start      # == args.seed for unchunked runs
+    torch.manual_seed(rng_seed)
+    np.random.seed(rng_seed % 2**32)
     if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(args.seed)
+        torch.cuda.manual_seed_all(rng_seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -318,7 +323,7 @@ def main():
               "(deterministic seed=42)")
 
     # Collate a batch
-    indices = list(range(min(args.n, len(ds))))
+    indices = list(range(args.start, min(args.start + args.n, len(ds))))
     batch_items = [ds[i] for i in indices]
 
     pxrd = torch.stack([b["pxrd_pattern"] for b in batch_items]).to(device)
@@ -859,6 +864,8 @@ def main():
             agg["config"] = {
                 "ckpt": args.ckpt,
                 "n": args.n,
+                "start": args.start,
+                "rng_seed": rng_seed,
                 "true_lattice": args.true_lattice,
                 "lat_from_aux": args.lat_from_aux,
                 "lat_from_index": args.lat_from_index,
