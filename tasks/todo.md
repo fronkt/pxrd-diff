@@ -1946,9 +1946,17 @@ Fixed before any code runs on a GPU (do not change after seeing results):
   200 x Adam 1e-3 step halves strict matches). Both matchers reported (paper + DiffCSP).
 - Compute: Vast (Anvil gpu queue est. 2027-01-28); box queue self-stops + idle watchdog; local pull loop
   armed at launch. Credit 1.97 USD on 11-25 -> top-up needed (Frank).
-- [ ] B1 dataset `niggli` option + reduced-structure / pattern-invariance checks
-- [ ] B2 exact edge split + padding trim, equivalence tests, G0 suite green
-- [ ] B3 14_train_csp / 03_sample wiring (niggli, sampling amp, index-cell reduction)
-- [ ] B4 CPU smoke: short train + sample + rematch end to end
-- [ ] B5 box pipeline (setup, benchmark -> width rule, train, G3 gate, G4, pack, self-stop)
+- [x] B1 dataset `niggli` option (75befe3). Check (`g3_diag/check_niggli.log`): train 27,136/27,136 and test
+      9,046/9,046 identical crystals (tight matcher, same atoms + volume); 47.8 % / 47.1 % of cells changed;
+      reduced angles 60.0-120.0 deg; simulated pattern vs cache max rel diff 6e-5.
+- [x] B2 edge split + padding trim (75befe3): forward and gradients equal the ced2179 forward (fp32, 1e-5);
+      full test suite 81/81.
+- [x] B3 wiring (75befe3): --niggli (train), niggli from ckpt args (sample), --amp bf16, --bucket
+      (atom-count groups 4/8/12/16/20), indexer cells Niggli-reduced; topk path refuses niggli ckpts.
+- [x] B4 CPU smoke (60 steps d64): null / learned / oracle / indexer all write outputs; rematch.py now
+      counts unparseable cells as misses and reproduces v30 null 0.340.
+- [x] B5 box pipeline (0df0f00): `box/p19_setup.sh COMMIT CAP_H`, `p19_pipeline.sh`, `p19_onstart.sh`,
+      local `p19_pull_loop.sh HOST PORT`. Bench parser unit-tested (string-compare bug fixed before use).
+      Offer picked 11-25: 61075218 (1x 5090, CA, 0.644 USD/h, rel 0.998, 48 cores). Rent BLOCKED by the
+      auto-mode classifier -> needs Frank's explicit OK + a top-up (credit 1.97 USD).
 - [ ] B6 run on Vast (after top-up), pull, stats, paper + letter rewrite
