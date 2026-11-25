@@ -188,3 +188,68 @@ def test_ensemble_shapes_and_padding():
                               eta=0.0, wyckoff=None, guide_scale=0.0)
     assert c.shape == (2, 3, 4, 3) and lp.shape == (2, 3, 6)
     assert torch.all(c[0, :, 3] == 0)
+
+
+# ---- Phase 19: the split edge projection and the padding trim compute the old function ----
+
+def _reference_forward(m, frac_t, atom_types, lat_params, lat_norm, t, pg, pf, mask, given, drop=None):
+    """The v30 forward exactly as committed at ced2179 (concatenated edge input, no trim)."""
+    from pxrd_diff.model.csp_denoiser import N_LAT_FEATS, lattice_features
+    B, N, _ = frac_t.shape
+    if drop is not None:
+        pd = drop.view(B, 1)
+        pg = torch.where(pd, m.null_global.expand(B, -1), pg)
+        pf = torch.where(pd.unsqueeze(-1), m.null_token.expand(B, pf.shape[1], -1), pf)
+    lat_f = lattice_features(lat_params)
+    cond = (m.time_emb(t * 1000.0) + m.pxrd_proj(m.pxrd_norm(pg))
+            + m.lat_proj(torch.cat([lat_f, lat_norm, given.float().unsqueeze(-1)], dim=-1)))
+    h = m.atom_emb(atom_types) + cond.unsqueeze(1)
+    diff = frac_t.unsqueeze(1) - frac_t.unsqueeze(2)
+    edge_feats = torch.cat([m.fourier(diff), lat_f[:, None, None, :].expand(B, N, N, N_LAT_FEATS)], -1)
+    pair_mask = mask.unsqueeze(2) & mask.unsqueeze(1) & ~torch.eye(N, dtype=torch.bool)
+    for L in m.layers:
+        d = h.shape[-1]
+        hn = L.norm(h)
+        msg = L.edge_mlp(torch.cat([hn.unsqueeze(2).expand(B, N, N, d),
+                                    hn.unsqueeze(1).expand(B, N, N, d), edge_feats], -1))
+        pm = pair_mask.unsqueeze(-1).to(msg.dtype)
+        agg = (msg * pm).sum(2) / pm.sum(2).clamp(min=1)
+        upd = L.node_mlp(torch.cat([hn, agg], -1))
+        scale, shift = L.film(cond).unsqueeze(1).chunk(2, dim=-1)
+        h = h + (upd * (1 + scale) + shift) * mask.unsqueeze(-1).to(h.dtype)
+        h = L.cross_attn(h, pf, mask)
+    h = m.out_norm(h)
+    mm = mask.unsqueeze(-1).to(h.dtype)
+    pooled = (h * mm).sum(1) / mm.sum(1).clamp(min=1)
+    return m.coord_head(h) * mm, m.lattice_head(torch.cat([pooled, cond], -1))
+
+
+@pytest.mark.parametrize("extra_pad", [0, 5])
+def test_split_edge_projection_and_trim_equal_reference(den, extra_pad):
+    f, types, lp, ln, t, pg, pf, mask, given = _inputs()
+    if extra_pad:                                        # trailing all-padding columns -> trim path
+        f = torch.cat([f, torch.rand(2, extra_pad, 3)], 1)
+        types = torch.cat([types, torch.zeros(2, extra_pad, dtype=types.dtype)], 1)
+        mask = types > 0
+    for drop in (None, torch.tensor([False, True])):
+        with torch.no_grad():
+            s_new, l_new = den(f, types, lp, ln, t, pg, pf, mask, given, drop)
+            s_ref, l_ref = _reference_forward(den, f, types, lp, ln, t, pg, pf, mask, given, drop)
+        assert s_new.shape == s_ref.shape
+        torch.testing.assert_close(s_new, s_ref, atol=1e-5, rtol=1e-5)
+        torch.testing.assert_close(l_new, l_ref, atol=1e-5, rtol=1e-5)
+
+
+def test_split_edge_projection_gradients_equal_reference():
+    torch.manual_seed(3)
+    m = CSPDenoiser(d_model=32, n_layers=2, n_heads=2, n_freq=4)
+    for layer in m.layers:
+        torch.nn.init.normal_(layer.film.weight, std=0.1)
+    x = _inputs()
+    grads = []
+    for fn in (lambda *a: m(*a), lambda *a: _reference_forward(m, *a)):
+        m.zero_grad()
+        s, l = fn(*x)
+        (s.pow(2).sum() + l.pow(2).sum()).backward()
+        grads.append(torch.cat([p.grad.flatten() for p in m.parameters() if p.grad is not None]))
+    torch.testing.assert_close(grads[0], grads[1], atol=1e-5, rtol=1e-4)

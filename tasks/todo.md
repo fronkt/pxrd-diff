@@ -1926,3 +1926,29 @@ or Anvil GPU-h (CHE260157) is needed. FRANK'S CALL.
 - [ ] P3 (option A / fallback): keep ckpt_final; rerun the 12 arms + null x 3 without refinement; report
       G3 as failed with this diagnosis in the methods + letter.
 - [ ] Venue: Anvil gpu queue is not viable for 12-16; gpu-debug fits G3-sized jobs; G4 + retrain need Vast.
+
+### Phase 19 - option B (Frank 2026-11-25: "B"): DiffCSP-aligned retrain, re-gate G3, G4 without refinement
+Fixed before any code runs on a GPU (do not change after seeing results):
+- Data: every cell Niggli-reduced and rebuilt in the canonical orientation (DiffCSP build_crystal:
+  get_reduced_structure() -> Lattice.from_parameters), train/val/test; oracle cells = the reduced true
+  cell; indexer cells Niggli-reduced. PXRD patterns unchanged (powder pattern is cell-choice invariant;
+  spot-checked). Flag `niggli` stored in the checkpoint args; 03_sample follows it.
+- Training mix: p_pattern_drop 0.3 (G3 mode 0.3 x 0.5 = 15 % of examples, was 5 %); p_cell_given 0.5.
+- Network: n_freq 128 (DiffCSP num_freqs). Width rule, fixed now: d_model 512 if a 100k-step run at
+  bs 256 fits in <= 16 h on the rented GPU (200-step benchmark), else 384 if it fits, else 256.
+  bf16 autocast in training and sampling (as v30). 100k steps, lr 1e-3 cosine, seed 0, as v30.
+- Exact speed-ups (no change in the function computed): first edge Linear split into per-atom
+  projections; padding trimmed to the batch's largest structure. Tested equal to the old forward (fp32).
+- G3 bar: null pattern, 1 sample, n = 1000, DiffCSP matcher (stol 0.5, ltol 0.3, angle 10) >= 45 %.
+  Pass -> G4. Fail -> stop, no G4, report and ask Frank (fallback = option A on ckpt v30).
+- G4 protocol: learned / oracle / indexer / indexer-unknown x seeds 0-2 + null x seeds 0-2, n = 1000,
+  20 samples (null 1), best-of-20 by Debye Pearson, NO refinement (--refine-steps 0; 11-25 test: the
+  200 x Adam 1e-3 step halves strict matches). Both matchers reported (paper + DiffCSP).
+- Compute: Vast (Anvil gpu queue est. 2027-01-28); box queue self-stops + idle watchdog; local pull loop
+  armed at launch. Credit 1.97 USD on 11-25 -> top-up needed (Frank).
+- [ ] B1 dataset `niggli` option + reduced-structure / pattern-invariance checks
+- [ ] B2 exact edge split + padding trim, equivalence tests, G0 suite green
+- [ ] B3 14_train_csp / 03_sample wiring (niggli, sampling amp, index-cell reduction)
+- [ ] B4 CPU smoke: short train + sample + rematch end to end
+- [ ] B5 box pipeline (setup, benchmark -> width rule, train, G3 gate, G4, pack, self-stop)
+- [ ] B6 run on Vast (after top-up), pull, stats, paper + letter rewrite

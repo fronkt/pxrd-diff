@@ -67,6 +67,22 @@ def _parse_cif(cif_str: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.nda
     return frac, z, lat, params, wyck
 
 
+def niggli_reduce_parsed(entry: tuple) -> tuple:
+    """Niggli-reduce one parsed structure and rebuild its cell in the canonical orientation.
+
+    Same as DiffCSP's build_crystal (niggli=True): get_reduced_structure(), then
+    Lattice.from_parameters(*params). Atom order, species and Wyckoff ids are kept; the
+    fractional coordinates are re-expressed in the reduced cell and wrapped to [0, 1).
+    """
+    from pymatgen.core import Lattice, Structure
+    frac, z, lat, params, wyck = entry
+    s = Structure(Lattice(lat), z.tolist(), frac).get_reduced_structure()
+    canon = Lattice.from_parameters(*s.lattice.parameters)
+    f = np.mod(s.frac_coords, 1.0).astype(np.float32)
+    return (f, z, canon.matrix.astype(np.float32),
+            np.array(canon.parameters, dtype=np.float32), wyck)
+
+
 def augment_pxrd_pattern(pattern: np.ndarray,
                          rng: Optional[np.random.Generator] = None,
                          p: float = 0.8) -> np.ndarray:
@@ -174,7 +190,8 @@ class CrystalPXRDDataset(Dataset):
                  limit: int | None = None,
                  n_peaks: int = 20,
                  augment: bool = False,
-                 augment_seed: Optional[int] = None):
+                 augment_seed: Optional[int] = None,
+                 niggli: bool = False):
         data_dir = Path(data_dir)
         cache_dir = data_dir / "cache"
         raw_dir = data_dir / "raw"
@@ -230,6 +247,26 @@ class CrystalPXRDDataset(Dataset):
                     with open(tmp, "wb") as fh:
                         pickle.dump({"material_ids": ids, "structures": self._structures}, fh)
                     os.replace(tmp, pc)
+            if niggli:
+                # JAC R2 Phase 19: Niggli-reduced cells (DiffCSP). Patterns are unchanged: a
+                # powder pattern does not depend on the choice of cell.
+                pn = cache_dir / f"{split}_parsed_niggli.pkl"
+                red = None
+                if pn.exists():
+                    with open(pn, "rb") as fh:
+                        red = pickle.load(fh)
+                    if red.get("material_ids", [])[:len(ids)] != ids:
+                        red = None
+                if red is not None:
+                    self._structures = red["structures"][:len(ids)]
+                else:
+                    self._structures = [niggli_reduce_parsed(e) for e in tqdm(
+                        self._structures, desc=f"Niggli {split}", leave=False)]
+                    if limit is None:
+                        tmp = pn.with_suffix(f".tmp{os.getpid()}")
+                        with open(tmp, "wb") as fh:
+                            pickle.dump({"material_ids": ids, "structures": self._structures}, fh)
+                        os.replace(tmp, pn)
 
     def __len__(self) -> int:
         return len(self.patterns)

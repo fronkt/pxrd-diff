@@ -23,7 +23,14 @@ class PCSampler:
     def __init__(self, encoder: nn.Module, denoiser: nn.Module, torus: TorusVE,
                  lat_mean: torch.Tensor, lat_std: torch.Tensor,
                  n_steps: int = 1000, step_lr: float = 1e-5,
-                 null_pattern: bool = False):
+                 null_pattern: bool = False, amp: bool = False,
+                 bucket_edges: tuple[int, ...] | None = None):
+        """amp: run the denoiser under bf16 autocast on CUDA (as in training).
+        bucket_edges: if set (e.g. (4, 8, 12, 16)), structures are sampled in groups by atom
+        count so the denoiser's padding trim applies; the model function is unchanged, only the
+        partition of the random draws differs (Phase 19)."""
+        self.amp = amp
+        self.bucket_edges = bucket_edges
         self.encoder = encoder
         self.denoiser = denoiser
         self.torus = torus
@@ -38,8 +45,11 @@ class PCSampler:
 
     def _net(self, f, types, l_norm, t, g, feats, mask, given, drop):
         tt = torch.full((f.shape[0],), float(t), device=f.device)
-        score_n, eps_l = self.denoiser(f, types, self._denorm(l_norm), l_norm, tt,
-                                       g, feats, mask, given, drop)
+        with torch.autocast("cuda", dtype=torch.bfloat16,
+                            enabled=self.amp and f.device.type == "cuda"):
+            score_n, eps_l = self.denoiser(f, types, self._denorm(l_norm), l_norm, tt,
+                                           g, feats, mask, given, drop)
+        score_n, eps_l = score_n.float(), eps_l.float()
         sigma = self.torus.sigma(tt)
         return score_n * self.torus.score_rms(sigma).view(-1, 1, 1), eps_l
 
@@ -52,6 +62,23 @@ class PCSampler:
         """Returns (fractional coords (B, N, 3) in [0, 1), cell parameters (B, 6))."""
         if guide_scale > 0:
             raise ValueError("Debye guidance is not implemented for the PC sampler")
+        if self.bucket_edges:
+            B, N = atom_types.shape
+            n_at = mask.sum(1)
+            f_out = torch.zeros(B, N, 3, device=pxrd.device)
+            l_out = torch.zeros(B, 6, device=pxrd.device)
+            lo = 0
+            for hi in (*self.bucket_edges, N):
+                idx = ((n_at > lo) & (n_at <= hi)).nonzero().squeeze(-1)
+                lo = hi
+                if idx.numel():
+                    f_b, l_b = self._sample(pxrd[idx], atom_types[idx], lattice_init[idx],
+                                            mask[idx], fixed_lattice)
+                    f_out[idx], l_out[idx] = f_b, l_b
+            return f_out, l_out
+        return self._sample(pxrd, atom_types, lattice_init, mask, fixed_lattice)
+
+    def _sample(self, pxrd, atom_types, lattice_init, mask, fixed_lattice):
         B, N = atom_types.shape
         dev = pxrd.device
         g, feats = self.encoder(pxrd)

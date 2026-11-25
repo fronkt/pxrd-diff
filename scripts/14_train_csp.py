@@ -98,6 +98,8 @@ def main() -> None:
     ap.add_argument("--lat-weight", type=float, default=1.0)
     ap.add_argument("--aux-weight", type=float, default=1.0)
     ap.add_argument("--subset", type=int, default=0, help="train on the first N structures only")
+    ap.add_argument("--niggli", action="store_true",
+                    help="Niggli-reduced cells in the canonical orientation (DiffCSP; Phase 19)")
     ap.add_argument("--val-split", default="val")
     ap.add_argument("--n-val", type=int, default=512)
     ap.add_argument("--val-every", type=int, default=2000)
@@ -118,7 +120,7 @@ def main() -> None:
     use_amp = args.amp == "bf16" and device.type == "cuda"
     print(f"Device: {device}, amp: {use_amp}, args: {vars(args)}", flush=True)
 
-    ds = CrystalPXRDDataset(ROOT / "data", split="train")
+    ds = CrystalPXRDDataset(ROOT / "data", split="train", n_peaks=0, niggli=args.niggli)
     stats = lattice_params_stats(ds)
     lat_mean = torch.tensor(stats["mean"], dtype=torch.float32, device=device)
     lat_std = torch.tensor(stats["std"], dtype=torch.float32, device=device).clamp(min=1e-3)
@@ -127,7 +129,8 @@ def main() -> None:
     dl = DataLoader(ds, batch_size=args.bs, shuffle=True, collate_fn=collate, drop_last=True,
                     num_workers=args.workers if device.type == "cuda" else 0,
                     persistent_workers=device.type == "cuda" and args.workers > 0)
-    vds = ds if args.val_split == "train" else CrystalPXRDDataset(ROOT / "data", split=args.val_split)
+    vds = ds if args.val_split == "train" else CrystalPXRDDataset(ROOT / "data", split=args.val_split,
+                                                                  n_peaks=0, niggli=args.niggli)
     val = collate([vds[i] for i in range(min(args.n_val, len(vds)))])
 
     encoder = PXRDEncoder(d_model=args.d_model).to(device)

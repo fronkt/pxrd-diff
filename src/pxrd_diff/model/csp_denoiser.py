@@ -25,6 +25,7 @@ import math
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from pxrd_diff.diffusion import SinusoidalTimestepEmb
 from pxrd_diff.model.denoiser import MAX_ATOMIC_NUM, PXRDCrossAttention
@@ -65,12 +66,20 @@ class CSPLayer(nn.Module):
         nn.init.zeros_(self.film.bias)
         self.cross_attn = PXRDCrossAttention(d, n_heads, prenorm=True)
 
-    def forward(self, h, edge_feats, pair_mask, mask, cond, pxrd_feats):
+    def forward(self, h, four, lat_f, pair_mask, mask, cond, pxrd_feats):
+        """four: (B, N, N, 6K) Fourier features of f_j - f_i; lat_f: (B, N_LAT_FEATS)."""
         B, N, d = h.shape
         hn = self.norm(h)
-        hi = hn.unsqueeze(2).expand(B, N, N, d)
-        hj = hn.unsqueeze(1).expand(B, N, N, d)
-        m = self.edge_mlp(torch.cat([hi, hj, edge_feats], dim=-1))
+        # edge_mlp[0] acts on cat([h_i, h_j, four_ij, lat]); applying its weight blocks to each
+        # part separately computes the same thing without the (B, N, N, 2d + E) concatenation.
+        lin = self.edge_mlp[0]
+        w = lin.weight
+        nf = four.shape[-1]
+        m = (F.linear(four, w[:, 2 * d:2 * d + nf], lin.bias)
+             + F.linear(hn, w[:, :d]).unsqueeze(2)
+             + F.linear(hn, w[:, d:2 * d]).unsqueeze(1)
+             + F.linear(lat_f, w[:, 2 * d + nf:])[:, None, None, :])
+        m = self.edge_mlp[3](self.edge_mlp[2](self.edge_mlp[1](m)))
         pm = pair_mask.unsqueeze(-1).to(m.dtype)
         agg = (m * pm).sum(2) / pm.sum(2).clamp(min=1)
         upd = self.node_mlp(torch.cat([hn, agg], dim=-1))
@@ -117,6 +126,13 @@ class CSPDenoiser(nn.Module):
         Returns (normalised coordinate score (B, N, 3), lattice noise estimate (B, 6)).
         """
         B, N, _ = frac_t.shape
+        n = int(mask.sum(1).max().item()) if mask.numel() else N
+        if 0 < n < N:
+            # padding atoms are inert (G0 test), so drop the all-padding columns and re-pad
+            score, eps_lat = self.forward(frac_t[:, :n], atom_types[:, :n], lat_params, lat_norm, t,
+                                          pxrd_global, pxrd_feats, mask[:, :n], cell_given,
+                                          pattern_drop)
+            return F.pad(score, (0, 0, 0, N - n)), eps_lat
         if pattern_drop is not None:
             pd = pattern_drop.view(B, 1)
             pxrd_global = torch.where(pd, self.null_global.expand(B, -1), pxrd_global)
@@ -129,13 +145,12 @@ class CSPDenoiser(nn.Module):
 
         h = self.atom_emb(atom_types) + cond.unsqueeze(1)
         diff = frac_t.unsqueeze(1) - frac_t.unsqueeze(2)              # [b, i, j] = f_j - f_i
-        edge_feats = torch.cat(
-            [self.fourier(diff), lat_f[:, None, None, :].expand(B, N, N, N_LAT_FEATS)], dim=-1)
+        four = self.fourier(diff)
         eye = torch.eye(N, dtype=torch.bool, device=mask.device)
         pair_mask = mask.unsqueeze(2) & mask.unsqueeze(1) & ~eye
 
         for layer in self.layers:
-            h = layer(h, edge_feats, pair_mask, mask, cond, pxrd_feats)
+            h = layer(h, four, lat_f, pair_mask, mask, cond, pxrd_feats)
 
         h = self.out_norm(h)
         m = mask.unsqueeze(-1).to(h.dtype)

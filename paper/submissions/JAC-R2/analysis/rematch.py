@@ -42,9 +42,9 @@ with warnings.catch_warnings():
     for mid, cif in ref.items():
         if mid not in pred:
             continue
-        a = Structure.from_str(pred[mid], fmt="cif")
         b = Structure.from_str(cif, fmt="cif")
         try:
+            a = Structure.from_str(pred[mid], fmt="cif")
             r = sm.get_rms_dist(a, b)
         except Exception:
             r = None

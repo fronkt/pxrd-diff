@@ -114,6 +114,11 @@ def main():
     ap.add_argument("--save-structures", default=None,
                     help="write the final predicted structures (one CIF per line, jsonl) "
                          "so they can be re-matched at other tolerances")
+    ap.add_argument("--amp", choices=["none", "bf16"], default="none",
+                    help="model_family csp: bf16 autocast for the denoiser (Phase 19 runs)")
+    ap.add_argument("--bucket", action="store_true",
+                    help="model_family csp: sample in atom-count groups (4/8/12/16/20) so padding "
+                         "is trimmed; same model function, different partition of random draws")
     ap.add_argument("--null-pattern", action="store_true",
                     help="model_family csp: replace every pattern by the learned null "
                          "pattern (composition-only generation; sanity anchor G3)")
@@ -312,12 +317,17 @@ def main():
               f"lr={args.refine_lr}, refine_lattice={args.refine_lattice}")
 
     # Dataset (precompute peak features iff the checkpoint's head needs them)
+    niggli = bool(train_args.get("niggli", False))
     ds = CrystalPXRDDataset(
         ROOT / "data", split=args.split,
         n_peaks=n_peaks_train if peak_aug_lat else 0,
         augment=args.noise_aug_eval,
         augment_seed=42,
+        niggli=niggli,
     )
+    if niggli:
+        print("Phase 19: Niggli-reduced cells (checkpoint trained with niggli); supplied "
+              "indexer cells are reduced too")
     if args.noise_aug_eval:
         print("Phase 7 eval: applying noise augmentation to test patterns "
               "(deterministic seed=42)")
@@ -362,7 +372,8 @@ def main():
         torus = TorusVE(train_args["sigma_min"], train_args["sigma_max"]).to(device)
         sampler = PCSampler(encoder, denoiser, torus, lat_mean.to(device), lat_std.to(device),
                             n_steps=args.pc_steps, step_lr=args.step_lr,
-                            null_pattern=args.null_pattern)
+                            null_pattern=args.null_pattern, amp=args.amp == "bf16",
+                            bucket_edges=(4, 8, 12, 16) if args.bucket else None)
         print(f"Model family csp: PC sampler, {args.pc_steps} levels, step_lr={args.step_lr}, "
               f"null_pattern={args.null_pattern}")
     else:
@@ -455,6 +466,10 @@ def main():
             idx_rows = json.load(f).get("rows", [])
         idx_by_id = {r["mid"]: r["pred_params"]
                      for r in idx_rows if r.get("pred_params")}
+        if niggli:
+            # same cell, reduced representation (the model was trained on reduced cells)
+            idx_by_id = {k: list(Lattice.from_parameters(*v).get_niggli_reduced_lattice().parameters)
+                         for k, v in idx_by_id.items()}
         # The true lattice is a SHAPE PLACEHOLDER for uncovered rows only. Under
         # the default --index-fallback miss those rows are scored as misses in
         # the evaluation loop and never reach StructureMatcher. The submitted
@@ -489,6 +504,8 @@ def main():
     index_topk_lat_params = None      # (B, K, 6)
     index_topk_lat_matrix = None      # (B, K, 3, 3)
     use_index_topk = bool(args.lat_from_index_topk) and not args.true_lattice
+    if use_index_topk and niggli:
+        sys.exit("--lat-from-index-topk is not wired for niggli checkpoints")
     if use_index_topk:
         with open(args.lat_from_index_topk) as f:
             topk_rows = json.load(f).get("rows", [])
@@ -890,6 +907,9 @@ def main():
                 "pc_steps": args.pc_steps if model_family == "csp" else None,
                 "step_lr": args.step_lr if model_family == "csp" else None,
                 "null_pattern": args.null_pattern,
+                "amp": args.amp,
+                "bucket": args.bucket,
+                "niggli": niggli,
             }
             if use_index_topk and picked_cell_ranks:
                 from collections import Counter
