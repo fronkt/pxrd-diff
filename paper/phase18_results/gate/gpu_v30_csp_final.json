@@ -1,0 +1,23 @@
+{
+ "ckpt": "runs/gpu_v30_csp/ckpt_final.pt",
+ "step": 100000,
+ "val_loss": {
+  "learned": 0.65978,
+  "given": 0.46908000000000005
+ },
+ "sens": {
+  "learned": {
+   "renoised_coords": 1.301313877105713,
+   "random_species": 1.1284414529800415,
+   "other_pxrd": 0.778599739074707,
+   "within_structure_spread": 0.9997008442878723
+  },
+  "given": {
+   "renoised_coords": 1.360755443572998,
+   "random_species": 1.1180464029312134,
+   "other_pxrd": 0.38278940320014954,
+   "within_structure_spread": 0.9998692274093628
+  }
+ },
+ "gate_pass": true
+}

@@ -1,0 +1,25 @@
+{
+ "steps": 200,
+ "lr": 0.0001,
+ "n": 1000,
+ "refine_loss_mean_first": 0.8893899291753768,
+ "refine_loss_mean_last": 0.8388852775096893,
+ "max_atom_displacement_A_median": 0.26972445845603943,
+ "max_atom_displacement_A_p90": 0.38601607680320743,
+ "paper": {
+  "before": 0.273,
+  "after": 0.274,
+  "lost": 1,
+  "gained": 2
+ },
+ "diffcsp": {
+  "before": 0.34,
+  "after": 0.35,
+  "lost": 4,
+  "gained": 14
+ },
+ "min_dist_lt_0.5A": {
+  "before": 1,
+  "after": 2
+ }
+}

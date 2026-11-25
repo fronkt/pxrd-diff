@@ -1,0 +1,1 @@
+{"n": 1000, "n_pred": 1000, "matches": 339, "match_rate": 0.339, "rms_mean": 0.08101601756656483, "tolerances": {"stol": 0.5, "ltol": 0.3, "angle_tol": 10.0}}

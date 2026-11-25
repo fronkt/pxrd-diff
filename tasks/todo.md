@@ -1873,3 +1873,56 @@ or Anvil GPU-h (CHE260157) is needed. FRANK'S CALL.
     --seed), merge with `anvil/merge_chunks.py` into the eval_v30 file names, G3 rematch in the
     background. Smoke-tested locally on the G1 ckpt: chunk rows = unchunked rows, merge order identical,
     incomplete arm refused. Stop: touch $SCRATCH/pxrd_ops/CHAIN_STOP. Must finish before the Nov 6 outage.
+
+### Phase 18b - G4 done, G3 FAILED its bar; diagnosis (2026-11-25)
+- Array 22292941 finished 11-23 14:51 (120/120 chunks exit 0); all 13 arms merged. Results pulled from
+  scratch to `paper/phase18_results/` (tar sha256 fd13db28...534f, identical; copy also on D:\pxrd-diff-transfer).
+- Match rate, n = 1000 (seeds 0/1/2; DiffCSP matcher = rematch of the s0 saved structures only):
+
+  | arm | paper matcher (ltol .2 stol .3 ang 5) | DiffCSP matcher (s0) | refined? |
+  |---|---|---|---|
+  | null, 1 sample | 0.274 (1 seed) | 0.340 | no |
+  | learned | 0.288 / 0.274 / 0.270 | 0.417 | yes, 200 x Adam 1e-3 |
+  | oracle | 0.693 / 0.681 / 0.680 | 0.782 | yes |
+  | indexer | 0.161 / 0.171 / 0.168 | 0.226 | yes |
+  | indexer, unknown system | 0.147 / 0.156 / 0.157 | - | yes |
+
+- **G3 FAILED its pre-set bar:** null-pattern at DiffCSP's matcher 0.339-0.340 vs DiffCSP's 51.5 %.
+  Evidence in `paper/submissions/JAC-R2/analysis/g3_diag/` (scripts + JSON).
+  - Sampler/score code checked line by line against jiaor17/DiffCSP (`diffusion.py`, configs fetched
+    11-25): same sigma 0.005-0.5 log schedule, 1000 steps, corrector step_lr 1e-5 x (sigma/sigma_min)^2,
+    ancestral predictor, score / sqrt(E score^2) target, uniform init. No discrepancy found.
+  - Null misses (660): **525 cell-shape misses** (no lattice mapping within ltol 0.3 / 10 deg after
+    volume scaling, or a different primitive atom count; 103 of them), **135 coordinate misses**. When
+    the cell maps, 70 % match. Volume per atom is right (median ratio 1.008, IQR 0.98-1.05); 9/1000
+    structures have an interatomic distance < 1 A. By system: cubic 0.68, trigonal 0.36, tetragonal 0.27,
+    orthorhombic 0.23, hexagonal 0.23, monoclinic 0.14, triclinic 0.12.
+  - Known recipe differences from DiffCSP (none tested in isolation yet):
+    (1) the exact G3 mode (no pattern, cell generated) is p_pattern_drop 0.1 x (1 - p_cell_given 0.5)
+        = 5 % of training examples; DiffCSP trains 100 % in it;
+    (2) cells are NOT Niggli-reduced (47.1 % of a 2000-structure train sample; angles 11-170 deg);
+        DiffCSP mp_20.yaml has niggli: true;
+    (3) d_model 256 / n_freq 10 / bf16 vs hidden 512 / num_freqs 128 / fp32.
+  - Counter-evidence to keep: generated cells with an angle outside 60-120 deg match MORE (0.42, n=383)
+    than the rest (0.29), so skewed output cells are not the failure; (2) is only a learnability hypothesis.
+- **Refinement defect (affects every refined arm and the R1 numbers too):** `refine_structure` = Adam
+  on fractional coordinates, lr 1e-3, 200 steps; Adam moves each coordinate ~lr per step whatever the
+  gradient, up to ~0.2 (about 1 A). Applied to the UNREFINED null structures (`refine_effect.py`, n=1000):
+  - lr 1e-3: paper matcher 0.273 -> 0.144 (129 lost, 0 gained); DiffCSP 0.340 -> 0.297; atom pairs
+    < 0.5 A 1 -> 87; median max displacement 1.31 A.
+  - lr 1e-4: paper 0.273 -> 0.274; DiffCSP 0.340 -> 0.350 (+14 / -4); < 0.5 A 1 -> 2; 0.27 A.
+  - So the paper-matcher learned/oracle/indexer numbers are depressed and learned vs null is confounded
+    (learned refined, null not). Pre-refinement structures were not saved: a rerun is needed.
+- Eval cost: sampling is 98 % of a chunk (learned c0: sample 4048 s, select 5 s, refine 16 s), ~1 TFLOP/s
+  on the A100 (fully connected edge MLP over expanded N x N x d tensors, fp32). Unmeasured idea: split the
+  first edge Linear into per-atom projections (exact) + bf16 inference.
+- Anvil gpu queue 11-25: 734 pending / 50 running; `sbatch --test-only` (1 GPU, 2 h) -> start 2027-01-28.
+
+**Plan - FRANK'S CALL (GPU spend + approach). Proposed G3 bar, fixed before any new run: >= 45 %.**
+- [ ] P1 (local, CPU): refinement off in the paper arms (or lr 1e-4, decided before any run); sampler
+      speed-up with an output-equivalence test on fixed seeds; null arm x 3 seeds.
+- [ ] P2 (option B): retrain with Niggli-reduced cells everywhere (train/val/test, oracle + indexer cells),
+      p_pattern_drop 0.3, n_freq 128; G3 on the new ckpt (1 sample, ~1 GPU-h); G4 only if G3 passes.
+- [ ] P3 (option A / fallback): keep ckpt_final; rerun the 12 arms + null x 3 without refinement; report
+      G3 as failed with this diagnosis in the methods + letter.
+- [ ] Venue: Anvil gpu queue is not viable for 12-16; gpu-debug fits G3-sized jobs; G4 + retrain need Vast.

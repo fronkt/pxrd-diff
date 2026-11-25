@@ -1,0 +1,45 @@
+Peak features test:   0%|          | 0/1000 [00:00<?, ?it/s]Peak features test:   0%|          | 1/1000 [00:00<16:18,  1.02it/s]                                                                    refined 50/1000  loss 0.899 -> 0.842
+refined 100/1000  loss 0.890 -> 0.853
+refined 150/1000  loss 0.932 -> 0.890
+refined 200/1000  loss 0.942 -> 0.889
+refined 250/1000  loss 0.842 -> 0.794
+refined 300/1000  loss 0.879 -> 0.843
+refined 350/1000  loss 0.883 -> 0.836
+refined 400/1000  loss 0.892 -> 0.847
+refined 450/1000  loss 0.881 -> 0.824
+refined 500/1000  loss 0.900 -> 0.851
+refined 550/1000  loss 0.911 -> 0.859
+refined 600/1000  loss 0.889 -> 0.840
+refined 650/1000  loss 0.913 -> 0.876
+refined 700/1000  loss 0.875 -> 0.828
+refined 750/1000  loss 0.850 -> 0.787
+refined 800/1000  loss 0.877 -> 0.827
+refined 850/1000  loss 0.873 -> 0.806
+refined 900/1000  loss 0.918 -> 0.857
+refined 950/1000  loss 0.910 -> 0.840
+refined 1000/1000  loss 0.834 -> 0.788
+{
+ "steps": 200,
+ "lr": 0.0001,
+ "n": 1000,
+ "refine_loss_mean_first": 0.8893899291753768,
+ "refine_loss_mean_last": 0.8388852775096893,
+ "max_atom_displacement_A_median": 0.26972445845603943,
+ "max_atom_displacement_A_p90": 0.38601607680320743,
+ "paper": {
+  "before": 0.273,
+  "after": 0.274,
+  "lost": 1,
+  "gained": 2
+ },
+ "diffcsp": {
+  "before": 0.34,
+  "after": 0.35,
+  "lost": 4,
+  "gained": 14
+ },
+ "min_dist_lt_0.5A": {
+  "before": 1,
+  "after": 2
+ }
+}
