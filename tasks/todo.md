@@ -1996,4 +1996,20 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     not wait for the gpu queue. Same nodes (g000-g015, A100 40 GB), so the width rule is applied unchanged.
   - Mock-tested locally (stubbed python/sacct/scancel) before deploy: bench-only, busy lock, takeover of a
     TIMEOUT holder, slices to ckpt_final, G3 claims + gate, G4 time limit, ALL_DONE, stale claim, failure.
-- [ ] B6 run on Anvil (A1 + A2), pull, stats, paper + letter rewrite
+- Amendment A3 (2026-11-26 ~12:00 EST), before any training step counted; memory only, the science is unchanged:
+  - Why: the gpu-debug bench (22423270, started 11:12 EST, 9 h after submission, not ~2.5 h) passed the Niggli
+    check, then the d 512 width bench ran out of memory on the A100 40 GB after step 50 (33.5 GB allocated,
+    4.4 GB fragmented). The Phase 19 settings (d 512, n_freq 128, bs 256) were never run on a 40 GB card: v30
+    trained at d 256, n_freq 10. Exit 4, as designed; no worker had started.
+  - Fix: `scripts/14_train_csp.py --micro-bs` (default 0 = --bs) accumulates the gradient over micro-batches
+    with each micro-batch's loss normalised by full-batch counts and all noise drawn for the full batch, so
+    each step is the bs-256 step up to float rounding (GroupNorm only, no batch-dependent layers). A CUDA
+    OOM halves the micro-batch and redoes the step with the same noise; checkpoints keep it for --resume.
+    Validation runs in chunks with the noise pre-drawn (same numbers). The submitted array's batch script is
+    frozen at submission, so the fallback is automatic: no resubmit, the workers keep their age.
+  - The width rule is unchanged (time, not memory, picks the width); the bench now times the micro-batched step.
+  - Tested: `tests/test_train_micro_batch.py` (gradient = pre-A3 full-batch gradient at micro 7/3/1; OOM ->
+    halve -> same gradient; validation independent of chunk); on real data (CPU, 4 steps, lr 1e-2) the new
+    script at full batch is bit-identical to the old one and micro 5 differs by median 2e-8 per weight.
+  - The backup bench 22423271 was held while this was fixed, then released.
+- [ ] B6 run on Anvil (A1 + A2 + A3), pull, stats, paper + letter rewrite
