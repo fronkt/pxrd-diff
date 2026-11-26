@@ -8,8 +8,8 @@
 # JAC R2 Phase 19 on Anvil (amendment A1 in tasks/todo.md): the G3 gate arm and the G4 arms, one
 # array task per (arm, chunk).
 #   sbatch --array=0-9 p19_arms.sbatch G3                 (submitted by p19_train.sbatch at ckpt_final)
-#   sbatch --array=0-$((NT - 1))%12 p19_arms.sbatch G4    (submitted by the task that passes G3 if
-#                                                          $OPS/G4_ON_ANVIL exists; else by hand)
+#   sbatch --export=ALL,OFFSET=o --array=0-$((k - 1))%12 p19_arms.sbatch G4   (blocks of <= 1000 tasks,
+#                    submitted by the task that passes G3 if $OPS/G4_ON_ANVIL exists; else by hand)
 #   COUNT=1 bash p19_arms.sbatch STAGE 0   prints NT;   DRY=1 bash p19_arms.sbatch STAGE ID   prints a command
 # Command per chunk = box/p19_pipeline.sh's SAMPLE + arm arguments (Phase 19 spec: 1000 PC steps, no
 # refinement, bf16, atom-count buckets) with --start/--n; 03_sample seeds a chunk with
@@ -24,7 +24,7 @@ OPS=/anvil/scratch/x-fcai3/pxrd_ops/p19
 export PATH=$P/pxrd_env/bin:$PATH PYTHONPATH=$R/src OMP_NUM_THREADS=16
 cd "$R" || exit 2
 STAGE=${1:?usage: p19_arms.sbatch G3|G4 [task id]}
-id=${SLURM_ARRAY_TASK_ID:-${2:?task id}}
+id=$(( ${SLURM_ARRAY_TASK_ID:-${2:?task id}} + ${OFFSET:-0} ))   # OFFSET: arrays are <= 1001 tasks
 OUT=paper/phase19_results; CH=$OUT/chunks
 CK=runs/gpu_p19/ckpt_final.pt
 STATUS=$OPS/p19.status
@@ -114,8 +114,11 @@ EOF
     if python -c "import json, sys; sys.exit(0 if json.load(open('$OUT/G3.json'))['pass'] else 1)"; then
         if [ -f "$OPS/G4_ON_ANVIL" ]; then
             NT=$(COUNT=1 bash "$ME" G4 0)
-            J=$(sbatch --parsable --array=0-$((NT - 1))%12 "$ME" G4) \
-                && log "G3 PASS -> G4 array $J ($NT tasks)" || log "G3 PASS, G4 SUBMIT FAILED"
+            for o in $(seq 0 1000 $((NT - 1))); do
+                k=$(( NT - o < 1000 ? NT - o : 1000 ))
+                J=$(sbatch --parsable --export=ALL,OFFSET=$o --array=0-$((k - 1))%12 "$ME" G4) \
+                    && log "G3 PASS -> G4 array $J (tasks $o-$((o + k - 1)) of $NT)" || log "G3 PASS, G4 SUBMIT FAILED"
+            done
         else
             log "G3 PASS; G4 waits for the compute decision (touch $OPS/G4_ON_ANVIL and submit, or Vast)"
         fi
