@@ -1975,4 +1975,25 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     on Anvil if its projected GPU-h at ~8 GPU-h/day finish by 12-08, else its arms go to Vast (Frank's OK).
   - Code + results on scratch (`/anvil/scratch/x-fcai3/pxrd-diff-p19`, 30-day purge; project fileset ENOSPC),
     log `/anvil/scratch/x-fcai3/pxrd_ops/p19/p19.status`; pulled to local after each stage.
-- [ ] B6 run on Anvil (A1), pull, stats, paper + letter rewrite
+- Amendment A2 (2026-11-26 ~01:30 EST), fixed before any GPU run; scheduling only, the science is unchanged:
+  - Why: the A1 chain's first job (22419296) was still pending after 5 h, estimated start 12-02 06:35. Anvil
+    ranks jobs by time waited (PriorityWeightAge 20000, PriorityMaxAge 7 days, fair-share weight 0). The 11-18
+    v30 array started fast because all its tasks had been aging since submission; a chain resubmits each link
+    at zero age, so every link would wait days. A1's "~6.6 jobs a day" premise held only for an aged array.
+  - Fix: `anvil/p19_train.sbatch` is now one array of identical 1-GPU <= 1:50 workers, submitted together so all
+    of them age. Each does the next step: Niggli check -> width rule + sampling bench -> a training slice
+    (under one lock; a worker that finds it held exits at once) -> once ckpt_final exists, unclaimed G3 chunks
+    (then G4 chunks, only if G3 passed and G4_ON_ANVIL exists). p19_arms.sbatch no longer submits arrays.
+  - Locks and chunk claims are mkdir directories holding the holder's job id, taken over when sacct says the
+    holder is no longer RUNNING (flock is not cluster-wide on Anvil's GPFS scratch: login02 held a lock that
+    login03 and login05 still got, tested 11-26). A chunk is claimed only if the time left covers its
+    estimate (bench, or 1.25x the slowest done chunk) + 15 min for merge and rematch.
+  - Stops: STOP file (Niggli mismatch, any failed chunk, or 2 lock-holding workers in a row without
+    progress) or no work left (G3 failed, G3 passed with G4 not on Anvil, or ALL_DONE); the worker then
+    cancels its array's pending tasks.
+  - The benchmark (Niggli check + width rule + sampling bench) runs first as one BENCH_ONLY job on gpu-debug
+    (30 min limit, estimated start within ~2.5 h), so the G4 cost and the Anvil-vs-Vast decision for G4 do
+    not wait for the gpu queue. Same nodes (g000-g015, A100 40 GB), so the width rule is applied unchanged.
+  - Mock-tested locally (stubbed python/sacct/scancel) before deploy: bench-only, busy lock, takeover of a
+    TIMEOUT holder, slices to ckpt_final, G3 claims + gate, G4 time limit, ALL_DONE, stale claim, failure.
+- [ ] B6 run on Anvil (A1 + A2), pull, stats, paper + letter rewrite

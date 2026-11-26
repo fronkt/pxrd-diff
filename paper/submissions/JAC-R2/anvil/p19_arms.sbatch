@@ -5,11 +5,10 @@
 #SBATCH -t 01:50:00
 #SBATCH -J p19-arms
 #SBATCH -o /anvil/scratch/x-fcai3/pxrd_ops/p19/%x_%A_%a.out
-# JAC R2 Phase 19 on Anvil (amendment A1 in tasks/todo.md): the G3 gate arm and the G4 arms, one
-# array task per (arm, chunk).
-#   sbatch --array=0-9 p19_arms.sbatch G3                 (submitted by p19_train.sbatch at ckpt_final)
-#   sbatch --export=ALL,OFFSET=o --array=0-$((k - 1))%12 p19_arms.sbatch G4   (blocks of <= 1000 tasks,
-#                    submitted by the task that passes G3 if $OPS/G4_ON_ANVIL exists; else by hand)
+# JAC R2 Phase 19 on Anvil (amendments A1 + A2 in tasks/todo.md): the G3 gate arm and the G4 arms, one
+# task per (arm, chunk).
+#   bash p19_arms.sbatch G3|G4 ID   run by the p19_train.sbatch workers, which claim task IDs (A2)
+#   sbatch --array=... p19_arms.sbatch G4   still works as an array (OFFSET for blocks of <= 1000)
 #   COUNT=1 bash p19_arms.sbatch STAGE 0   prints NT;   DRY=1 bash p19_arms.sbatch STAGE ID   prints a command
 # Command per chunk = box/p19_pipeline.sh's SAMPLE + arm arguments (Phase 19 spec: 1000 PC steps, no
 # refinement, bf16, atom-count buckets) with --start/--n; 03_sample seeds a chunk with
@@ -18,9 +17,9 @@
 # (merge_chunks.py) and rematches it at the DiffCSP tolerances (rematch.py). The merge of p19_null_s0
 # writes G3.json with the Phase 19 bar (0.45): pass -> G4, fail -> stop (spec: no G4, ask Frank).
 set -u
-P=/anvil/projects/x-che260157
-R=/anvil/scratch/x-fcai3/pxrd-diff-p19
-OPS=/anvil/scratch/x-fcai3/pxrd_ops/p19
+P=${P19_P:-/anvil/projects/x-che260157}   # P19_P/R/OPS: overrides for the mock test only
+R=${P19_R:-/anvil/scratch/x-fcai3/pxrd-diff-p19}
+OPS=${P19_OPS:-/anvil/scratch/x-fcai3/pxrd_ops/p19}
 export PATH=$P/pxrd_env/bin:$PATH PYTHONPATH=$R/src OMP_NUM_THREADS=16
 cd "$R" || exit 2
 STAGE=${1:?usage: p19_arms.sbatch G3|G4 [task id]}
@@ -28,14 +27,13 @@ id=$(( ${SLURM_ARRAY_TASK_ID:-${2:?task id}} + ${OFFSET:-0} ))   # OFFSET: array
 OUT=paper/phase19_results; CH=$OUT/chunks
 CK=runs/gpu_p19/ckpt_final.pt
 STATUS=$OPS/p19.status
-ME=paper/submissions/JAC-R2/anvil/p19_arms.sbatch
 MERGE=paper/submissions/JAC-R2/anvil/merge_chunks.py
 REMATCH=paper/submissions/JAC-R2/analysis/rematch.py
 IDX=paper/phase9_results/index_benchmark_v2_native.json
 UNK=paper/phase15_results/index_cells_test1000_unknown.json
 N=1000; G3_BAR=0.45
 mkdir -p "$CH"
-log() { echo "$(date -u +%FT%TZ) [$STAGE ${SLURM_ARRAY_JOB_ID:-dry}_$id] $*" | tee -a "$STATUS" >&2; }
+log() { echo "$(date -u +%FT%TZ) [$STAGE task $id${WORKER:+ in worker $WORKER}] $*" | tee -a "$STATUS" >&2; }
 
 arms_for() {
     case $1 in
@@ -113,14 +111,9 @@ EOF
     log "G3: $(tr -d '\n ' < "$OUT/G3.json")"
     if python -c "import json, sys; sys.exit(0 if json.load(open('$OUT/G3.json'))['pass'] else 1)"; then
         if [ -f "$OPS/G4_ON_ANVIL" ]; then
-            NT=$(COUNT=1 bash "$ME" G4 0)
-            for o in $(seq 0 1000 $((NT - 1))); do
-                k=$(( NT - o < 1000 ? NT - o : 1000 ))
-                J=$(sbatch --parsable --export=ALL,OFFSET=$o --array=0-$((k - 1))%12 "$ME" G4) \
-                    && log "G3 PASS -> G4 array $J (tasks $o-$((o + k - 1)) of $NT)" || log "G3 PASS, G4 SUBMIT FAILED"
-            done
+            log "G3 PASS -> G4 runs in the p19_train.sbatch workers (G4_ON_ANVIL; A2)"
         else
-            log "G3 PASS; G4 waits for the compute decision (touch $OPS/G4_ON_ANVIL and submit, or Vast)"
+            log "G3 PASS; G4 waits for the compute decision (touch $OPS/G4_ON_ANVIL + more workers, or Vast)"
         fi
     else
         log "G3 FAILED its bar: G4 not run (Phase 19 spec: stop and ask Frank)"
