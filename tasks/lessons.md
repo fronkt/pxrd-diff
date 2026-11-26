@@ -110,3 +110,14 @@ successful surprising approach. Use format:
 - **Rule:** before concluding "a patch cannot fix it", measure the do-nothing baseline per noise band.
   The per-band check (vp_torus_check.txt) found the actual cause in one CPU run: the coordinate noise
   schedule wipes out the signal for 81 % of timesteps. Three earlier diagnostics only measured symptoms.
+
+## 2026-11-26: a queue observation from an array does not transfer to a chain (Phase 19 A1 -> A2)
+- A1 assumed "backfill starts ~6.6 of our 1:50 jobs a day" from the 11-18 v30 array. That array's tasks
+  all aged together from submission. Anvil ranks by age alone (PriorityWeightAge 20000, max 7 days,
+  fair-share weight 0), so a self-chaining job restarts at age 0 with every link: the first link was
+  estimated at 6 days. The chain could never finish by the deadline. Found 5 h after deploy, before it ran.
+- **Rule:** before designing a submission pattern on a shared cluster, read the priority config
+  (`scontrol show config | grep -i ^Priority`, `sprio -j`) and ask whether the evidence came from the
+  same pattern. On age-ranked queues, submit all units of work together as one array of workers.
+- **Rule:** test lock primitives on the real filesystem across two hosts before relying on them. flock
+  was node-local on Anvil's GPFS scratch; mkdir + holder job id + sacct is what works.
