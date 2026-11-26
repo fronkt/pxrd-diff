@@ -165,6 +165,8 @@ def main() -> None:
         step = ck["step"]
         for _ in range(step):
             sched.step()
+        # a resumed slice must not replay the first slice's batches, times and noise
+        torch.manual_seed(args.seed + step)
         print(f"Resumed from {args.resume} at step {step}", flush=True)
     while step < args.steps:
         for batch in dl:

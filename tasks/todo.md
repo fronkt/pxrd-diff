@@ -1959,4 +1959,20 @@ Fixed before any code runs on a GPU (do not change after seeing results):
       local `p19_pull_loop.sh HOST PORT`. Bench parser unit-tested (string-compare bug fixed before use).
       Offer picked 11-25: 61075218 (1x 5090, CA, 0.644 USD/h, rel 0.998, 48 cores). Rent BLOCKED by the
       auto-mode classifier -> needs Frank's explicit OK + a top-up (credit 1.97 USD).
-- [ ] B6 run on Vast (after top-up), pull, stats, paper + letter rewrite
+- Amendment A1 (2026-11-25 20:30 EST, Frank: "can't you use anvil?"), fixed before any GPU run:
+  - Compute moves to Anvil (A100 40 GB, gpu partition, 1,207.4 GPU-h left, free). The --test-only estimate for
+    any gpu job is 2027-01-29 (839 pending), but backfill started 33 of our 1-GPU 1:50 jobs on 11-18..11-23
+    (~6.6 a day, ~8 GPU-h/day), so every job is 1 GPU and <= 1:50.
+  - Width rule unchanged, applied to the A100: the same 300-step benchmark, "fits" = 100k steps <= 16 GPU-h.
+  - Training in self-chaining slices (`anvil/p19_train.sbatch`): each job trains for its remaining time
+    (--max-minutes), saves, and its successor resumes. Resume now reseeds with seed + step so slices do not
+    replay the first slice's batches and noise (the v30 slices did); the only change to training code.
+  - First job also repeats the B1 Niggli check on Anvil's data copies (raw csv md5 = local; the npz files are
+    Anvil's own v30 simulation, md5 differs from the local ones) and stops the chain on any mismatch.
+  - G3 arm = 10 x 100-structure chunks (`anvil/p19_arms.sbatch G3`); the merging task writes G3.json, same
+    bar 0.45. G4 = the same arms as the box pipeline, chunked (null 100; 20-sample arms sized by the sampling
+    benchmark to <= 80 min per chunk). G4 starts on Anvil only if `$OPS/G4_ON_ANVIL` exists; the rule: G4 runs
+    on Anvil if its projected GPU-h at ~8 GPU-h/day finish by 12-08, else its arms go to Vast (Frank's OK).
+  - Code + results on scratch (`/anvil/scratch/x-fcai3/pxrd-diff-p19`, 30-day purge; project fileset ENOSPC),
+    log `/anvil/scratch/x-fcai3/pxrd_ops/p19/p19.status`; pulled to local after each stage.
+- [ ] B6 run on Anvil (A1), pull, stats, paper + letter rewrite

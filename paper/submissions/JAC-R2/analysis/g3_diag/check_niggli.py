@@ -76,6 +76,12 @@ def main() -> None:
         out[split] = o
         print(split, json.dumps(o), flush=True)
     print(json.dumps(out, indent=1))
+    bad = [s for s, o in out.items()
+           if not (o["atoms_species_same"] == o["volume_same"] == o["tight_match"] == o["n"]
+                   and o["pattern_max_rel_diff"] < 1e-3)]
+    if bad:
+        sys.exit(f"NIGGLI CHECK FAILED for {bad}")
+    print("NIGGLI CHECK OK")
 
 
 if __name__ == "__main__":
