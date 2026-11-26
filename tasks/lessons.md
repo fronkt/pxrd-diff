@@ -121,3 +121,14 @@ successful surprising approach. Use format:
   same pattern. On age-ranked queues, submit all units of work together as one array of workers.
 - **Rule:** test lock primitives on the real filesystem across two hosts before relying on them. flock
   was node-local on Anvil's GPFS scratch; mkdir + holder job id + sacct is what works.
+
+## 2026-11-26: a new config needs a memory estimate on the target GPU before it queues (Phase 19 A3)
+- The Phase 19 settings (d 512, n_freq 128, bs 256) had only ever been timed, never run, on a 40 GB A100;
+  v30 trained at d 256 / n_freq 10. The width bench ran out of memory after 50 steps, and finding that out
+  cost a 9 h gpu-debug wait. The cross-attention keys/values over 4253 pattern tokens (B x L x 2d per
+  layer, kept for backward) dominate memory and scale with d: an estimate would have shown ~36 GB.
+- **Rule:** before queueing a config that grows activations (width, tokens, frequencies, batch), estimate
+  peak memory against the target card, and make the training step degrade (accumulate micro-batches)
+  instead of crash.
+- **Rule:** a submitted batch script is frozen at sbatch time; put fixes in the code it calls, so a
+  queued array keeps its age.
