@@ -2028,6 +2028,10 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     (instance-initiated shutdown behaviour = stop, so results survive a missed pull), plus a user-data
     `shutdown -h` hard cap. After each pull: terminate, delete the SG and key pair.
 - [ ] B6 run (A1-A4: training started on Anvil, continued on AWS), pull, stats, paper + letter rewrite
+  - 11-27 06:16 UTC: AWS train box g6e.xlarge i-0fff3427ede18b5be (L40S) up; data md5 = Anvil's; 20 tests pass on its
+    GPU. Sampling bench on L40S: sample=148.7 s (A100 108.2 s); training resumed at step 9543, 0.835 s/step
+    (A100 0.54), GPU-bound -> ~21 h to 100k, then G3 + null s1/s2 (~3.5 h); cap 26 h. Twenty-sample arm on L40S
+    ~8.6 h -> 12 arms ~103 GPU-h. Anvil: STOP + pending workers cancelled 06:28 UTC.
   - 11-27 04:36 UTC: worker 22423272_0 benched d512 19.31 h, d384 15.00 h per 100k -> d_model 384; sampling bench
     38 min per 100 x 20 chunk, chunk20 100, G4 ~76 + 3 A100 GPU-h -> Vast by the A1 rule (needs Frank's OK + top-up);
     training slice 1 started (0.54 s/step). Debug bench 22423271 cancelled (redundant).
