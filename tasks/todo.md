@@ -2032,6 +2032,12 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     GPU. Sampling bench on L40S: sample=148.7 s (A100 108.2 s); training resumed at step 9543, 0.835 s/step
     (A100 0.54), GPU-bound -> ~21 h to 100k, then G3 + null s1/s2 (~3.5 h); cap 26 h. Twenty-sample arm on L40S
     ~8.6 h -> 12 arms ~103 GPU-h. Anvil: STOP + pending workers cancelled 06:28 UTC.
+  - 11-27 21:12 UTC: step 73,100 (0.84 s/step) -> train done ~03:30 UTC 11-28, G3 ~04:45, null s1/s2 ~07:00 (cap
+    08:16). Box was unreachable ~16:50-21:00 UTC only because the laptop changed networks (SG = one IP); the
+    second IP was added to the SG. G4 helpers (local launcher, not in the repo: it holds account ids): 6 x
+    g6e.xlarge, same key + SG, stop on shutdown, cap 21 h, arms paired by seed (learned+oracle,
+    indexer+indexer_unknown); launched at train done so the SSO login is still valid, data + ckpt_final
+    uploaded while G3 runs, `p19_setup.sh` started only after G3.json passes (else halt + ask Frank).
   - 11-27 04:36 UTC: worker 22423272_0 benched d512 19.31 h, d384 15.00 h per 100k -> d_model 384; sampling bench
     38 min per 100 x 20 chunk, chunk20 100, G4 ~76 + 3 A100 GPU-h -> Vast by the A1 rule (needs Frank's OK + top-up);
     training slice 1 started (0.54 s/step). Debug bench 22423271 cancelled (redundant).
