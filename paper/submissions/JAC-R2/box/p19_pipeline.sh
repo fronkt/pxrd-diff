@@ -3,6 +3,8 @@
 #   bench (width rule) -> train gpu_p19 -> G3 gate (null, 1 sample, DiffCSP matcher >= 0.45)
 #   -> G4 arms (no refinement) -> pack -> RUN_DONE -> wait <= 3 h for PULLED -> self-stop.
 # Launched detached by p19_setup.sh: setsid nohup bash p19_pipeline.sh CAP_H > logs/p19.out &
+# A4 (AWS): the same script on EC2 g6e boxes; self_stop shuts the box down (shutdown behaviour stop),
+# the train box resumes Anvil's checkpoint, and /workspace/ARMS splits the G4 arms across boxes.
 # CAP_H = hard cap in hours from launch (set from the credit; the watchdog packs and stops).
 # Every step is idempotent (markers / outputs in $OUT), so a relaunch resumes: training resumes from
 # its latest checkpoint, finished arms are skipped. After each stage the results are packed to
@@ -18,12 +20,18 @@ G3_BAR=0.45
 mkdir -p "$OUT" "$LOG"
 log() { echo "$(date -u +%FT%TZ) $*" >> "$STATUS"; }
 
-self_stop() {
-    eval "$(tr '\0' '\n' < /proc/1/environ | grep -E '^(CONTAINER_API_KEY|CONTAINER_ID)=' | sed 's/^/export /')"
+self_stop() {   # Vast: stop the container through its API; AWS (A4): shut down (the box stops)
     log "self-stop ($1)"
-    curl -s -X PUT -H "Authorization: Bearer $CONTAINER_API_KEY" -d '{"state":"stopped"}' \
-        "https://console.vast.ai/api/v0/instances/$CONTAINER_ID/" >> "$STATUS"
+    if tr '\0' '\n' < /proc/1/environ 2>/dev/null | grep -q '^CONTAINER_API_KEY='; then
+        eval "$(tr '\0' '\n' < /proc/1/environ | grep -E '^(CONTAINER_API_KEY|CONTAINER_ID)=' | sed 's/^/export /')"
+        curl -s -X PUT -H "Authorization: Bearer $CONTAINER_API_KEY" -d '{"state":"stopped"}' \
+            "https://console.vast.ai/api/v0/instances/$CONTAINER_ID/" >> "$STATUS"
+    else
+        sudo shutdown -h now
+    fi
 }
+# A4: /workspace/ARMS (one arm per line) limits this box's G4 arms; no file = all arms
+want() { [ ! -f /workspace/ARMS ] || grep -qx "$1" /workspace/ARMS; }
 
 pack() {   # $1 = output tgz; the checkpoint goes only into the final pack (pulled once on its own)
     local extra=()
@@ -91,6 +99,13 @@ if [ ! -f "$OUT/width.txt" ]; then
     pack /workspace/p19_partial.tgz
 fi
 D=$(cat "$OUT/width.txt")
+# A4: the width came from Anvil's A100 bench; time the sampling bench on this box's GPU for the G4 cost
+if [ ! -f "$OUT/bench_sample_box.log" ] && [ -f "runs/bench_d$D/ckpt_000300.pt" ]; then
+    python -u scripts/03_sample.py --ckpt "runs/bench_d$D/ckpt_000300.pt" --n 100 --start 0 \
+        --n-samples 20 --pc-steps 50 --refine-steps 0 --amp bf16 --bucket --batch-size 50 --seed 0 \
+        --out-json "$LOG/bench_sample_box.json" > "$OUT/bench_sample_box.log" 2>&1
+    log "bench sample on this box (50 PC steps, 100 x 20): $(grep -h '^Total:' "$OUT/bench_sample_box.log")"
+fi
 
 # ---- 2. training -----------------------------------------------------------------------------
 if [ ! -f "runs/$RUN/ckpt_final.pt" ]; then
@@ -108,6 +123,7 @@ CK=runs/$RUN/ckpt_final.pt
 SAMPLE=(--ckpt "$CK" --n 1000 --pc-steps 1000 --refine-steps 0 --amp bf16 --bucket --batch-size 50)
 run_arm() {   # tag, extra args...
     local tag=$1; shift
+    [ "$tag" = p19_null_s0 ] || want "$tag" || return 0
     if [ -f "$OUT/$tag.per_sample.jsonl" ]; then return 0; fi
     log "$tag start"
     python -u scripts/03_sample.py "${SAMPLE[@]}" "$@" --out-json "$OUT/$tag.json" \

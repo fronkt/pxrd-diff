@@ -3,6 +3,10 @@
 # Usage (once, over ssh): bash p19_setup.sh COMMIT CAP_HOURS
 # Clone at COMMIT, deps, MP-20 from CDVAE + simulated patterns (workers sized to the cgroup quota),
 # parsed + Niggli caches, G0 tests on the GPU box, then launch p19_pipeline.sh detached.
+# A4 (AWS EC2, Deep Learning OSS Nvidia Driver AMI GPU PyTorch, user ubuntu): /workspace is created by
+# the launcher; the data and Anvil's checkpoints are uploaded before this runs, so the MP-20 download
+# and the simulation are skipped; the AMI's PyTorch venv is activated here and inherited by the pipeline.
+if [ -f /opt/pytorch/bin/activate ]; then source /opt/pytorch/bin/activate; fi
 set -euo pipefail
 COMMIT=${1:?commit}; CAP_H=${2:?cap hours}
 mkdir -p /workspace/logs
@@ -31,7 +35,7 @@ for s in ("train", "val", "test"):
     CrystalPXRDDataset("data", split=s, n_peaks=0, niggli=True)   # builds parsed + Niggli caches
 print("caches ready")
 PY
-python -m pytest -q -p no:cacheprovider tests/test_csp_model.py
+python -m pytest -q -p no:cacheprovider tests/test_csp_model.py tests/test_train_micro_batch.py
 echo "$CAP_H" > /workspace/CAP_H
 cp paper/submissions/JAC-R2/box/p19_pipeline.sh paper/submissions/JAC-R2/box/p19_onstart.sh /workspace/
 sed -i 's/\r$//' /workspace/p19_pipeline.sh /workspace/p19_onstart.sh

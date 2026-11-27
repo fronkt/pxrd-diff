@@ -2012,7 +2012,22 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     halve -> same gradient; validation independent of chunk); on real data (CPU, 4 steps, lr 1e-2) the new
     script at full batch is bit-identical to the old one and micro 5 differs by median 2e-8 per weight.
   - The backup bench 22423271 was held while this was fixed, then released.
-- [ ] B6 run on Anvil (A1 + A2 + A3), pull, stats, paper + letter rewrite
+- Amendment A4 (2026-11-27 ~00:45 EST, Frank: "instead of vast, move it to AWS"); venue only, the science is unchanged:
+  - The rest of training, G3 and G4 move to AWS (83S research profile, us-east-1, on-demand: spot is blocked) on
+    L40S 48 GB boxes (g6e; no g6e.2xlarge capacity at launch, so the train box is a g6e.xlarge). They run the
+    box scripts already written for a single box (`box/p19_setup.sh` + `p19_pipeline.sh` + `p19_pull_loop.sh`).
+  - Handover: Anvil's training lock was given a manual holder (no new slices, reversible); slice 1 ends with
+    its time-limit checkpoint, which the train box resumes (same args, micro-batch from the checkpoint). Data =
+    Anvil's files, md5-checked on the box. Once the box trains, Anvil's STOP file cancels the pending workers.
+  - The width stays d 384 (chosen by the rule on the A100); the box times the sampling bench on its own GPU for
+    the G4 cost. G3 and G4 arms run unchunked (one 03_sample run per arm, as in the box pipeline) instead of
+    Anvil's 100-structure chunks: same command and seeds per arm, different RNG streams only.
+  - The train box runs training -> G3 -> null s1/s2 (`/workspace/ARMS`). When G3 passes, the 12 twenty-sample
+    arms go to ~6 more g6e boxes (2 arms each, ~13 h at the A100 rate) with ckpt_final uploaded.
+  - Stops: the pipeline watchdog (cap; runner gone 30 min) and finish() shut the box down
+    (instance-initiated shutdown behaviour = stop, so results survive a missed pull), plus a user-data
+    `shutdown -h` hard cap. After each pull: terminate, delete the SG and key pair.
+- [ ] B6 run (A1-A4: training started on Anvil, continued on AWS), pull, stats, paper + letter rewrite
   - 11-27 04:36 UTC: worker 22423272_0 benched d512 19.31 h, d384 15.00 h per 100k -> d_model 384; sampling bench
     38 min per 100 x 20 chunk, chunk20 100, G4 ~76 + 3 A100 GPU-h -> Vast by the A1 rule (needs Frank's OK + top-up);
     training slice 1 started (0.54 s/step). Debug bench 22423271 cancelled (redundant).
