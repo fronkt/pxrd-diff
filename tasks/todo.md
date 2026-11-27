@@ -2013,3 +2013,6 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     script at full batch is bit-identical to the old one and micro 5 differs by median 2e-8 per weight.
   - The backup bench 22423271 was held while this was fixed, then released.
 - [ ] B6 run on Anvil (A1 + A2 + A3), pull, stats, paper + letter rewrite
+  - 11-27 04:36 UTC: worker 22423272_0 benched d512 19.31 h, d384 15.00 h per 100k -> d_model 384; sampling bench
+    38 min per 100 x 20 chunk, chunk20 100, G4 ~76 + 3 A100 GPU-h -> Vast by the A1 rule (needs Frank's OK + top-up);
+    training slice 1 started (0.54 s/step). Debug bench 22423271 cancelled (redundant).
