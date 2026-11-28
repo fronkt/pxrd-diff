@@ -1,0 +1,67 @@
+/opt/pytorch/lib/python3.12/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Loaded checkpoint: step=300, d_model=384, predict_x0=False, lat_head=Aux, sg_head=False
+Phase 4.1: ensemble n_samples=20, eta=0.0
+Phase 19: Niggli-reduced cells (checkpoint trained with niggli); supplied indexer cells are reduced too
+Model family csp: PC sampler, 50 levels, step_lr=1e-05, null_pattern=False
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=0.953  b=1.092  c=1.813  α=12.25  β=8.48  γ=13.04
+Aux-head lattice validity: 100/100 (100.0%)
+Ensemble: 100 patterns x 20 candidates in chunks of 50 (2 chunks)
+  chunk 1/2 done (sample=76.7s  select=3.0s  refine=0.0s)
+  chunk 2/2 done (sample=148.7s  select=3.2s  refine=0.0s)
+Total: sample=148.7s  select=3.2s  refine=0.0s
+Selected-candidate pearson: mean=0.217 median=0.154
+/opt/pytorch/lib/python3.12/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.228  pearson=0.293  all=N
+      mp-1218989  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.356  pearson=0.005  all=N
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=26.798  pearson=0.044  all=N
+      mp-1220884  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.418  pearson=0.200  all=N
+      mp-1224266  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.183  pearson=0.052  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=28.905  pearson=0.235  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=23.264  pearson=0.026  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.533  pearson=0.046  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.830  pearson=0.109  all=N
+      mp-1219027  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.438  pearson=0.016  all=N
+       mp-867922  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.651  pearson=0.106  all=N
+         mp-4073  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=20.776  pearson=-0.005  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=3.267  pearson=0.201  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.623  pearson=0.059  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.049  pearson=0.113  all=N
+      mp-1516449  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.983  pearson=0.118  all=N
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=16.658  pearson=0.038  all=N
+      mp-1094830  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=21.006  pearson=0.026  all=N
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=10.439  pearson=0.084  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=19.727  pearson=0.039  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=39.108  pearson=0.011  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=27.706  pearson=0.032  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.353  pearson=0.029  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.552  pearson=-0.010  all=N
+      mp-1218090  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=17.118  pearson=0.031  all=N
+       mp-972370  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=20.354  pearson=0.015  all=N
+      mp-1224851  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=30.633  pearson=-0.009  all=N
+      mp-1222864  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=28.045  pearson=0.048  all=N
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=29.560  pearson=-0.011  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.942  pearson=0.069  all=N
+/workspace/pxrd-diff/src/pxrd_diff/eval.py:192: RuntimeWarning: Mean of empty slice
+  "rmsd_mean": float(np.nanmean(rmsd)),
+/workspace/pxrd-diff/src/pxrd_diff/eval.py:193: RuntimeWarning: All-NaN slice encountered
+  "rmsd_median": float(np.nanmedian(rmsd)),
+
+--- Aggregate Metrics ---
+                               n: 100
+          composition_match_rate: 1.0000
+                       rmsd_mean: nan
+                     rmsd_median: nan
+   match_rate (StructureMatcher): 0.0000
+                        rwp_mean: 20.2219
+                    pearson_mean: 0.0655
+            headline_all_correct: 0.0000
+                   sg_match@0.01: 0.0000
+                   sg_match@0.05: 0.0000
+                    sg_match@0.1: 0.0000
+                    sg_match@0.2: 0.0000
+                   n_unbuildable: 0
+
+Wrote aggregate metrics to /workspace/logs/bench_sample_box.json

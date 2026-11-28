@@ -2038,6 +2038,18 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     g6e.xlarge, same key + SG, stop on shutdown, cap 21 h, arms paired by seed (learned+oracle,
     indexer+indexer_unknown); launched at train done so the SSO login is still valid, data + ckpt_final
     uploaded while G3 runs, `p19_setup.sh` started only after G3.json passes (else halt + ask Frank).
+  - **11-28 04:25 UTC: G3 FAILED its bar: 0.412 (412/1000) at DiffCSP's matcher vs >= 0.45** (v30 0.340;
+    DiffCSP published 0.515); paper matcher 0.349 (v30 0.274). Training reached 100k at 03:28 UTC (ckpt_final
+    md5 c237c644...; val coordinate losses flat from ~96k). Per the fixed rule: no G4, box RUN_DONE, ask Frank.
+    The 6 helpers (launched 03:35, data + ckpt uploaded and md5-checked by 03:52) were STOPPED, not terminated,
+    at ~04:40 (EBS only, kept for a quick restart). Final pack pulled + md5 OK into `paper/phase19_results/` and
+    `analysis/box_logs_p19/train/`; ckpts 9543-95k copied to `D:\pxrd-diff\aws\train_ckpts`.
+  - Miss breakdown (`g3_diag/null_breakdown_p19_null_s0.json`, same script as v30): cell misses 525 -> 472,
+    coordinate misses 135 -> 116, primitive atom count differs 103 -> 91; cell within tolerance 45.4 % -> 52.4 %;
+    match when the cell is right 70.3 % -> 77.9 %; volume ratio median 1.002. By atom count, match (cell ok):
+    1-4 0.714 (0.735), 5-8 0.451 (0.525), 9-12 0.411 (0.504), 13-20 0.192 (0.406). So the retrain helped
+    everywhere; the generated cell is still ~80 % of the misses. Untested recipe difference left: our lattice is
+    6 normalised (lengths, angles) with eps from a pooled head; DiffCSP diffuses the 3x3 lattice matrix.
   - 11-27 04:36 UTC: worker 22423272_0 benched d512 19.31 h, d384 15.00 h per 100k -> d_model 384; sampling bench
     38 min per 100 x 20 chunk, chunk20 100, G4 ~76 + 3 A100 GPU-h -> Vast by the A1 rule (needs Frank's OK + top-up);
     training slice 1 started (0.54 s/step). Debug bench 22423271 cancelled (redundant).

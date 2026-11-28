@@ -1,0 +1,79 @@
+/opt/pytorch/lib/python3.12/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Loaded checkpoint: step=100000, d_model=384, predict_x0=False, lat_head=Aux, sg_head=False
+Phase 19: Niggli-reduced cells (checkpoint trained with niggli); supplied indexer cells are reduced too
+Model family csp: PC sampler, 1000 levels, step_lr=1e-05, null_pattern=True
+Aux-head lattice MAE vs true (a,b,c in Å, α,β,γ in °):
+  a=0.596  b=0.640  c=1.134  α=8.32  β=6.61  γ=8.20
+Aux-head lattice validity: 1000/1000 (100.0%)
+Sampling 1000 structures in chunks of 50 (20 chunks, 50 DDIM steps)
+  chunk 2/20 done (sample=333.5s  select=0.0s  refine=0.0s)
+  chunk 4/20 done (sample=669.5s  select=0.0s  refine=0.0s)
+  chunk 6/20 done (sample=1002.1s  select=0.0s  refine=0.0s)
+  chunk 8/20 done (sample=1334.8s  select=0.0s  refine=0.0s)
+  chunk 10/20 done (sample=1667.3s  select=0.0s  refine=0.0s)
+  chunk 12/20 done (sample=1999.9s  select=0.0s  refine=0.0s)
+  chunk 14/20 done (sample=2336.7s  select=0.0s  refine=0.0s)
+  chunk 16/20 done (sample=2670.4s  select=0.0s  refine=0.0s)
+  chunk 18/20 done (sample=3004.8s  select=0.0s  refine=0.0s)
+  chunk 20/20 done (sample=3338.0s  select=0.0s  refine=0.0s)
+Total: sample=3338.0s  select=0.0s  refine=0.0s
+/opt/pytorch/lib/python3.12/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+        mp-10009  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=15.221  pearson=-0.004  all=N
+      mp-1218989  comp=Y  sg@0.1=Y  rmsd=0.016  rwp=11.646  pearson=0.169  all=Y
+      mp-1225695  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=25.225  pearson=-0.009  all=N
+      mp-1220884  comp=Y  sg@0.1=Y  rmsd=  NaN  rwp=14.987  pearson=-0.004  all=N
+      mp-1224266  comp=Y  sg@0.1=Y  rmsd=  NaN  rwp=9.170  pearson=0.007  all=N
+      mp-1002572  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=23.387  pearson=-0.019  all=N
+       mp-626680  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.865  pearson=0.014  all=N
+      mp-1228956  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=7.848  pearson=0.455  all=N
+      mp-1219335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=23.601  pearson=-0.010  all=N
+      mp-1219027  comp=Y  sg@0.1=Y  rmsd=  NaN  rwp=17.195  pearson=0.019  all=N
+       mp-867922  comp=Y  sg@0.1=Y  rmsd=0.001  rwp=0.926  pearson=0.973  all=Y
+         mp-4073  comp=Y  sg@0.1=Y  rmsd=  NaN  rwp=18.815  pearson=0.042  all=N
+        mp-11131  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=13.618  pearson=0.212  all=N
+      mp-1215627  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.331  pearson=0.065  all=N
+      mp-1223834  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=18.764  pearson=-0.012  all=N
+      mp-1516449  comp=Y  sg@0.1=Y  rmsd=0.002  rwp=3.348  pearson=0.730  all=Y
+      mp-1225183  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=29.071  pearson=-0.021  all=N
+      mp-1094830  comp=Y  sg@0.1=Y  rmsd=0.009  rwp=15.159  pearson=0.290  all=Y
+       mp-849335  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.378  pearson=-0.011  all=N
+       mp-758558  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=12.572  pearson=-0.013  all=N
+      mp-1207672  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=6.187  pearson=0.734  all=N
+         mp-2452  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=19.661  pearson=-0.001  all=N
+        mp-12398  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=27.169  pearson=-0.004  all=N
+      mp-1101094  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=14.284  pearson=0.120  all=N
+      mp-1218090  comp=Y  sg@0.1=Y  rmsd=0.008  rwp=4.536  pearson=0.703  all=Y
+       mp-972370  comp=Y  sg@0.1=Y  rmsd=0.001  rwp=4.552  pearson=0.687  all=Y
+      mp-1224851  comp=Y  sg@0.1=Y  rmsd=  NaN  rwp=17.048  pearson=0.011  all=N
+      mp-1222864  comp=Y  sg@0.1=Y  rmsd=0.028  rwp=7.055  pearson=0.762  all=Y
+      mp-1189226  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=22.062  pearson=-0.022  all=N
+      mp-1225753  comp=Y  sg@0.1=N  rmsd=  NaN  rwp=4.957  pearson=0.406  all=N
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+spglib: ssm_get_exact_positions failed.
+spglib: get_bravais_exact_positions_and_lattice failed.
+Wrote per-sample flags to paper/phase19_results/p19_null_s0.per_sample.jsonl.tmp
+Wrote 1000 predicted structures to paper/phase19_results/p19_null_s0.structs.jsonl
+
+--- Aggregate Metrics ---
+                               n: 1000
+          composition_match_rate: 1.0000
+                       rmsd_mean: 0.0155
+                     rmsd_median: 0.0021
+   match_rate (StructureMatcher): 0.3490
+                        rwp_mean: 15.2538
+                    pearson_mean: 0.1831
+            headline_all_correct: 0.3170
+                   sg_match@0.01: 0.0950
+                   sg_match@0.05: 0.3160
+                    sg_match@0.1: 0.3420
+                    sg_match@0.2: 0.3580
+                   n_unbuildable: 0
+
+Wrote aggregate metrics to paper/phase19_results/p19_null_s0.json

@@ -1,0 +1,8 @@
+2026-11-27T06:16:34Z start commit 56ab1b7 JAC  cap 26 h gpu NVIDIA L40S
+2026-11-27T06:19:39Z bench sample on this box (50 PC steps, 100 x 20): Total: sample=148.7s  select=3.2s  refine=0.0s
+2026-11-27T06:19:39Z train gpu_p19 d384 resume runs/gpu_p19/ckpt_009543.pt
+2026-11-28T03:28:34Z train done
+2026-11-28T03:28:34Z p19_null_s0 start
+2026-11-28T04:25:54Z p19_null_s0 done Total: sample=3338.0s  select=0.0s  refine=0.0s  diffcsp 0.412
+2026-11-28T04:25:54Z G3: {"match_rate_diffcsp":0.412,"bar":0.45,"pass":false,"published_diffcsp_1sample":0.5149}
+2026-11-28T04:25:54Z RUN_DONE (G3 FAILED its bar; G4 not run (spec: stop and ask Frank))
