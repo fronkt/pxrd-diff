@@ -2050,6 +2050,21 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     1-4 0.714 (0.735), 5-8 0.451 (0.525), 9-12 0.411 (0.504), 13-20 0.192 (0.406). So the retrain helped
     everywhere; the generated cell is still ~80 % of the misses. Untested recipe difference left: our lattice is
     6 normalised (lengths, angles) with eps from a pooled head; DiffCSP diffuses the 3x3 lattice matrix.
+- **Amendment A5 (2026-11-28 ~05:00 UTC, Frank chose "G4 on new model" over the fixed v30 fallback, a
+  retrain of the cell part, or stopping), fixed before any G4 arm runs:**
+  - G4 runs on the Phase 19 checkpoint (`runs/gpu_p19/ckpt_final.pt`, md5 c237c644...) although G3 missed
+    its bar (0.412 < 0.45). Why not v30 (the fixed fallback): the new checkpoint beats v30 on every G3
+    diagnostic (match 0.340 -> 0.412, cell within tolerance 45 -> 52 %, match given the cell 70 -> 78 %),
+    and nothing about G4 has been seen for either. G3.json stays as measured (pass false).
+  - G4 protocol unchanged (Phase 19 above): learned / oracle / indexer / indexer-unknown x seeds 0-2, 20
+    samples, best-of-20 by Debye Pearson, no refinement, + null x seeds 1-2 (s0 = the G3 arm); both matchers.
+  - The paper and letter report G3 as failed: null pattern 41.2 % vs DiffCSP's 51.5 % at DiffCSP's
+    matcher, with the miss breakdown (generated cells ~80 % of the misses), so every pattern-conditioned
+    number is read against our own null arm, not DiffCSP's.
+  - Code: `p19_pipeline.sh` continues past a failed G3 only if `/workspace/G4_DESPITE_G3` is non-empty
+    (the launcher writes it); no marker = the old stop. The 6 stopped helpers restart with their data +
+    ckpt (md5-checked 11-28 03:52); the train box restarts for null s1/s2 (its RUN_DONE/PULLED cleared).
+    Restarted EC2 boxes do not rerun user-data, so the launcher re-arms `shutdown -h +1560` on each.
   - 11-27 04:36 UTC: worker 22423272_0 benched d512 19.31 h, d384 15.00 h per 100k -> d_model 384; sampling bench
     38 min per 100 x 20 chunk, chunk20 100, G4 ~76 + 3 A100 GPU-h -> Vast by the A1 rule (needs Frank's OK + top-up);
     training slice 1 started (0.54 s/step). Debug bench 22423271 cancelled (redundant).

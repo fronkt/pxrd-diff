@@ -151,7 +151,13 @@ EOF
     log "G3: $(cat "$OUT/G3.json" | tr -d '\n ')"
 fi
 if ! python -c "import json,sys; sys.exit(0 if json.load(open('$OUT/G3.json'))['pass'] else 1)"; then
-    finish "G3 FAILED its bar; G4 not run (spec: stop and ask Frank)"; exit 0
+    # A5 (Frank 2026-11-28): G4 runs on this checkpoint although G3 missed its bar; the launcher writes the
+    # marker, G3.json stays as measured and the paper reports G3 as failed. No marker = the old stop.
+    if [ -s /workspace/G4_DESPITE_G3 ]; then
+        log "A5: G3 below its bar ($(python -c "import json;print(json.load(open('$OUT/G3.json'))['match_rate_diffcsp'])") < $G3_BAR); G4 runs anyway: $(head -1 /workspace/G4_DESPITE_G3)"
+    else
+        finish "G3 FAILED its bar; G4 not run (spec: stop and ask Frank)"; exit 0
+    fi
 fi
 
 # ---- 4. G4 arms (no refinement) --------------------------------------------------------------
