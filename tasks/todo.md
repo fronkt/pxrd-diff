@@ -2065,6 +2065,10 @@ Fixed before any code runs on a GPU (do not change after seeing results):
     (the launcher writes it); no marker = the old stop. The 6 stopped helpers restart with their data +
     ckpt (md5-checked 11-28 03:52); the train box restarts for null s1/s2 (its RUN_DONE/PULLED cleared).
     Restarted EC2 boxes do not rerun user-data, so the launcher re-arms `shutdown -h +1560` on each.
+  - 11-28 09:15 UTC: A5 started (after a fresh SSO login): all 7 boxes restarted (new IPs), setup rc 0 at
+    ff9adfc on each, no untracked result file differed from git, ckpt md5 c237c644 on every box, GPUs 93-100 %,
+    poweroff scheduled 11-29 ~11:14 UTC. Helpers: 2 twenty-sample arms each (~17-18 h -> ~03:00-04:00 UTC
+    11-29, cap 21 h); train box: null s1/s2 (~2 h, cap 6 h). 7 local pull loops + `watch_g4.sh` running.
   - 11-27 04:36 UTC: worker 22423272_0 benched d512 19.31 h, d384 15.00 h per 100k -> d_model 384; sampling bench
     38 min per 100 x 20 chunk, chunk20 100, G4 ~76 + 3 A100 GPU-h -> Vast by the A1 rule (needs Frank's OK + top-up);
     training slice 1 started (0.54 s/step). Debug bench 22423271 cancelled (redundant).
